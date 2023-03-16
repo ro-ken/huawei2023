@@ -113,7 +113,8 @@ public class Robot {
 
     // 选一个最佳的工作站
     public void selectBestStation() {
-        Station station = selectClosestStation();
+//        Station station = selectClosestStation();
+        Station station = selectTimeShortestStation();
 //        Station maxStation = selectBestValueStation();
         if (station == null){
             Main.printLog("no station can use...");
@@ -138,50 +139,60 @@ public class Robot {
             double dis = station.calcDistance(x,y);
             if (dis < minDistance){
                 // 卖方有货，卖方有位置
-                if (station.type>3 && station.leftTime ==-1) continue;  // 未生产产品
+//                if (station.type>3 && station.leftTime ==-1) continue;  // 未生产产品
                 Station oth = station.chooseAvailableNextStation();
                 if (oth != null){
                     closestStation = station;
                     minDistance = dis;
                 }
             }
-//            Main.printLog("maxvalue"+maxValue);
         }
         return closestStation;
     }
 
-    private Station selectBestValueStation() {
-        Station maxStation = null;
-        int maxValue = -10000;
+    //选择取货时间最短的，取货时间 = max {走路时间，生成时间}
+    private Station selectTimeShortestStation() {
+        Station shortestStation = null;
+        double shortest = 10000;
         for(int i=0;i<Main.stationNum;i++){
 
             Station station = Main.stations[i];
-            if (station.leftTime == -1) continue;
-            int value = station.calcValue(x, y, true);
-//            Main.printLog("value"+value);
-            value = station.canSellStations.peek().getValue()-value;    // 赚的钱 - 花费的时间
-//            Main.printLog("getValue + num"+station.canSellStations.size());
-//            Main.printLog("getValue"+station.canSellStations.peek().getValue());
-            if (value > maxValue){
+            if (station.leftTime == -1 || station.bookPro) continue;
+            double dis = station.calcDistance(x,y);
+            double time1 = calcFpsToPlace(dis);
+            double time = Math.max(time1,station.leftTime);
+            if (time < shortest){
                 // 卖方有货，卖方有位置
-                Station oth = station.canSellStations.peek().getKey();
-//                Main.printLog("station = "+station.Id);
-//                if (station.proStatus == 1 && !oth.bookRow[station.type] && !oth.positionIsFull(station.type)){
-                if (!oth.bookRow[station.type] && !oth.positionIsFull(station.type)){
-                    maxStation = station;
-                    maxValue = value;
+                Station oth = station.chooseAvailableNextStation();
+                if (oth != null){
+                    shortestStation = station;
+                    shortest = time;
                 }
             }
-//            Main.printLog("maxvalue"+maxValue);
         }
-        return maxStation;
+        return shortestStation;
+    }
+
+    // 计算最快到达需要多久
+    private double calcFpsToPlace(double dis) {
+        double time = 0;
+        double a = getAcceleration();
+        double minDistance = getMinDistance();
+        if (dis < minDistance/2){
+            time = Math.pow(2*dis/a,0.5);
+        }else {
+            double time1 = Math.pow(minDistance/a,0.5);
+            double time2 = (dis - minDistance/2)/maxSpeed;
+            time = time1 + time2;
+        }
+        return time*50;
     }
 
     // 计算路线
     public void calcRoute() {
         if (nextStation != null){
             route = new Route(nextStation.x,nextStation.y,this);
-            route.calcParam();
+//            route.calcParam();
         }
     }
 
@@ -200,13 +211,7 @@ public class Robot {
     }
 
     public void rush() {
-
         route.rush();
-//        if (route.status == 1){
-//            adjustAngle();
-//        }else if (route.status == 2){
-//            goToTarget();
-//        }
     }
 
     @Override
@@ -223,62 +228,6 @@ public class Robot {
                 '}';
     }
 
-    private void goToTarget() {
-
-        if (angV!=0){
-            route.adjustTurn();
-        }
-        if (route.status == 1) return;  // 先减速调整角度
-        double rx = nextStation.x - x;
-        double ry = nextStation.y - y;
-        double deltaDistance = Math.pow(rx*rx+ry*ry,0.5);
-        if (deltaDistance > route.setMinDistance){
-            Main.printForward(id,6);
-
-            Main.printLog(this);
-        }else {
-            Main.printForward(id,0);
-        }
-    }
-
-    private void adjustAngle() {
-        if (lineVy!=0 || lineVy !=0){
-            Main.printForward(id,0);    // 先减速
-        }
-        double tmpAngle = Math.abs(turn - route.theoryTurn);
-        double deltaAngle = Math.min(tmpAngle,2*pi-tmpAngle);
-
-        if (deltaAngle < canForwardRad){
-            route.status = 2;    // run
-            goToTarget();
-            return;
-        }
-        // 不一定要减速到0 ,在一定范围就可以出发了
-        if (angV < angleSpeedOffset){
-            if (deltaAngle < canForwardRad){
-                route.status = 2;    // run
-            }else{
-                if (route.isRotate){
-                    calcRoute();    // 转得不对，重新调整
-                    route.isRotate = false;
-                }else {
-                    double putRotate = pi * route.clockwise * route.turnSpeedCoef;
-                    Main.printRotate(id,putRotate);
-                    Main.printLog("rotate:"+putRotate);
-                    route.isRotate = true;
-                }
-            }
-        }
-        else {
-            if (deltaAngle > route.setMinAngle){
-                Main.printRotate(id,pi * route.clockwise * route.turnSpeedCoef);
-                Main.printLog("rotate:"+pi * route.clockwise * route.turnSpeedCoef);
-            }else {
-                Main.printRotate(id,0);
-                Main.printLog("rotate:0");
-            }
-        }
-    }
 
     public boolean isArrive() {
         if (StationId == nextStation.Id){

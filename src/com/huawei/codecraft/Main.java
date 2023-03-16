@@ -116,9 +116,6 @@ public class Main {
     private static void initialization() {
         for (int i = 0; i < stationNum; i++) {
             stations[i].initialization();
-//            printLog(stations[i].type + " -> "+ stations[i].canSellStations.size());
-//            if (stations[i].canSellStations.size() > 0)
-//            printLog(stations[i].type + " -> "+ stations[i].canSellStations.size() + " top money =" + stations[i].canSellStations.peek().getValue());
         }
     }
 
