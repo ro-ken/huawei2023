@@ -18,37 +18,47 @@ public class Main {
     public static int stationNum = 0;
     public static final int duration = 3 * 60;
     public static final int fps = 50;
+    public static final boolean test = false;    // 是否可写入
 
     public static void main(String[] args) throws FileNotFoundException {
 
-        log = new PrintStream("./log.txt");
-        System.setOut(log);//把创建的打印输出流赋给系统。即系统下次向 ps输出
-        System.out.println("这行语句将会被写到log.txt文件中");
+        if (test){
+            log = new PrintStream("./log.txt");
+            System.setOut(log);//把创建的打印输出流赋给系统。即系统下次向 ps输出
+            printLog("这行语句将会被写到log.txt文件中");
+        }
+
         schedule();
     }
 
     // 核心代码，分析如何运动
     private static void analyse() {
         for (int i = 0; i < 4; i++) {
-            System.out.println(robots[i]);
+                printLog(robots[i].toString());
+
+
             if (robots[i].nextStation == null){
                 robots[i].selectBestStation();
                 robots[i].calcRoute();
                 robots[i].rush();
             }else {
                 if (robots[i].isArrive()){
+                    // 有物品就买，没有就等待,逐帧判断
                     if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){
                         printBuy(i);
                         robots[i].srcStation.bookPro = false;       //解除预定
-                        System.out.println("buy");
+                        printLog("buy");
                         robots[i].changeTarget();
+                        // 有物品就卖，没有就等待,逐帧判断
                     } else if (robots[i].nextStation == robots[i].destStation && !robots[i].nextStation.positionIsFull(robots[i].carry)){
                         printSell(i);
                         robots[i].destStation.bookRow[robots[i].srcStation.type] = false;   //解除预定
-                        System.out.println("sell");
+
+                        printLog("sell");
                         robots[i].changeTarget();
                     }
                 }else{
+                    // 没到目的地就继续前进
                     robots[i].rush();
                 }
             }
@@ -77,6 +87,11 @@ public class Main {
     public static void printFrame(int frameID){
         outStream.printf("%d\n", frameID);
     }
+    public static void printLog(Object log){
+        if (test){
+            System.out.println(log);
+        }
+    }
 
     private static void schedule() {
         initMap();
@@ -89,7 +104,7 @@ public class Main {
             String line = inStream.nextLine();
             String[] parts = line.split(" ");
             frameID = Integer.parseInt(parts[0]);
-            System.out.println(frameID);
+            printLog(frameID);
             readUtilOK();
 
             printFrame(frameID);
@@ -101,9 +116,9 @@ public class Main {
     private static void initialization() {
         for (int i = 0; i < stationNum; i++) {
             stations[i].initialization();
-//            System.out.println(stations[i].type + " -> "+ stations[i].canSellStations.size());
+//            printLog(stations[i].type + " -> "+ stations[i].canSellStations.size());
 //            if (stations[i].canSellStations.size() > 0)
-//            System.out.println(stations[i].type + " -> "+ stations[i].canSellStations.size() + " top money =" + stations[i].canSellStations.peek().getValue());
+//            printLog(stations[i].type + " -> "+ stations[i].canSellStations.size() + " top money =" + stations[i].canSellStations.peek().getValue());
         }
     }
 
@@ -111,13 +126,13 @@ public class Main {
     private static boolean readUtilOK() {
         String line;
         line = inStream.nextLine(); // stationNum
-//        System.out.println(line);
+//        printLog(line);
         assert stationNum == Integer.parseInt(line);
         int stationId = -1;
         while (inStream.hasNextLine()) {
             stationId ++;
             line = inStream.nextLine();
-//            System.out.println(line);
+//            printLog(line);
             if ("OK".equals(line)) {
                 return true;
             }
@@ -155,14 +170,14 @@ public class Main {
             row --;
             double y = row * 0.5 - 0.25;
             line = inStream.nextLine();
-//            System.out.println(line);
+//            printLog(line);
             if ("OK".equals(line)) {
                 stationNum = stationId;
                 for (Integer key: map.keySet()){
-                    System.out.println("type = " + key + "nums = " +map.get(key).size());
+                    printLog("type = " + key + "nums = " +map.get(key).size());
                 }
-//                System.out.println(robotId);
-//                System.out.println("hi");
+//                printLog(robotId);
+//                printLog("hi");
                 return true;
             }
 

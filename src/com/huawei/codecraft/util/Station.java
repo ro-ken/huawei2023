@@ -85,7 +85,7 @@ public class Station{
     }
 
     private static double calcMinDistance(boolean isEmpty) {
-        double a = isEmpty ? Robot.empthA:Robot.fullA;
+        double a = isEmpty ? Robot.emptyA:Robot.fullA;
         return Math.pow(Robot.maxSpeed,2)/(a);
     }
 
@@ -102,7 +102,7 @@ public class Station{
     public double distanceToSecond(boolean isEmpty, double ox,double oy){
         //两种情况， 加速，匀速，减速  or  加速 ，减速
         double minDistance = isEmpty?emptyMinDistance:fullMinDistance;
-        double a = isEmpty ? Robot.empthA:Robot.fullA;
+        double a = isEmpty ? Robot.emptyA:Robot.fullA;
         double distance = calcDistance(ox,oy);
         double second ;
         if (distance <= minDistance){
@@ -151,12 +151,12 @@ public class Station{
     }
 
     public int calcValue(double x1,double y1,boolean isEmpty) {
-//        System.out.println(type);
+
         if (type>7) return 0;
         int baseMoney = Goods.item[type].earn;
         int fps = distanceToFps(isEmpty,x1,y1);
         int theoryMoney = (int) (baseMoney * Robot.calcTimeValue(fps));
-//        System.out.println("money");
+
         return theoryMoney;
     }
 

@@ -19,12 +19,12 @@ public class Robot {
     public static final int maxForce = 250;//N
     public static final int maxRotateForce = 50;//N*m
 
-    public static final double radOffset = 0.1 ; //(rad)最大误差 0.003
+    public static final double canForwardRad = 0.4 ; // 行走最小角度偏移量，0.4=23度
     public static final double angleSpeedOffset = 0.1 ; //(rad)最大误差 0.003
-    public static double empthA;     //加速度
+    public static double emptyA;     //加速度
     public static double fullA;     //加速度
 
-    public static double empthRotateA;     //角加速度
+    public static double emptyRotateA;     //角加速度
     public static double fullRotateA;     //角加速度
     public static double emptyMinAngle; // 加速减速临界值 ,空载
     public static double fullMinAngle; // 加速减速临界值 ，满载
@@ -49,10 +49,10 @@ public class Robot {
     Route route;
 
     static {
-        empthA = calcAcceleration(emptyRadius);
+        emptyA = calcAcceleration(emptyRadius);
         fullA = calcAcceleration(fullRadius);
 
-        empthRotateA = calcRotateAcce(emptyRadius);
+        emptyRotateA = calcRotateAcce(emptyRadius);
         fullRotateA = calcRotateAcce(fullRadius);
 
         emptyMinAngle = calcMinAngle(true);
@@ -61,12 +61,12 @@ public class Robot {
 
 
     private static double calcMinAngle(boolean isEmpty) {
-        double a = isEmpty ? empthRotateA:fullRotateA;
+        double a = isEmpty ? emptyRotateA:fullRotateA;
         return Math.pow(maxRotate,2)/(a);
     }
 
     private static double calcRotateAcce(double radius) {
-        System.out.println(radius);
+        Main.printLog(radius);
         double s = pi * radius * radius;
         double m = s * density;
         double I = m * radius * radius * 0.5;
@@ -116,14 +116,14 @@ public class Robot {
         Station station = selectClosestStation();
 //        Station maxStation = selectBestValueStation();
         if (station == null){
-            System.out.println("no station can use...");
+            Main.printLog("no station can use...");
             return;
         }
 
         nextStation = srcStation = station;
-        System.out.println("src"+srcStation);
+        Main.printLog("src"+srcStation);
         destStation = srcStation.availNextStation;
-        System.out.println("dest" + destStation);
+        Main.printLog("dest" + destStation);
         srcStation.bookPro = true;      // 预定位置
         destStation.bookRow[srcStation.type] = true;
     }
@@ -145,7 +145,7 @@ public class Robot {
                     minDistance = dis;
                 }
             }
-//            System.out.println("maxvalue"+maxValue);
+//            Main.printLog("maxvalue"+maxValue);
         }
         return closestStation;
     }
@@ -158,21 +158,21 @@ public class Robot {
             Station station = Main.stations[i];
             if (station.leftTime == -1) continue;
             int value = station.calcValue(x, y, true);
-//            System.out.println("value"+value);
+//            Main.printLog("value"+value);
             value = station.canSellStations.peek().getValue()-value;    // 赚的钱 - 花费的时间
-//            System.out.println("getValue + num"+station.canSellStations.size());
-//            System.out.println("getValue"+station.canSellStations.peek().getValue());
+//            Main.printLog("getValue + num"+station.canSellStations.size());
+//            Main.printLog("getValue"+station.canSellStations.peek().getValue());
             if (value > maxValue){
                 // 卖方有货，卖方有位置
                 Station oth = station.canSellStations.peek().getKey();
-//                System.out.println("station = "+station.Id);
+//                Main.printLog("station = "+station.Id);
 //                if (station.proStatus == 1 && !oth.bookRow[station.type] && !oth.positionIsFull(station.type)){
                 if (!oth.bookRow[station.type] && !oth.positionIsFull(station.type)){
                     maxStation = station;
                     maxValue = value;
                 }
             }
-//            System.out.println("maxvalue"+maxValue);
+//            Main.printLog("maxvalue"+maxValue);
         }
         return maxStation;
     }
@@ -192,13 +192,21 @@ public class Robot {
     public double getMinAngle() {
         return carry > 0? fullMinAngle:emptyMinAngle;
     }
+    public double getAcceleration() {
+        return carry > 0? fullA:emptyA;
+    }
+    public double getAngleAcceleration() {
+        return carry > 0? fullRotateA:emptyRotateA;
+    }
 
     public void rush() {
-        if (route.status == 1){
-            adjustAngle();
-        }else if (route.status == 2){
-            goToTarget();
-        }
+
+        route.rush();
+//        if (route.status == 1){
+//            adjustAngle();
+//        }else if (route.status == 2){
+//            goToTarget();
+//        }
     }
 
     @Override
@@ -227,7 +235,7 @@ public class Robot {
         if (deltaDistance > route.setMinDistance){
             Main.printForward(id,6);
 
-            System.out.println(this);
+            Main.printLog(this);
         }else {
             Main.printForward(id,0);
         }
@@ -240,14 +248,14 @@ public class Robot {
         double tmpAngle = Math.abs(turn - route.theoryTurn);
         double deltaAngle = Math.min(tmpAngle,2*pi-tmpAngle);
 
-        if (deltaAngle < radOffset){
+        if (deltaAngle < canForwardRad){
             route.status = 2;    // run
             goToTarget();
             return;
         }
         // 不一定要减速到0 ,在一定范围就可以出发了
         if (angV < angleSpeedOffset){
-            if (deltaAngle < radOffset){
+            if (deltaAngle < canForwardRad){
                 route.status = 2;    // run
             }else{
                 if (route.isRotate){
@@ -256,7 +264,7 @@ public class Robot {
                 }else {
                     double putRotate = pi * route.clockwise * route.turnSpeedCoef;
                     Main.printRotate(id,putRotate);
-                    System.out.println("rotate:"+putRotate);
+                    Main.printLog("rotate:"+putRotate);
                     route.isRotate = true;
                 }
             }
@@ -264,17 +272,17 @@ public class Robot {
         else {
             if (deltaAngle > route.setMinAngle){
                 Main.printRotate(id,pi * route.clockwise * route.turnSpeedCoef);
-                System.out.println("rotate:"+pi * route.clockwise * route.turnSpeedCoef);
+                Main.printLog("rotate:"+pi * route.clockwise * route.turnSpeedCoef);
             }else {
                 Main.printRotate(id,0);
-                System.out.println("rotate:0");
+                Main.printLog("rotate:0");
             }
         }
     }
 
     public boolean isArrive() {
         if (StationId == nextStation.Id){
-            System.out.println("robot arrived id ="+StationId);
+            Main.printLog("robot arrived id ="+StationId);
             return true;
         }else{
             return false;
@@ -288,102 +296,27 @@ public class Robot {
         }else {
             nextStation = srcStation = destStation = null;
         }
-        System.out.println("state change");
-        System.out.println("next station" + nextStation);
+        Main.printLog("state change");
+        Main.printLog("next station" + nextStation);
+    }
+
+    // 通过当前速度减速到0 的最小距离
+    public double getMinDistanceByCurSpeed() {
+        double a = getAcceleration();
+        double v2 = Math.pow(lineVx,2) + Math.pow(lineVy,2);
+        double x = v2/(2*a);
+        return x;
+    }
+
+    private double getCurLineSpeed() {
+        double t = Math.pow(lineVx,2) + Math.pow(lineVy,2);
+        return Math.pow(t,0.5);
+    }
+
+    public double getMinAngleDistanceByCurSpeed() {
+        double a = getAngleAcceleration();
+        double angle = angV * angV / (2*a);
+        return angle;
     }
 }
 
-
-// 运动过程描述
-class Route{
-    double ox,oy;
-    double clockwise = 0;    // 1为正向，-1为反向 ，0 不动
-    int status = 1;    //路线所处节点， 1 旋转，2加速
-    boolean isRotate = false;
-
-    public double setMinAngle;   // 设置临界减速角度
-    public double setMinDistance;   // 设置临界减速距离
-    public double turnSpeedCoef = 1;    // 设置旋转系数，角度越小，转得越慢
-    public double lineSpeedCoef = 1;    // 设置直线系数，距离越近，走的越慢
-    double theoryTurn;
-    double angleOffset;
-    Robot robot;
-
-    public Route(double ox,double oy,Robot robot) {
-        this.ox = ox;
-        this.oy = oy;
-        this.robot = robot;
-    }
-
-    public void adjustTurn() {
-        calcTheoryTurn();
-        double delta = Math.abs(robot.turn - theoryTurn);
-        if (delta > Robot.radOffset){
-            status = 1; //角度太大，减速先调整角度
-            return;
-        }else{
-            //微修
-            if (delta < angleOffset){
-                Main.printRotate(robot.id,0);
-            }else {
-                calcClockwise();
-                Main.printRotate(robot.id,Robot.radOffset * clockwise);
-            }
-        }
-
-
-    }
-
-    public void calcTheoryTurn() {
-        double rx = ox - robot.x;
-        double ry = oy - robot.y;
-
-        // 计算夹角弧度
-        theoryTurn = Math.atan2(ry, rx);
-    }
-
-    public void calcClockwise() {
-        if (theoryTurn>robot.turn && theoryTurn - robot.turn < Robot.pi || theoryTurn<robot.turn && robot.turn - theoryTurn > Robot.pi){
-            clockwise = 1;
-        }else {
-            clockwise = -1;
-        }
-    }
-
-    public void calcSetMinAngle() {
-        double tmpAngle = Math.abs(robot.turn - theoryTurn);
-        double deltaAngle = Math.min(tmpAngle,2* Robot.pi-tmpAngle);
-        double minAngle = robot.getMinAngle();
-        if (deltaAngle <= minAngle){
-            setMinAngle = deltaAngle/2;
-//            turnSpeedCoef = 0.4;
-        }else {
-            setMinAngle = robot.getMinAngle()/2;
-//            turnSpeedCoef = 0.8;
-        }
-    }
-
-    public void calcSetMinDistance() {
-        double rx = ox - robot.x;
-        double ry = oy - robot.y;
-        double deltaDistance = Math.pow(rx*rx+ry*ry,0.5);
-        angleOffset = Math.abs(Math.atan2(0.4, deltaDistance));
-        if (deltaDistance <= robot.getMinDistance()){
-            setMinDistance = deltaDistance/2;
-        }else {
-            setMinDistance = robot.getMinDistance()/2;
-        }
-    }
-    private void calcOffset() {
-
-    }
-    public void calcParam() {
-
-        calcTheoryTurn();//转向方向转向顺时针
-        calcClockwise();
-        calcSetMinAngle();
-        calcSetMinDistance();
-        calcOffset();
-    }
-
-}
