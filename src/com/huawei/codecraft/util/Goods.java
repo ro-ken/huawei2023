@@ -1,4 +1,4 @@
-package com.huawei.codecraft;
+package com.huawei.codecraft.util;
 
 /**
  * @Author: ro_kin

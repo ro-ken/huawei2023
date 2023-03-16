@@ -4,7 +4,7 @@ import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.*;
-import com.huawei.codecraft.*;
+import com.huawei.codecraft.util.*;
 
 public class Main {
 
@@ -12,10 +12,10 @@ public class Main {
     private static final PrintStream outStream = new PrintStream(new BufferedOutputStream(System.out));
     private static PrintStream log = null;
 
-    static Robot[] robots = new Robot[4];
-    static Station[] stations = new Station[50];
+    public static Robot[] robots = new Robot[4];
+    public static Station[] stations = new Station[50];
     public static Map<Integer, ArrayList<Station>> map = new HashMap<>(); // 类型，以及对应的工作站
-    static int stationNum = 0;
+    public static int stationNum = 0;
     public static final int duration = 3 * 60;
     public static final int fps = 50;
 

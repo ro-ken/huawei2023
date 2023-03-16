@@ -1,11 +1,29 @@
-package com.huawei.codecraft;
+package com.huawei.codecraft.util;
 
-import javafx.util.Pair;
+import com.huawei.codecraft.Main;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.PriorityQueue;
+
+class Pair{
+    Station key;
+    Integer value;
+
+    public Pair(Station key, Integer value) {
+        this.key = key;
+        this.value = value;
+    }
+
+    public Station getKey() {
+        return key;
+    }
+
+    public Integer getValue() {
+        return value;
+    }
+}
 
 /**
  * @Author: ro_kin
@@ -17,18 +35,18 @@ public class Station{
     public static double emptyMinDistance; // 加速减速临界值 ,空载
     public static double fullMinDistance; // 加速减速临界值 ，满载
 
-    public PriorityQueue<Pair<Station,Integer>> canSellStations;
+    public PriorityQueue<Pair> canSellStations;
     public Station availNextStation;
 
     int Id;
-    int type;   // 1-9
+    public int type;   // 1-9
     double x;
     double y;
-    int leftTime;   // 剩余时间，帧数 -1：未生产 ； 0 阻塞；>0 剩余帧数
-    int rowStatus; // 原材料 二进制位表描述，例如 48(110000) 表示拥有物品 4 和 5
-    int proStatus; // 产品格 状态 0 无 1 有
-    boolean[] bookRow;    // 原料空格是否预定
-    boolean bookPro;      // 产品空格是否预定
+    public int leftTime;   // 剩余时间，帧数 -1：未生产 ； 0 阻塞；>0 剩余帧数
+    public int rowStatus; // 原材料 二进制位表描述，例如 48(110000) 表示拥有物品 4 和 5
+    public int proStatus; // 产品格 状态 0 无 1 有
+    public boolean[] bookRow;    // 原料空格是否预定
+    public boolean bookPro;      // 产品空格是否预定
 
     static {
         item = new StationItem[10];
@@ -109,9 +127,9 @@ public class Station{
 
     public void initialization() {
 
-        canSellStations = new PriorityQueue<>(new Comparator<Pair<Station,Integer>>() {
+        canSellStations = new PriorityQueue<>(new Comparator<Pair>() {
             @Override
-            public int compare(Pair<Station, Integer> o1, Pair<Station, Integer> o2) {
+            public int compare(Pair o1, Pair o2) {
                 return o2.getValue() - o1.getValue();   // 大顶堆
             }
         });
@@ -125,7 +143,7 @@ public class Station{
                 for(int i=0;i<stations.size();i++) {
                     Station st = stations.get(i);
                     Integer value = calcValue(st.x,st.y,false);
-                    Pair<Station,Integer> pair = new Pair<>(st,value);
+                    Pair pair = new Pair(st,value);
                     canSellStations.add(pair);
                 }
             }
@@ -144,7 +162,7 @@ public class Station{
 
     // 没有可用返回 null
     public Station chooseAvailableNextStation() {
-        for(Pair<Station,Integer> pair : canSellStations){
+        for(Pair pair : canSellStations){
             Station oth = pair.getKey();
             if (!oth.bookRow[type] && !oth.positionIsFull(type)){
                 availNextStation = oth;

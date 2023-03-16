@@ -1,4 +1,6 @@
-package com.huawei.codecraft;
+package com.huawei.codecraft.util;
+
+import com.huawei.codecraft.Main;
 
 /**
  * @Author: ro_kin
@@ -29,20 +31,20 @@ public class Robot {
 
 
     int id;
-    int StationId; // -1 无 ，从0 开始 表示第几个工作台
-    int carry;  // 携带物品 1-7
-    double timeValue;  // 时间价值系数 [0.8 - 1]
-    double bumpValue;       //碰撞价值系数 [0.8 - 1]
-    double angV; //角速度  弧度/s 正逆，负顺
-    double lineVx;    //线速度， m/s
-    double lineVy;    //线速度， m/s
-    double turn; //朝向 [-pi,pi] 0朝向右，pi/2  朝上
-    double x;
-    double y;
+    public int StationId; // -1 无 ，从0 开始 表示第几个工作台
+    public int carry;  // 携带物品 1-7
+    public double timeValue;  // 时间价值系数 [0.8 - 1]
+    public double bumpValue;       //碰撞价值系数 [0.8 - 1]
+    public double angV; //角速度  弧度/s 正逆，负顺
+    public double lineVx;    //线速度， m/s
+    public double lineVy;    //线速度， m/s
+    public double turn; //朝向 [-pi,pi] 0朝向右，pi/2  朝上
+    public double x;
+    public double y;
 
-    Station nextStation;    // null : no target to go
-    Station srcStation;
-    Station destStation;
+    public Station nextStation;    // null : no target to go
+    public Station srcStation;
+    public Station destStation;
 
     Route route;
 
