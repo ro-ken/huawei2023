@@ -11,12 +11,14 @@ public class Main {
     private static final Scanner inStream = new Scanner(System.in);
     private static final PrintStream outStream = new PrintStream(new BufferedOutputStream(System.out));
     private static PrintStream log = null;
+    public static int frameID=0;
 
     public static Robot[] robots = new Robot[4];
     public static Station[] stations = new Station[50];
     public static Map<Integer, ArrayList<Station>> map = new HashMap<>(); // 类型，以及对应的工作站
     public static int stationNum = 0;
-    public static final int duration = 3 * 60;
+    public static final int duration = 3 * 60 * 50;
+    public static final int JudgeDuration = 3 * 50 * 50;    //最后10s需判断买入的商品能否卖出
     public static final int fps = 50;
     public static final boolean test = false;    // 是否可写入
 
@@ -45,6 +47,11 @@ public class Main {
                 if (robots[i].isArrive()){
                     // 有物品就买，没有就等待,逐帧判断
                     if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){
+                        if (frameID > JudgeDuration){
+                            if (!robots[i].canBugJudge()){
+                                continue;
+                            }
+                        }
                         printBuy(i);
                         robots[i].srcStation.bookPro = false;       //解除预定
                         printLog("buy");
@@ -64,6 +71,7 @@ public class Main {
             }
         }
     }
+
 
     public static void printSell(int robotId){
         outStream.printf("sell %d\n", robotId);
@@ -99,7 +107,7 @@ public class Main {
         outStream.println("OK");
         outStream.flush();
 
-        int frameID;
+
         while (inStream.hasNextLine()) {
             String line = inStream.nextLine();
             String[] parts = line.split(" ");

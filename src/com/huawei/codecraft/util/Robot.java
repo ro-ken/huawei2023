@@ -14,13 +14,13 @@ public class Robot {
     public static final double fullRadius = 0.53;
     public static final int density = 20;
     public static final int maxSpeed = 6;//m/s
-    public static final int minSpeed = -2;//m/s
+//    public static final int minSpeed = -2;//m/s
     public static final double maxRotate = pi/2;//rad/s
     public static final int maxForce = 250;//N
     public static final int maxRotateForce = 50;//N*m
 
-    public static final double canForwardRad = 0.4 ; // 行走最小角度偏移量，0.4=23度
-    public static final double angleSpeedOffset = 0.1 ; //(rad)最大误差 0.003
+    public static final double canForwardRad = pi/3 ; // 行走最小角度偏移量，0.4=23度
+//    public static final double angleSpeedOffset = 0.1 ; //(rad)最大误差 0.003
     public static double emptyA;     //加速度
     public static double fullA;     //加速度
 
@@ -174,7 +174,7 @@ public class Robot {
     }
 
     // 计算最快到达需要多久
-    private double calcFpsToPlace(double dis) {
+    private int calcFpsToPlace(double dis) {
         double time = 0;
         double a = getAcceleration();
         double minDistance = getMinDistance();
@@ -185,7 +185,7 @@ public class Robot {
             double time2 = (dis - minDistance/2)/maxSpeed;
             time = time1 + time2;
         }
-        return time*50;
+        return (int) (time*50);
     }
 
     // 计算路线
@@ -266,6 +266,15 @@ public class Robot {
         double a = getAngleAcceleration();
         double angle = angV * angV / (2*a);
         return angle;
+    }
+
+    // 买入的商品是否有时间售出
+    public boolean canBugJudge() {
+        double ox = srcStation.availNextStation.x;
+        double oy = srcStation.availNextStation.y;
+        int needFPS = calcFpsToPlace(srcStation.calcDistance(ox,oy));
+        int leftFps = Main.duration - Main.frameID - 100;   // 两s误差,后期可调整
+        return leftFps > needFPS;
     }
 }
 
