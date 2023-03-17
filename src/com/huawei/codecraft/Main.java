@@ -27,7 +27,7 @@ public class Main {
         if (test){
             log = new PrintStream("./log.txt");
             System.setOut(log);//把创建的打印输出流赋给系统。即系统下次向 ps输出
-            printLog("这行语句将会被写到log.txt文件中");
+//            printLog("这行语句将会被写到log.txt文件中");
         }
 
         schedule();
@@ -37,7 +37,6 @@ public class Main {
     private static void analyse() {
         for (int i = 0; i < 4; i++) {
                 printLog(robots[i].toString());
-
 
             if (robots[i].nextStation == null){
                 robots[i].selectBestStation();

@@ -66,7 +66,6 @@ public class Robot {
     }
 
     private static double calcRotateAcce(double radius) {
-        Main.printLog(radius);
         double s = pi * radius * radius;
         double m = s * density;
         double I = m * radius * radius * 0.5;
@@ -216,15 +215,15 @@ public class Robot {
 
     @Override
     public String toString() {
-        String s = route == null ? " ": ", tarturn=" + route.theoryTurn +", set=" + route.setMinAngle ;
+//        String s = route == null ? " ": ", tarturn=" + route.theoryTurn +", set=" + route.setMinAngle ;
         return "Robot{" +
                 "id=" + id +
                 ", carry=" + carry +
                 ", Vr=" + angV +
-                ", Vx=" + lineVx +
-                ", Vy=" + lineVy +
+//                ", Vx=" + lineVx +
+//                ", Vy=" + lineVy +
                 ", turn=" + turn +
-                s +
+                route +
                 '}';
     }
 

@@ -8,6 +8,16 @@ class Route{
     double rx,ry;   // 距离矢量
     double clockwise = 0;    // 1为正向，-1为反向 ，0 不动
 
+    @Override
+    public String toString() {
+        return "Route{" +
+                "clockwise=" + clockwise +
+                ", realA=" + realAngleDistance +
+                ", theoryTurn=" + theoryTurn +
+                ", stopA=" + stopMinAngleDistance +
+                '}';
+    }
+
     public double realDistance;
     private double realAngleDistance;
     public double setMinAngle;   // 设置临界减速角度
@@ -30,7 +40,6 @@ class Route{
     // 给定设置角度和速度
     public void rush() {
         calcParamEveryFrame();    // 参数计算
-
         //计算线速度
         if (realAngleDistance < Robot.canForwardRad && stopMinDistance < realDistance){
             // 速度太小，加速
@@ -42,7 +51,9 @@ class Route{
 
         //计算角速度
         if (stopMinAngleDistance < realAngleDistance){
+            double coff = Math.min(1,(realAngleDistance-stopMinAngleDistance)/realAngleDistance);
             Main.printRotate(robot.id, Robot.pi * clockwise);
+//            Main.printLog("rotate" + Robot.pi * clockwise * coff);
         }else {
             Main.printRotate(robot.id,0);
         }
@@ -53,7 +64,9 @@ class Route{
     public void calcTheoryTurn() {
         // 计算夹角弧度
         theoryTurn = Math.atan2(ry, rx);
-        realAngleDistance = Math.abs(robot.turn - theoryTurn);
+        double tmp = Math.abs(robot.turn - theoryTurn);
+        realAngleDistance = Math.min(tmp,2* Robot.pi-tmp);
+        Main.printLog("tmp"+tmp+"real"+realAngleDistance);
     }
 
     public void calcClockwise() {
@@ -64,18 +77,18 @@ class Route{
         }
     }
 
-//    public void calcSetMinAngle() {
-//        double tmpAngle = Math.abs(robot.turn - theoryTurn);
-//        double deltaAngle = Math.min(tmpAngle,2* Robot.pi-tmpAngle);
-//        double minAngle = robot.getMinAngle();
-//        if (deltaAngle <= minAngle){
-//            setMinAngle = deltaAngle/2;
-////            turnSpeedCoef = 0.4;
-//        }else {
-//            setMinAngle = robot.getMinAngle()/2;
-////            turnSpeedCoef = 0.8;
-//        }
-//    }
+    public void calcSetMinAngle() {
+        double tmpAngle = Math.abs(robot.turn - theoryTurn);
+        double deltaAngle = Math.min(tmpAngle,2* Robot.pi-tmpAngle);
+        double minAngle = robot.getMinAngle();
+        if (deltaAngle <= minAngle){
+            setMinAngle = deltaAngle/2;
+//            turnSpeedCoef = 0.4;
+        }else {
+            setMinAngle = robot.getMinAngle()/2;
+//            turnSpeedCoef = 0.8;
+        }
+    }
 
 //    public void calcSetMinDistance() {
 //
@@ -89,6 +102,7 @@ class Route{
 
 
     public void calcParamEveryFrame() {
+        Main.printLog("fdsafasdf");
         calcVector();   // 距离矢量
         calcTheoryTurn();//理论偏角
         calcClockwise();    // 转动方向
