@@ -12,6 +12,7 @@ public class Main {
     private static final PrintStream outStream = new PrintStream(new BufferedOutputStream(System.out));
     private static PrintStream log = null;
     public static int frameID=0;
+    public static MyThread thread;
 
     public static Robot[] robots = new Robot[4];
     public static Station[] stations = new Station[50];
@@ -103,6 +104,8 @@ public class Main {
     private static void schedule() {
         initMap();
         initialization();
+        Thread thread = new MyThread();
+        thread.start();
         outStream.println("OK");
         outStream.flush();
 
