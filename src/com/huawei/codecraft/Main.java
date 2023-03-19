@@ -12,7 +12,7 @@ public class Main {
     private static final PrintStream outStream = new PrintStream(new BufferedOutputStream(System.out));
     private static PrintStream log = null;
     public static int frameID=0;
-    public static MyThread thread;
+//    public static MyThread thread;
 
     public static Robot[] robots = new Robot[4];
     public static Station[] stations = new Station[50];
@@ -22,6 +22,7 @@ public class Main {
     public static final int JudgeDuration = 3 * 50 * 50;    //最后10s需判断买入的商品能否卖出
     public static final int fps = 50;
     public static final boolean test = false;    // 是否可写入
+    public static final int robotNum = 4;
 
     public static void main(String[] args) throws FileNotFoundException {
 
@@ -36,8 +37,9 @@ public class Main {
 
     // 核心代码，分析如何运动
     private static void analyse() {
-        for (int i = 0; i < 4; i++) {
-                printLog(robots[i].toString());
+
+        for (int i = 0; i < robotNum; i++) {
+//                printLog(robots[i].toString());
 
             if (robots[i].nextStation == null){
                 robots[i].selectBestStation();
@@ -70,6 +72,21 @@ public class Main {
                 }
             }
         }
+
+
+        for (int i = 0; i < robotNum; i++) {
+//            if ()
+            robots[i].calcMoveEquation();
+        }
+        // 对每个机器人依次进行碰撞计算
+        for (int i = 0; i < robotNum-1; i++) {
+//            if (robots[i].isTempPlace) continue;
+            for (int j = i+1; j < robotNum; j++) {
+                if (robots[i].angV == 0)
+                    robots[i].calcBump(robots[j]);
+            }
+        }
+
     }
 
 
@@ -104,8 +121,8 @@ public class Main {
     private static void schedule() {
         initMap();
         initialization();
-        Thread thread = new MyThread();
-        thread.start();
+//        Thread thread = new MyThread();
+//        thread.start();
         outStream.println("OK");
         outStream.flush();
 
@@ -118,7 +135,12 @@ public class Main {
             readUtilOK();
 
             printFrame(frameID);
+
+            long t1 = System.currentTimeMillis();
             analyse();
+            long t2 = System.currentTimeMillis();
+            printLog("time:"+String.valueOf(t2-t1));
+
             printOk();
         }
     }
@@ -160,8 +182,8 @@ public class Main {
                 robot.lineVx = Double.parseDouble(parts[5]);
                 robot.lineVy = Double.parseDouble(parts[6]);
                 robot.turn = Double.parseDouble(parts[7]);
-                robot.x = Double.parseDouble(parts[8]);
-                robot.y = Double.parseDouble(parts[9]);
+                robot.pos.x = Double.parseDouble(parts[8]);
+                robot.pos.y = Double.parseDouble(parts[9]);
             }
             // do something;
         }
@@ -213,6 +235,24 @@ public class Main {
             // do something;
         }
         return false;
+    }
+
+    // 计算向量的点积
+    public static double dotProduct(double x1,double y1, double x2,double y2) {
+        return x1 * x2 + y1 * y2;
+    }
+
+    // 计算向量的点积
+    public static double dotProduct(Point vector1,Point vector2) {
+        return dotProduct(vector1.x,vector1.y,vector2.x,vector2.y);
+    }
+
+    // 计算向量的模长
+    public static double norm(double x,double y) {
+        return Math.sqrt(x*x + y*y);
+    }
+    public static double norm(Point vector) {
+        return norm(vector.x, vector.y);
     }
 
 }

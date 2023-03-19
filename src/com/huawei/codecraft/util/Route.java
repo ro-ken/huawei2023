@@ -4,8 +4,10 @@ import com.huawei.codecraft.Main;
 
 // 运动过程描述
 class Route{
-    double ox,oy;
-    double rx,ry;   // 距离矢量
+    public Point target;
+//    double ox,oy;
+    public Point vector;    // todo 每次都得更新，可能是tmpplace
+//    double rx,ry;   // 距离矢量
     double clockwise = 0;    // 1为正向，-1为反向 ，0 不动
 
     @Override
@@ -22,18 +24,17 @@ class Route{
     private double realAngleDistance;
     public double setMinAngle;   // 设置临界减速角度
     public double setMinDistance;   // 设置临界减速距离
-//    public double turnSpeedCoef = 1;    // 设置旋转系数，角度越小，转得越慢
-//    public double lineSpeedCoef = 1;    // 设置直线系数，距离越近，走的越慢
     double theoryTurn;
     double angleOffset;
     double stopMinDistance;
     double stopMinAngleDistance;
+
     Robot robot;
 
 
     public Route(double ox,double oy,Robot robot) {
-        this.ox = ox;
-        this.oy = oy;
+        target = new Point(ox,oy);
+        vector = new Point();
         this.robot = robot;
     }
 
@@ -51,7 +52,7 @@ class Route{
 
         //计算角速度
         if (stopMinAngleDistance < realAngleDistance){
-            double coff = Math.min(1,(realAngleDistance-stopMinAngleDistance)/realAngleDistance);
+//            double coff = Math.min(1,(realAngleDistance-stopMinAngleDistance)/realAngleDistance);
             Main.printRotate(robot.id, Robot.pi * clockwise);
 //            Main.printLog("rotate" + Robot.pi * clockwise * coff);
         }else {
@@ -63,10 +64,10 @@ class Route{
 
     public void calcTheoryTurn() {
         // 计算夹角弧度
-        theoryTurn = Math.atan2(ry, rx);
+        theoryTurn = Math.atan2(vector.y, vector.x);
         double tmp = Math.abs(robot.turn - theoryTurn);
         realAngleDistance = Math.min(tmp,2* Robot.pi-tmp);
-        Main.printLog("tmp"+tmp+"real"+realAngleDistance);
+//        Main.printLog("tmp"+tmp+"real"+realAngleDistance);
     }
 
     public void calcClockwise() {
@@ -102,7 +103,7 @@ class Route{
 
 
     public void calcParamEveryFrame() {
-        Main.printLog("fdsafasdf");
+
         calcVector();   // 距离矢量
         calcTheoryTurn();//理论偏角
         calcClockwise();    // 转动方向
@@ -118,9 +119,26 @@ class Route{
 
     // 关键参数，每一帧需要重新计算
     private void calcVector() {
-        rx = ox - robot.x;
-        ry = oy - robot.y;
-        realDistance = Math.pow(rx*rx+ry*ry,0.5);
+        vector.x = target.x - robot.pos.x;
+        vector.y = target.y - robot.pos.y;
+        realDistance = Main.norm(vector);
 
+    }
+
+    // 计算向量的模长
+    public double calcDeltaAngle(Point other) {
+        double dotProduct = Main.dotProduct(vector,other); // 计算点积
+        double normA = Main.norm(vector); // 计算向量a的模长
+        double normB = Main.norm(other); // 计算向量b的模长
+
+        double cosTheta = dotProduct / (normA * normB); // 计算余弦值
+        double theta = Math.acos(cosTheta); // 将余弦值转化为弧度值
+        return theta;
+    }
+
+    // 判断是否到达了目的地
+    public boolean isArriveTarget() {
+        double dis = target.calcDistance(robot.pos);
+        return dis < robot.getRadius() * robot.arriveMinDistance;
     }
 }

@@ -9,7 +9,7 @@ import java.util.PriorityQueue;
 
 class Pair{
     Station key;
-    Integer value;
+    Integer value;  // 价值，排序用
 
     public Pair(Station key, Integer value) {
         this.key = key;
@@ -40,8 +40,8 @@ public class Station{
 
     int Id;
     public int type;   // 1-9
-    double x;
-    double y;
+    public Point pos;
+
     public int leftTime;   // 剩余时间，帧数 -1：未生产 ； 0 阻塞；>0 剩余帧数
     public int rowStatus; // 原材料 二进制位表描述，例如 48(110000) 表示拥有物品 4 和 5
     public int proStatus; // 产品格 状态 0 无 1 有
@@ -79,8 +79,8 @@ public class Station{
         return "Sta{" +
                 "id=" + Id +
                 ", type=" + type +
-                ", x=" + x +
-                ", y=" + y +
+                ", x=" + pos.x +
+                ", y=" + pos.y +
                 '}';
     }
 
@@ -92,8 +92,7 @@ public class Station{
     public Station(int id, int type, double x, double y) {
         Id = id;
         this.type = type;
-        this.x = x;
-        this.y = y;
+        pos = new Point(x,y);
         bookPro = false;
         bookRow = new boolean[8];
     }
@@ -103,19 +102,14 @@ public class Station{
         //两种情况， 加速，匀速，减速  or  加速 ，减速
         double minDistance = isEmpty?emptyMinDistance:fullMinDistance;
         double a = isEmpty ? Robot.emptyA:Robot.fullA;
-        double distance = calcDistance(ox,oy);
+        double distance = pos.calcDistance(ox,oy);
         double second ;
         if (distance <= minDistance){
-            second = Math.pow(distance/a,0.5);
+            second = Math.sqrt(distance/a);
         }else {
-            second = Math.pow(minDistance/a,0.5) + (distance-minDistance)/a;
+            second = Math.sqrt(minDistance/a) + (distance-minDistance)/a;
         }
         return second;
-    }
-
-    public double calcDistance(double ox, double oy) {
-        double tmp = Math.pow(x-ox,2) + Math.pow(y-oy,2);
-        return Math.pow(tmp,0.5);
     }
 
     // 距离换算成帧数
@@ -142,7 +136,7 @@ public class Station{
                 ArrayList<Station> stations = Main.map.get(tp);
                 for(int i=0;i<stations.size();i++) {
                     Station st = stations.get(i);
-                    Integer value = calcValue(st.x,st.y,false);
+                    Integer value = calcValue(st.pos.x,st.pos.y,false);
                     Pair pair = new Pair(st,value);
                     canSellStations.add(pair);
                 }
