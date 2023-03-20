@@ -29,7 +29,7 @@ class Route{
     double stopMinDistance;
     double stopMinAngleDistance;
 
-    double emergencyDistanceCoef = 1;   // 半径乘子，每个机器人紧急距离，外人不得靠近
+    double emergencyDistanceCoef = 0.5;   // 半径乘子，每个机器人紧急距离，外人不得靠近
     boolean isEmergency;// 是否紧急
     Point emergencyPos;    // 紧急机器人位置;
 

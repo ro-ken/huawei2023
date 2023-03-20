@@ -65,6 +65,14 @@ public class Station{
 
     }
 
+    public void setPosition(int type){
+        rowStatus = rowStatus | (1<<type);
+    }
+
+    public void clearPosition(int type){
+        rowStatus = rowStatus & (~(1<<type));
+    }
+
     public boolean positionIsFull(int type){
         return bitJudge(rowStatus,type);
     }

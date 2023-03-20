@@ -126,10 +126,6 @@ public class Robot {
 //        Station station = selectClosestStation();
         Station station = selectTimeShortestStation();
 //        Station maxStation = selectBestValueStation();
-        if (station == null){
-            Main.printLog("no station can use...");
-            return;
-        }
 
         nextStation = srcStation = station;
         Main.printLog("src"+srcStation);

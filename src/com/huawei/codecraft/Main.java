@@ -66,6 +66,8 @@ public class Main {
                     } else if (robots[i].nextStation == robots[i].destStation && !robots[i].nextStation.positionIsFull(robots[i].carry)){
                         printSell(i);
                         robots[i].destStation.bookRow[robots[i].srcStation.type] = false;   //解除预定
+                        robots[i].destStation.setPosition(robots[i].srcStation.type);       // 卖了以后对应物品空格置1
+//                        bookRow[robots[i].srcStation.type] = false;   //解除预定
 
                         printLog("sell");
                         robots[i].changeTarget();
