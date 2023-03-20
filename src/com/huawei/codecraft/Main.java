@@ -46,6 +46,10 @@ public class Main {
                 robots[i].calcRoute();
                 robots[i].rush();
             }else {
+
+                // 碰撞检测
+//                robots[i].calcMoveEquation();
+
                 if (robots[i].isArrive()){
                     // 有物品就买，没有就等待,逐帧判断
                     if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){
@@ -73,19 +77,18 @@ public class Main {
             }
         }
 
-
-        for (int i = 0; i < robotNum; i++) {
-//            if ()
-            robots[i].calcMoveEquation();
-        }
-        // 对每个机器人依次进行碰撞计算
-        for (int i = 0; i < robotNum-1; i++) {
+//
+//        for (int i = 0; i < robotNum; i++) {
+////            if ()
+//            robots[i].calcMoveEquation();
+//        }
+////        // 对每个机器人依次进行碰撞计算
+//        for (int i = 0; i < robotNum-1; i++) {
 //            if (robots[i].isTempPlace) continue;
-            for (int j = i+1; j < robotNum; j++) {
-                if (robots[i].angV == 0)
-                    robots[i].calcBump(robots[j]);
-            }
-        }
+//            for (int j = i+1; j < robotNum; j++) {
+//                 robots[i].calcBump(robots[j]);
+//            }
+//        }
 
     }
 
@@ -99,6 +102,10 @@ public class Main {
     public static void printForward(int robotId,int speed){
         outStream.printf("forward %d %d\n", robotId, speed);
     }
+    public static void printForward(int robotId,double speed){
+        outStream.printf("forward %d %f\n", robotId, speed);
+    }
+
     public static void printRotate(int robotId,double angleSpeed){
         outStream.printf("rotate %d %f\n", robotId, angleSpeed);
     }

@@ -36,4 +36,14 @@ public class Point{
     public double calcDistance(double ox, double oy) {
         return Math.sqrt(Math.pow(ox-x,2) + Math.pow(oy-y,2));
     }
+
+    // 计算两点向量
+    public Point calcVector(Point dest){
+        return new Point(dest.x-x, dest.y-y);
+    }
+
+    public double calcDot(Point oth){
+        return x*oth.y - oth.x*y;
+    }
+
 }

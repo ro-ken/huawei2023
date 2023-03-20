@@ -15,7 +15,7 @@ public class Robot {
     public static final int density = 20;
     public static final int maxSpeed = 6;//m/s
 //    public static final int minSpeed = -2;//m/s
-    public static final double maxRotate = pi/2;//rad/s
+    public static final double maxRotate = pi;//rad/s
     public static final int maxForce = 250;//N
     public static final int maxRotateForce = 50;//N*m
 
@@ -248,7 +248,8 @@ public class Robot {
             }
         }
 
-        route.rush();
+//        route.rush();
+        route.rush2();
     }
 
     @Override
@@ -362,6 +363,8 @@ public class Robot {
     // 碰撞计算
     public void calcBump(Robot other) {
         if (route.vector.x == 0 || other.route.vector.x == 0) return;    //应该不会是垂直情况
+
+
 
         // 检测两个机器人轨迹是否有交集
         if (routeBumpDetect(other)){
