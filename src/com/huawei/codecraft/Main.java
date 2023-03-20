@@ -79,19 +79,6 @@ public class Main {
             }
         }
 
-//
-//        for (int i = 0; i < robotNum; i++) {
-////            if ()
-//            robots[i].calcMoveEquation();
-//        }
-////        // 对每个机器人依次进行碰撞计算
-//        for (int i = 0; i < robotNum-1; i++) {
-//            if (robots[i].isTempPlace) continue;
-//            for (int j = i+1; j < robotNum; j++) {
-//                 robots[i].calcBump(robots[j]);
-//            }
-//        }
-
     }
 
 

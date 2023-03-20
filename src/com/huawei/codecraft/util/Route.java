@@ -3,7 +3,6 @@ package com.huawei.codecraft.util;
 import com.huawei.codecraft.Main;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 // 运动过程描述
 class Route{
@@ -18,8 +17,6 @@ class Route{
     double printTurnSpeed;
 
 
-
-
     public double realDistance;
     private double realAngleDistance;
     public double setMinAngle;   // 设置临界减速角度
@@ -30,6 +27,7 @@ class Route{
     double stopMinAngleDistance;
 
     double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
+    double verticalSafeDistanceCoef = 1.5;   // 半径乘子，每个机器人紧急距离，外人不得靠近
     boolean isEmergency;// 是否紧急
     Point emergencyPos;    // 紧急机器人位置;
 
@@ -139,6 +137,7 @@ class Route{
 
         unsafeRobotIds.clear(); // 先清空
         double emgDis = emergencyDistanceCoef * robot.getRadius() + 2 * robot.getRadius();
+        double verSafeDis = verticalSafeDistanceCoef * robot.getRadius() + 2 * robot.getRadius();
         double safeDis = perceptionDistanceCoef * stopMinDistance + emgDis;
         for (int i = 0; i < 4; i++) {
             if (i == robot.id) continue;
@@ -147,6 +146,7 @@ class Route{
             if (dis<safeDis){
                 // 目前只判断了两个条件，夹角和是否在内圈，后面第二圈也可以加一下判断
                 Point vec = robot.pos.calcVector(Main.robots[i].pos);
+                double verDis = calcVerticalDistance(Main.robots[i].pos);// 计算向量和速度垂直的距离
                 double angle = calcDeltaAngle(vec);
                 if (dis < emgDis && angle < emergencyAngle) {
                     // 目前只考虑一个紧急情况，若有多个，选取最紧急的
@@ -156,8 +156,10 @@ class Route{
                     unsafeRobotIds.add(i);
                     break;  // 紧急情况
                 }else {
-
                     if (angle < perceptionAngleRange){
+                        if (Robot.judgeWidth && verDis > verSafeDis){
+                            continue;
+                        }
                         safe = false;
                         unsafeRobotIds.add(i);
                     }
@@ -167,11 +169,27 @@ class Route{
         return safe;
     }
 
+    private double calcVerticalDistance(Point pos) {
+        // 先算线速度，夹角小于pi/2 刹车，大于pi/2 全速
+        Point speed = new Point(robot.lineVx,robot.lineVy);
+        Point posVec = robot.pos.calcVector(pos);
+        double dis = Main.norm(posVec);
+        double angle = calcDeltaAngle(speed,posVec);
+        double verDis = dis * Math.sin(angle); // 垂直距离 = 斜边 * sin (t)
+        return verDis;
+    }
+
     private void calcSafePrintSpeed() {
         //计算线速度
         if (realAngleDistance < Robot.canForwardRad && stopMinDistance < realDistance){
             // 速度太小，加速
-            printLineSpeed = Robot.maxSpeed;
+//            printLineSpeed = Robot.maxSpeed;
+            if (realAngleDistance < Robot.maxForwardRad){
+                printLineSpeed = Robot.maxSpeed;
+            }else {
+                printLineSpeed = Robot.rotateSpeedEquation.getY(realAngleDistance);
+            }
+
         }else {
             // 减速
             printLineSpeed = 0;

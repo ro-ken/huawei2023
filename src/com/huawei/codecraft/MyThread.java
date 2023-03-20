@@ -5,6 +5,8 @@ package com.huawei.codecraft;
  * @Data:2023/3/17 19:42
  * @Description: TODO
  */
+
+// 还未用到
 public class MyThread extends Thread{
     public int lastFrame = 0;   // 上一帧序号
 

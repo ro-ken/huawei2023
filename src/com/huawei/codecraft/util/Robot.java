@@ -19,7 +19,8 @@ public class Robot {
     public static final int maxForce = 250;//N
     public static final int maxRotateForce = 50;//N*m
 
-    public static final double canForwardRad = pi/3 ; // 行走最小角度偏移量，0.4=23度
+    public static final double canForwardRad = pi/2 ; // 行走最小角度偏移量
+    public static final double maxForwardRad = pi/4 ; // 最大速度的最小角度
 //    public static final double angleSpeedOffset = 0.1 ; //(rad)最大误差 0.003
     public static double emptyA;     //加速度
     public static double fullA;     //加速度
@@ -28,6 +29,7 @@ public class Robot {
     public static double fullRotateA;     //角加速度
     public static double emptyMinAngle; // 加速减速临界值 ,空载
     public static double fullMinAngle; // 加速减速临界值 ，满载
+    public static Line rotateSpeedEquation; // 转向速度方程
 
 
     int id;
@@ -55,6 +57,8 @@ public class Robot {
     public double tmpPlaceOffset = 1.2; // 半径乘子 偏移系数，单位 个，临时距离向右偏移多少
     public double minDistanceForWall = 4; // 半径乘子，偏移系数，单位 个，
     public double arriveMinDistance = 2;//半径乘子，和目的地的最小判定距离
+    public static final boolean judgeWidth = true;
+
 
     Route route;
 
@@ -67,6 +71,18 @@ public class Robot {
 
         emptyMinAngle = calcMinAngle(true);
         fullMinAngle = calcMinAngle(false);
+    }
+
+    public Robot(int stationId, double x, double y, int robotId) {
+        StationId = stationId;
+        this.nextStation = null;
+        this.srcStation = null;
+        this.destStation = null;
+        pos = new Point(x,y);
+        id=robotId;
+        topLine = new Line();
+        belowLine = new Line();
+        rotateSpeedEquation = new Line(new Point(maxForwardRad,maxSpeed),new Point(pi/2,0));
     }
 
 
@@ -90,17 +106,6 @@ public class Robot {
         return a;
     }
 
-
-    public Robot(int stationId, double x, double y, int robotId) {
-        StationId = stationId;
-        this.nextStation = null;
-        this.srcStation = null;
-        this.destStation = null;
-        pos = new Point(x,y);
-        id=robotId;
-        topLine = new Line();
-        belowLine = new Line();
-    }
 
     public static double calcTimeValue(int fps) {
         return f(fps,9000,0.8);
