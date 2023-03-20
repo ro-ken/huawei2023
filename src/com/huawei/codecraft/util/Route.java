@@ -29,7 +29,7 @@ class Route{
     double stopMinDistance;
     double stopMinAngleDistance;
 
-    double emergencyDistanceCoef = 0.5;   // 半径乘子，每个机器人紧急距离，外人不得靠近
+    double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
     boolean isEmergency;// 是否紧急
     Point emergencyPos;    // 紧急机器人位置;
 
@@ -37,6 +37,7 @@ class Route{
 
     double perceptionDistanceCoef = 2;  // 刹车距离 * 2 + emergencyDistance;这个距离以内要做出反应
     double perceptionAngleRange = Robot.pi/4;   // 前方一半视野角度
+    double emergencyAngle = Robot.pi/2;   // 前方一半视野角度
     ArrayList<Integer> unsafeRobotIds;
 
     public Route(double ox,double oy,Robot robot) {
@@ -141,10 +142,13 @@ class Route{
         double safeDis = perceptionDistanceCoef * stopMinDistance + emgDis;
         for (int i = 0; i < 4; i++) {
             if (i == robot.id) continue;
+//            if (robot.carry ==0 && Main.robots[i].carry==0) continue;   // 空载不检测碰撞
             double dis = robot.pos.calcDistance(Main.robots[i].pos);
             if (dis<safeDis){
                 // 目前只判断了两个条件，夹角和是否在内圈，后面第二圈也可以加一下判断
-                if (dis < emgDis) {
+                Point vec = robot.pos.calcVector(Main.robots[i].pos);
+                double angle = calcDeltaAngle(vec);
+                if (dis < emgDis && angle < emergencyAngle) {
                     // 目前只考虑一个紧急情况，若有多个，选取最紧急的
                     safe = false;
                     isEmergency = true;
@@ -152,8 +156,7 @@ class Route{
                     unsafeRobotIds.add(i);
                     break;  // 紧急情况
                 }else {
-                    Point vec = robot.pos.calcVector(Main.robots[i].pos);
-                    double angle = calcDeltaAngle(vec);
+
                     if (angle < perceptionAngleRange){
                         safe = false;
                         unsafeRobotIds.add(i);
