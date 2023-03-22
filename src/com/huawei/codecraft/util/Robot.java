@@ -569,10 +569,11 @@ public class Robot {
     public void setTask(Station task) {
 
         if (task.taskBook) return;
+        if (waterFlow.isType7 && !task.haveEmptyPosition()) return; // 没有空格位，若没有7的情况下，不用判断
         waterFlow.curTasks.get(task.type).add(task);  // 加入队列
         task.taskBook = true;   //加锁
         curTask = task;
-
+        // 若 task 的产品格都是满的，会报错
         setSrcDest(selectClosestSrcToDest(curTask),curTask);
     }
 

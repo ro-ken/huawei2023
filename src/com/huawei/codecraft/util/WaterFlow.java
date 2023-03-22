@@ -98,12 +98,13 @@ public class WaterFlow {
             //当前任务机器人过多，分配可用的
 
             task = newAvailableTask();
-        };
+        }
         if (task == null){
             // 456被占满，分配无效,等待
             Main.printLog("no task");
             return;
         }
+
         rob.setTask(task);
 //                curTask = task;
     }

@@ -28,6 +28,7 @@ class Route{
 
     double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
     double verticalSafeDistanceCoef = 1.5;   // 半径乘子，每个机器人紧急距离，外人不得靠近
+    double lineSpeedCoef = 3;   // y = kx
     boolean isEmergency;// 是否紧急
     Point emergencyPos;    // 紧急机器人位置;
 
@@ -36,6 +37,7 @@ class Route{
     double perceptionDistanceCoef = 2;  // 刹车距离 * 2 + emergencyDistance;这个距离以内要做出反应
     double perceptionAngleRange = Robot.pi/4;   // 前方一半视野角度
     double emergencyAngle = Robot.pi/2;   // 前方一半视野角度
+
     ArrayList<Integer> unsafeRobotIds;
 
     public Route(double ox,double oy,Robot robot) {
@@ -91,9 +93,14 @@ class Route{
         for(Integer i:unsafeRobotIds){
             Robot rot = Main.robots[i];
             Point posVec = robot.pos.calcVector(rot.pos);
+            double angle = calcDeltaAngle(posVec, speed);
             double cos = calcDeltaCos(speed, posVec);
-            if ( 1-cos < speedCoef){
-                speedCoef = cos;    //速度选择小的 安全
+//            if ( 1-cos < speedCoef){
+//                speedCoef = 1-cos;    //速度选择小的 安全
+//            }
+            double y = angle * lineSpeedCoef;
+            if ( y < speedCoef){
+                speedCoef = y;    //速度选择小的 安全
             }
             double dis = robot.pos.calcDistance(rot.pos);
             if (dis < minDis){
@@ -109,11 +116,16 @@ class Route{
     private int calcAvoidBumpClockwise(Point speed,Point posVec) {
         int cw;
         double dot = speed.calcDot(posVec);
-        if (dot < 0){
-            // speed 在逆时针方位
-            cw = 1;
-        }else {
+        if (Math.abs(dot)<0.1) {
             cw = -1;
+        }
+        else {
+            if (dot < 0){
+                // speed 在逆时针方位
+                cw = 1;
+            }else {
+                cw = -1;
+            }
         }
         return cw;
     }
