@@ -23,6 +23,8 @@ public class Main {
     public static final int fps = 50;
     public static final boolean test = false;    // 是否可写入
     public static final int robotNum = 4;
+    public static boolean have9;
+    public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
 
     public static void main(String[] args) throws FileNotFoundException {
 
@@ -43,7 +45,6 @@ public class Main {
 
             if (robots[i].nextStation == null){
                 robots[i].selectBestStation();
-                robots[i].calcRoute();
                 robots[i].rush();
             }else {
 
@@ -51,8 +52,12 @@ public class Main {
 //                robots[i].calcMoveEquation();
 
                 if (robots[i].isArrive()){
+                    Main.printLog("arrive");
                     // 有物品就买，没有就等待,逐帧判断
+                    Main.printLog(robots[i].nextStation == robots[i].srcStation);
+                    Main.printLog(robots[i].nextStation);
                     if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){
+                        Main.printLog("arrive");
                         if (frameID > JudgeDuration){
                             if (!robots[i].canBugJudge()){
                                 continue;
@@ -117,8 +122,7 @@ public class Main {
     private static void schedule() {
         initMap();
         initialization();
-//        Thread thread = new MyThread();
-//        thread.start();
+
         outStream.println("OK");
         outStream.flush();
 
@@ -127,7 +131,7 @@ public class Main {
             String line = inStream.nextLine();
             String[] parts = line.split(" ");
             frameID = Integer.parseInt(parts[0]);
-            printLog(frameID);
+//            printLog(frameID);
             readUtilOK();
 
             printFrame(frameID);
@@ -135,7 +139,7 @@ public class Main {
             long t1 = System.currentTimeMillis();
             analyse();
             long t2 = System.currentTimeMillis();
-            printLog("time:"+String.valueOf(t2-t1));
+//            printLog("time:"+String.valueOf(t2-t1));
 
             printOk();
         }
@@ -145,6 +149,56 @@ public class Main {
         for (int i = 0; i < stationNum; i++) {
             stations[i].initialization();
         }
+        // 先初始化123，在456，在7
+        for (int i = 1; i <= 7; i++) {
+            if (map.containsKey(i)){
+                ArrayList<Station> stations = map.get(i);
+                for (Station st : stations){
+                    st.initialization2();
+                }
+            }
+        }
+//         station 初始化完毕
+//         选择最有价值的生产流水线投入生产，明确一条流水线有哪些节点
+//         分配四个机器人去负责不同的流水线
+        initWaterFlow();
+    }
+
+
+    private static void initWaterFlow() {
+        if (map.containsKey(7)){
+            // 最多开2条流水线
+            ArrayList<Station> sts = map.get(7);
+            if(sts.size() == 1){
+                WaterFlow flow = new WaterFlow(sts.get(0));
+                flow.assignRobot(4);//分配4个
+                waterFlows.add(flow);
+            }else {
+                Collections.sort(sts);
+                for (int i=0;i<2;i++){
+                    WaterFlow flow = new WaterFlow(sts.get(i));
+                    flow.assignRobot(2);    // 每条流水线两个机器人
+                    waterFlows.add(flow);
+                }
+            }
+        }else {
+            // 最多选择4条流水线
+            int[] ids = selectHighValueSt(4);
+            Station[] clone = stations.clone();
+            Arrays.sort(clone);
+
+            for (int i = 0; i < 4; i++) {
+                WaterFlow flow = new WaterFlow(clone[i]);
+                flow.assignRobot(1);    // 一个机器人负责一个
+                waterFlows.add(flow);
+            }
+        }
+        printLog(waterFlows);
+    }
+
+    // 选择价值最高的几个节点
+    private static int[] selectHighValueSt(int i) {
+        return new int[0];
     }
 
 
@@ -201,6 +255,7 @@ public class Main {
                 for (Integer key: map.keySet()){
                     printLog("type = " + key + "nums = " +map.get(key).size());
                 }
+                have9 = map.containsKey(9); // 是否有9号工作台
 //                printLog(robotId);
 //                printLog("hi");
                 return true;

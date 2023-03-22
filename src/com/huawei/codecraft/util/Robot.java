@@ -2,6 +2,8 @@ package com.huawei.codecraft.util;
 
 import com.huawei.codecraft.Main;
 
+import java.util.ArrayList;
+
 /**
  * @Author: ro_kin
  * @Data:2023/3/13 19:47
@@ -48,6 +50,10 @@ public class Robot {
     public Station srcStation;
     public Station destStation;
 
+    public WaterFlow waterFlow; // 处于哪条流水线
+    public Station curTask; // 当前的任务    // 做完清空
+    public Station lastStation; // 当前处于那个工作站，供决策使用，到达更新 todo
+
     // 碰撞相关
     public boolean isTempPlace = false;   // 是否去往临时目的地，避免碰撞
     public Point tmpPos;
@@ -58,6 +64,7 @@ public class Robot {
     public double minDistanceForWall = 4; // 半径乘子，偏移系数，单位 个，
     public double arriveMinDistance = 2;//半径乘子，和目的地的最小判定距离
     public static final boolean judgeWidth = true;
+    //todo 不要撞墙，
 
 
     Route route;
@@ -128,19 +135,52 @@ public class Robot {
 
     // 选一个最佳的工作站
     public void selectBestStation() {
-//        Station station = selectClosestStation();
-        Station station = selectTimeShortestStation();
+        if (waterFlow == null){
+            Station station = selectTimeShortestStation();
 //        Station maxStation = selectBestValueStation();
-        if (station == null){
-            Main.printLog("no available station ! wait...");
-            return;
+            if (station == null){
+                Main.printLog("no available station ! wait...");
+                return;
+            }
+            setSrcDest(station,srcStation.availNextStation);
+
+        }else {
+            useWaterFlowSelectMode();
         }
-        nextStation = srcStation = station;
+
+    }
+    public void setSrcDest(Station src, Station dest) {
+        nextStation = srcStation = src;
         Main.printLog("src"+srcStation);
-        destStation = srcStation.availNextStation;
+        destStation = dest;
         Main.printLog("dest" + destStation);
         srcStation.bookPro = true;      // 预定位置
-        destStation.bookRow[srcStation.type] = true;
+
+        if (destStation.type <= 7)  {   // 8,9 不需要预定
+            destStation.bookRow[srcStation.type] = true;
+        }
+        calcRoute();
+    }
+
+    // 使用流水线模式
+    public void useWaterFlowSelectMode() {
+
+        if (curTask == null){
+            // 开始，这种情况是运输完了456,需要上边下发新任务
+            waterFlow.assignTask(this);
+        }else {
+            // 还未完成生成，继续完成
+            for (int ty : Station.item[curTask.type].call) {
+                // 列出需要的物品,若物品还为空，则说明需要去取
+                if (!curTask.positionIsFull(ty)){
+                    // 已排序，取最近 todo 结合自身距离选src
+                    Pair p = curTask.canBuyStationsMap.get(ty).peek();
+                    setSrcDest(p.getKey(),curTask);
+                }
+            }
+
+        }
+
     }
 
     private Station selectClosestStation() {
@@ -243,14 +283,14 @@ public class Robot {
 
     public void rush() {
 
-        // 临时目的地判断是否到达
-        if (isTempPlace){
-            if (route.isArriveTarget()){
-                isTempPlace = false;
-                if (nextStation == null) return;
-                route.target.set(nextStation.pos);// 重新设置目的地
-            }
-        }
+//        // 临时目的地判断是否到达
+//        if (isTempPlace){
+//            if (route.isArriveTarget()){
+//                isTempPlace = false;
+//                if (nextStation == null) return;
+//                route.target.set(nextStation.pos);// 重新设置目的地
+//            }
+//        }
 
 //        route.rush();
         route.rush2();
@@ -274,7 +314,7 @@ public class Robot {
     // 判断目标点是否到达工作台
     public boolean isArrive() {
         if (StationId == nextStation.Id){
-            Main.printLog("robot arrived id ="+StationId);
+//            Main.printLog("robot arrived id ="+StationId);
             return true;
         }else{
             return false;
@@ -286,11 +326,50 @@ public class Robot {
             nextStation = destStation;
             calcRoute();
         }else {
-
+            if (waterFlow != null) {
+                useWaterFlowChangeMode();
+            }
             nextStation = srcStation = destStation = null;
+
         }
         Main.printLog("state change");
         Main.printLog("next station" + nextStation);
+    }
+
+    private void useWaterFlowChangeMode() {
+        // 流水线模式，加一些控制
+        if (curTask != null){
+            // 需判断当前任务是否完成，
+            // 若有产品，也要结束，把产品先运过去
+//            if (curTask.haveEmptyPosition()) return;
+            if (curTask.haveEmptyPosition()) {
+                Main.printLog("11111111111111111111");
+                if (!waterFlow.isType7)
+                    return;
+                // 产品卖不出去才继续生产
+                if (curTask.proStatus == 0 || waterFlow.target.positionIsFull(curTask.type) || waterFlow.target.bookRow[curTask.type]) {
+                    return;
+                }else {
+                    waterFlow.curTasks.get(curTask.type).remove(curTask);    // 删除任务
+                    curTask.taskBook = false;
+                    lastStation = nextStation;
+                    curTask = null;
+                    return;
+                }
+
+            }
+            Main.printLog("222222222");
+                // 当前任务已经完成，释放资源
+            waterFlow.completed.put(curTask.type,waterFlow.completed.get(curTask.type) + 1);    // 完成数 + 1
+            waterFlow.curTasks.get(curTask.type).remove(curTask);    // 删除任务
+            curTask.taskBook = false;
+//            Main.printLog(curTask+"lock release");
+            lastStation = nextStation;
+            curTask = null;
+        }else {
+            // 若为空，交给下一帧处理
+            lastStation = nextStation;
+        }
     }
 
     // 通过当前速度减速到0 的最小距离
@@ -310,7 +389,7 @@ public class Robot {
 
     // 买入的商品是否有时间售出
     public boolean canBugJudge() {
-        int needFPS = calcFpsToPlace(srcStation.pos.calcDistance(srcStation.availNextStation.pos));
+        int needFPS = calcFpsToPlace(srcStation.pos.calcDistance(destStation.pos));
         int leftFps = Main.duration - Main.frameID - 100;   // 两s误差,后期可调整
         return leftFps > needFPS;
     }
@@ -489,6 +568,46 @@ public class Robot {
         return true;
     }
 
+    public void setTask(Station task) {
+
+        if (task.taskBook) return;
+        waterFlow.curTasks.get(task.type).add(task);  // 加入队列
+        task.taskBook = true;   //加锁
+        curTask = task;
+
+        setSrcDest(selectClosestSrcToDest(curTask),curTask);
+    }
+
+
+    private Station selectClosestSrcToDest(Station dest) {
+        // 选择距离dest和自己最近的src
+        // 距离 =  robot -> src -> dest
+        double minTime = 100000;
+        Station st = null;
+        for (int ty : Station.item[dest.type].call) {
+            Main.printLog(dest);
+            Main.printLog(dest.bookRow[ty]);
+            Main.printLog(dest.positionIsFull(ty));
+            if (waterFlow.isType7){
+                // 时间小于等于0 ，表明未生产，将会一直阻塞
+                if (dest.bookRow[ty] || dest.positionIsFull(ty)) continue;
+            }
+            for (Station s:Main.map.get(ty)){
+                // 第一段空载，第二段满载
+                double t1 = s.distanceToFps(true,pos);
+                double t2 = s.distanceToFps(false,dest.pos);
+                double t = t1 + t2;
+                if (t < minTime){
+                    minTime = t;
+                    st = s;
+                }
+            }
+        }
+        if (st == null){
+            Main.printLog("-------task"+dest);
+        }
+        return st;
+    }
 }
 
 

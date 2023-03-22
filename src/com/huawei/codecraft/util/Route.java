@@ -58,10 +58,10 @@ class Route{
         calcParamEveryFrame();    // 参数计算
 
         if (isMoveSafe()){
-            Main.printLog("safe");
+//            Main.printLog("safe");
             calcSafePrintSpeed();
         }else {
-            Main.printLog("unsafe");
+//            Main.printLog("unsafe");
             calcUnsafePrintSpeed();
         }
         Main.printForward(robot.id,printLineSpeed);
@@ -71,7 +71,7 @@ class Route{
 
     private void calcUnsafePrintSpeed() {
         // 紧急情况，和其他机器人靠得很近，逃离
-        Main.printLog(isEmergency);
+//        Main.printLog(isEmergency);
         if (isEmergency){
             processEmergEvent();
         }else {
@@ -98,6 +98,7 @@ class Route{
             double dis = robot.pos.calcDistance(rot.pos);
             if (dis < minDis){
                 rotateCoef = cos;
+                // todo，不能处理，方向斜碰撞情况 \/
                 clockwise = calcAvoidBumpClockwise(speed,posVec);
             }
         }
