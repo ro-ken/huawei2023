@@ -343,7 +343,6 @@ public class Robot {
             // 若有产品，也要结束，把产品先运过去
 //            if (curTask.haveEmptyPosition()) return;
             if (curTask.haveEmptyPosition()) {
-                Main.printLog("11111111111111111111");
                 if (!waterFlow.isType7)
                     return;
                 // 产品卖不出去才继续生产
@@ -358,7 +357,6 @@ public class Robot {
                 }
 
             }
-            Main.printLog("222222222");
                 // 当前任务已经完成，释放资源
             waterFlow.completed.put(curTask.type,waterFlow.completed.get(curTask.type) + 1);    // 完成数 + 1
             waterFlow.curTasks.get(curTask.type).remove(curTask);    // 删除任务

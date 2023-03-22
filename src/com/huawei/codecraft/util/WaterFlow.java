@@ -185,7 +185,6 @@ public class WaterFlow {
         Main.printLog("now:"+now);
         if (now.type <= 6){
             if (now.proStatus == 1){
-                // 是给7的
                 if (!target.positionIsFull(now.type) && !target.bookRow[now.type]){
                     // 有空位 送
                     robot.setSrcDest(now,target);
@@ -205,12 +204,12 @@ public class WaterFlow {
                 }else urgentTask(robot);
             }
 
-        }else if (now.type == 7 && now.proStatus == 1){
-               //卖出
-                robot.setSrcDest(now,now.canSellStations.peek().getKey());
 
+        }else if (target.proStatus == 1 && !target.bookPro){
+            // 七八九的情况，判断7是否有物品
+               //卖出 7号
+            robot.setSrcDest(target,target.canSellStations.peek().getKey());
         }else {
-//               assign456Task(robot); //
             urgentTask(robot);
         }
 
@@ -243,14 +242,15 @@ public class WaterFlow {
         if (src != null){
             robot.setSrcDest(src,target);
         }else {
-            // 若没有物品，判断7是否有物品
-            if (target.proStatus == 1 && !target.bookPro){
-                // 若能运送，则运送
-                robot.setSrcDest(target,target.closest89);
-            }else {
-                // 若7也没有，则处理一个456号任务
-                assign456Task(robot);
-            }
+            assign456Task(robot);       // 不送7了，
+//            // 若没有物品，判断7是否有物品
+//            if (target.proStatus == 1 && !target.bookPro){
+//                // 若能运送，则运送
+//                robot.setSrcDest(target,target.closest89);
+//            }else {
+//                // 若7也没有，则处理一个456号任务
+//                assign456Task(robot);
+//            }
         }
     }
 }

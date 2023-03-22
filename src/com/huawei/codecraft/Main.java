@@ -52,12 +52,12 @@ public class Main {
 //                robots[i].calcMoveEquation();
 
                 if (robots[i].isArrive()){
-                    Main.printLog("arrive");
+//                    Main.printLog("arrive");
                     // 有物品就买，没有就等待,逐帧判断
                     Main.printLog(robots[i].nextStation == robots[i].srcStation);
                     Main.printLog(robots[i].nextStation);
                     if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){
-                        Main.printLog("arrive");
+//                        Main.printLog("arrive");
                         if (frameID > JudgeDuration){
                             if (!robots[i].canBugJudge()){
                                 continue;

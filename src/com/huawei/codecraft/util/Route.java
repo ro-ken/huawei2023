@@ -132,6 +132,7 @@ class Route{
         printTurnSpeed = Robot.maxRotate * clockwise;
     }
 
+    // 当前移动是否安全
     private boolean isMoveSafe() {
         boolean safe = true;
         isEmergency = false;
