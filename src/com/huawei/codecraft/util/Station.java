@@ -197,7 +197,7 @@ public class Station implements Comparable{
         return allMoney/allFps;
     }
 
-    private double calcEarnMoney(Point pos) {
+    public double calcEarnMoney(Point pos) {
         int baseMoney = Goods.item[type].earn;
         int fps1 = distanceToFps(false,pos);
         double theoryMoney = (baseMoney * Robot.calcTimeValue(fps1));   // 不算碰撞
@@ -335,6 +335,34 @@ public class Station implements Comparable{
             }
         }
         return false;
+    }
+
+    public boolean positionFull() {
+        for (int tp : item[type].call) {
+            if (!positionIsFull(tp)){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // 原料格没人预定
+    public boolean positionNoBook() {
+        for (int tp : item[type].call) {
+            if (bookRow[tp]){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // 是否有东西可以卖
+    public boolean canSell() {
+        return proStatus == 1 && !bookPro;
+    }
+
+    public boolean canBuy(int tp) {
+        return !positionIsFull(tp) && !bookRow[tp];
     }
 }
 

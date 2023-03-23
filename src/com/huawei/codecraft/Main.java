@@ -19,7 +19,8 @@ public class Main {
     public static Map<Integer, ArrayList<Station>> map = new HashMap<>(); // 类型，以及对应的工作站
     public static int stationNum = 0;
     public static final int duration = 3 * 60 * 50;
-    public static final int JudgeDuration = 3 * 50 * 50;    //最后10s需判断买入的商品能否卖出
+    public static final int JudgeDuration = duration - 10 * 50;    //最后10s需判断买入的商品能否卖出
+    public static final int JudgeDuration2 = duration - 20 * 50;    //最后20s需判断选择是否最佳，是否还有商品没有卖
     public static final int fps = 50;
     public static final boolean test = false;    // 是否可写入
     public static final int robotNum = 4;
@@ -131,7 +132,7 @@ public class Main {
             String line = inStream.nextLine();
             String[] parts = line.split(" ");
             frameID = Integer.parseInt(parts[0]);
-//            printLog(frameID);
+            printLog(frameID);
             readUtilOK();
 
             printFrame(frameID);

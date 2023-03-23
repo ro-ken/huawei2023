@@ -89,7 +89,7 @@ public class Robot {
         id=robotId;
         topLine = new Line();
         belowLine = new Line();
-        rotateSpeedEquation = new Line(new Point(maxForwardRad,maxSpeed),new Point(pi/2,0));
+        rotateSpeedEquation = new Line(new Point(maxForwardRad,maxSpeed/1.5),new Point(pi/2,0));
     }
 
 
@@ -146,9 +146,79 @@ public class Robot {
 
         }else {
             useWaterFlowSelectMode();
+//            taskIsOK();
         }
 
     }
+
+    // 判断当前任务是否具有可行性
+    private void taskIsOK() {
+        // 主要是看剩余时间是否够
+        if (Main.frameID < Main.JudgeDuration2) return;
+//        if ()
+        int left = Main.duration - Main.frameID;    // 剩余时间
+        boolean flag = false;
+
+        if (waterFlow.isType7) {
+            // 有产品但没有机器人去
+            Main.printLog("123");
+            if (srcStation != null && srcStation.type == 7) return;
+            Main.printLog("456");
+            int t1 = waterFlow.target.distanceToFps(true,pos);   // 跑到target需要多久
+            boolean flag1 = (waterFlow.target.proStatus == 1 || waterFlow.target.leftTime>0);
+            if (!waterFlow.target.bookPro && flag1 && waterFlow.target.positionNoBook()){
+                // 如果有产品或在生产
+                if (waterFlow.target.proStatus == 0 ){
+                    t1 = Math.max(t1,waterFlow.target.leftTime);
+                }
+                int t = t1 + waterFlow.sellMinFps;  // 卖掉7总共的时间
+
+                if (t<left-50 && t>left-4*50){
+                    // 把产品取走
+                    Main.printLog("choose 7" + waterFlow.target);
+                    setSrcDest(waterFlow.target,waterFlow.target.closest89);
+                    flag = true;
+                }
+            }
+        }
+        if (srcStation == null) return;
+        if (!flag){
+            // 判断其他情况,在剩余时间是否能完成当前任务
+            int t1 = srcStation.distanceToFps(true,pos);
+            int t2 = srcStation.distanceToFps(false,destStation.pos);
+            int t= t1 + t2 + 100;  // 加上1s的误差，有旋转时间
+            if (t<left){
+                // 当前任务可能完不成了，找找有没有其他能完成的任务，赚点小钱
+                double value = 0;
+                Station src = null;
+                Station dest = null;
+                for (int i = 0; i < Main.stationNum; i++) {
+                    Station st = Main.stations[i];
+                    if (st.canSell() && st.type<=6){
+                        t1 = st.distanceToFps(true,pos);
+                        for (Pair p : st.canSellStations) {
+                            Station s = p.key;
+                            if (s.canBuy(st.type)){
+                                t2 = st.distanceToFps(false,s.pos);
+                                t= t1 + t2 + 100;  // 加上2s的误差，有旋转时间
+                                double earn = st.calcEarnMoney(s.pos);
+                                if (t<left && earn > value){
+                                    value = earn;
+                                    src = st;
+                                    dest = s;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (value>0){
+                    setSrcDest(src,dest);
+                }
+            }
+        }
+    }
+
     public void setSrcDest(Station src, Station dest) {
         nextStation = srcStation = src;
         Main.printLog("src"+srcStation);
@@ -173,9 +243,10 @@ public class Robot {
             for (int ty : Station.item[curTask.type].call) {
                 // 列出需要的物品,若物品还为空，则说明需要去取
                 if (!curTask.positionIsFull(ty)){
-                    // 已排序，取最近 todo 结合自身距离选src
+                    // 已排序，取最近
                     Pair p = curTask.canBuyStationsMap.get(ty).peek();
                     setSrcDest(p.getKey(),curTask);
+
                 }
             }
 
@@ -388,7 +459,7 @@ public class Robot {
     // 买入的商品是否有时间售出
     public boolean canBugJudge() {
         int needFPS = calcFpsToPlace(srcStation.pos.calcDistance(destStation.pos));
-        int leftFps = Main.duration - Main.frameID - 100;   // 两s误差,后期可调整
+        int leftFps = Main.duration - Main.frameID - 50;   // 1s误差,后期可调整
         return leftFps > needFPS;
     }
 
@@ -584,9 +655,6 @@ public class Robot {
         double minTime = 100000;
         Station st = null;
         for (int ty : Station.item[dest.type].call) {
-            Main.printLog(dest);
-            Main.printLog(dest.bookRow[ty]);
-            Main.printLog(dest.positionIsFull(ty));
             if (waterFlow.isType7){
                 // 时间小于等于0 ，表明未生产，将会一直阻塞
                 if (dest.bookRow[ty] || dest.positionIsFull(ty)) continue;

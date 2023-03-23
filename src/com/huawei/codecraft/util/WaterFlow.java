@@ -14,6 +14,7 @@ import java.util.*;
 public class WaterFlow {
     Station target;     // 流水线终极目标
     boolean isType7;    // 是否是7号工作站
+    int sellMinFps;     // 卖掉 target货物的fps
     ArrayList<Robot> robots ;
     Map<Integer,ArrayList<Station>> curTasks ;  //  7号工作站的456号任务
     Map<Integer,Integer> completed; // 完成的任务数量
@@ -33,6 +34,7 @@ public class WaterFlow {
         curTasks = new HashMap<>();
         completed = new HashMap<>();
         robots = new ArrayList<>();
+        sellMinFps = target.distanceToFps(false,target.closest89.pos);
         init();
     }
 
@@ -186,7 +188,11 @@ public class WaterFlow {
         Main.printLog("now:"+now);
         if (now.type <= 6){
             if (now.proStatus == 1){
-                if (!target.positionIsFull(now.type) && !target.bookRow[now.type]){
+                boolean flag1 = !target.positionIsFull(now.type) && !target.bookRow[now.type];  // 有空位
+                double tt = now.distanceToFps(false,target.pos);    // 运送到 target的时间
+                // 下面变量含义：没有产品，且在生产，原料满了，没有预定，送过去以后就生产完了，刚好取走货物
+                boolean flag2 = !target.bookRow[now.type] && target.positionFull() && target.proStatus == 0 && target.leftTime < tt;
+                if (flag1 || flag2){
                     // 有空位 送
                     robot.setSrcDest(now,target);
 
