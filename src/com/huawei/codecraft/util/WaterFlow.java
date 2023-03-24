@@ -47,28 +47,93 @@ public class WaterFlow {
 
 
     public void assignRobot(int robotNum) {
-        // 分配最近的机器人
-        for (int i = 0; i < 4; i++) {
-            Robot rob = Main.robots[i];
-            if (rob.waterFlow == null){
-                rob.waterFlow = this;
-                robots.add(rob);
-                if (robots.size() == robotNum) {
-                    break;
+
+        if (robotNum == 1){
+            for (int i = 0; i < robotNum; i++) {
+                Robot rob = selectClosestRobot();
+                if (rob != null){
+                    rob.waterFlow = this;
+                    robots.add(rob);
+                }
+            }
+        }else {
+            for (int i = 0; i < 4; i++) {
+                Robot rob = Main.robots[i];
+                if (rob.waterFlow == null){
+                    rob.waterFlow = this;
+                    robots.add(rob);
+                    if (robots.size() == robotNum) {
+                        break;
+                    }
                 }
             }
         }
+
         // 预先分配一个任务
         for (Robot rob : robots){
             assign456Task(rob);
         }
     }
 
+    private Robot selectClosestRobot() {
+        // 选择距离target最近的机器人
+        double minDis = 100000;
+        Robot minRot = null;
+        // 分配最近的机器人
+        for (int i = 0; i < 4; i++) {
+            Robot rob = Main.robots[i];
+            if (rob.waterFlow == null){
+                double dis = target.pos.calcDistance(rob.pos);
+                if (dis<minDis){
+                    minDis = dis;
+                    minRot = rob;
+                }
+            }
+        }
+        return minRot;
+    }
+
+    public Station selectDeadStation(Robot rob){
+        //123-456-9 的情况
+        // 可以用贪心，把局部的钱最大化，在生产流水线
+        // 选择单位价值大于target，且离机器人最近的任务
+        double minFps = 100000;
+        Station next = null;
+        for (int i = 0; i < Main.stationNum; i++) {
+            Station st = Main.stations[i];
+            if (st.type<=3 || st.type >=7 || st.taskBook) continue;
+            if (st.positionNoBook() && st.rowStatus == 0){
+                // 位置没有预定，而且全空才考虑
+                double fps = st.distanceToFps(true,rob.pos);
+                double valueFps = st.fastestComposeMoney * 3 / (fps+ st.fastestComposeFps * 3);
+                Main.printLog(st);
+                Main.printLog(st.fastestComposeMoney/st.fastestComposeFps);
+                Main.printLog("fps:"+fps+":valueFps"+valueFps);
+                Main.printLog("fastestComposeMoney:"+st.fastestComposeMoney+":fastestComposeFps"+st.fastestComposeFps);
+                if (valueFps > target.cycleAvgValue){
+                    if (fps < minFps){
+                        minFps = fps;
+                        next = st;
+                    }
+                }
+            }
+        }
+        return next;
+    }
+
     // 分配一个456号任务，必须把curTask字段赋值
     private void assign456Task(Robot rob) {
 
         if (!isType7){
-            rob.setTask(target);
+            Station next = selectDeadStation(rob);
+
+            if (next != null){
+                rob.setTask(next);
+            }else {
+                rob.setTask(target);
+            }
+//
+//            rob.setTask(target);
             return;
         }
 
@@ -112,26 +177,44 @@ public class WaterFlow {
     }
 
     private Station newAvailableTask() {
-        // 还是从大到小
-        Station task = newTask(6);
-        if (task == null){
-            task = newTask(5);
+        Station task = null;
+        if (Main.specialMapMode){
+            if (Main.mapSeq == 2 || Main.mapSeq == 4){
+                // 设置优先级 4最高
+                task = newAvailableTaskBySeq(new int[]{4,6,5});
+            }else {
+                task = newAvailableTaskBySeq(new int[]{6,5,4});
+            }
+        }else {
+            task = newAvailableTaskBySeq(new int[]{6,5,4});
         }
-        if (task == null){
-            task = newTask(4);
+        return task;
+    }
+
+    private Station newAvailableTaskBySeq(int[] seq) {
+        Station task = null;
+        for (int i = 0; i < 3; i++) {
+            if (task == null){
+                task = newTask(seq[i]);
+            }
         }
         return task;
     }
 
     private int selectTaskByValue(ArrayList<Integer> tasks) {
-        if (tasks.size() == 0) return 6;    // 6 最高
+        if (tasks.size() == 0) {
+            if (Main.specialMapMode){
+                if (Main.mapSeq == 2 || Main.mapSeq == 4){
+                    return 4;
+                }
+            }
+            return 6;    // 6 最高
+        }
         return Math.max(tasks.get(0),tasks.get(1)); // 2个任务 选最大  4 < 5 < 6
     }
 
     private Station newTask(int taskId) {
         PriorityQueue<Pair> pairs = target.canBuyStationsMap.get(taskId);
-//        Main.printLog(taskId);
-//        Main.printLog(pairs);
         for (Pair p :pairs){
             // 选择当前没有被占用,并且可以生产的station
             Station st = p.key;
@@ -174,11 +257,18 @@ public class WaterFlow {
     public void assignTask(Robot robot) {
 
         if (!isType7){
-            if (target.proStatus == 1){
-                robot.setSrcDest(target,target.closest89);
+            Station next = selectDeadStation(robot);
+            Main.printLog("next"+ next);
+            if (next!=null){
+                robot.setTask(next);
             }else {
-                robot.setTask(target);
+                if (target.proStatus == 1){
+                    robot.setSrcDest(target,target.closest89);
+                }else {
+                    robot.setTask(target);
+                }
             }
+
             return;
         }
 

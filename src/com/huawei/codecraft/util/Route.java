@@ -26,15 +26,19 @@ class Route{
     double stopMinDistance;
     double stopMinAngleDistance;
 
-    double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
-    double verticalSafeDistanceCoef = 1.5;   // 半径乘子，每个机器人紧急距离，外人不得靠近
-    double lineSpeedCoef = 3;   // y = kx
+    public static double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
+    public static double verticalSafeDistanceCoef = 1.5;   // 半径乘子，每个机器人紧急距离，外人不得靠近
+    public static double lineSpeedCoef = 3;   // y = kx
     boolean isEmergency;// 是否紧急
     Point emergencyPos;    // 紧急机器人位置;
 
-    double perceptionDistanceCoef = 2;  // 刹车距离 * 2 + emergencyDistance;这个距离以内要做出反应
-    double perceptionAngleRange = Robot.pi/4;   // 前方一半视野角度
-    double emergencyAngle = Robot.pi/2;   // 前方一半视野角度
+
+    public static double wallCoef = 3.2;      // 靠墙判定系数，多大算靠墙
+    public static double perceptionDistanceCoef = 2;  // 刹车距离 * 2 + emergencyDistance;这个距离以内要做出反应
+    public static double perceptionAngleRange = Robot.pi/4;   // 前方一半视野角度
+    public static double emergencyAngle = Robot.pi/2;   // 前方一半视野角度
+    public static double minDot = 0.1;   // 最小通信转角度点击
+    public static double cornerStopMinDistance = 0.3;   // 在墙角，提前多少减速
 
     ArrayList<Integer> unsafeRobotIds;
 
@@ -72,16 +76,21 @@ class Route{
     private void calcUnsafePrintSpeed() {
         // 紧急情况，和其他机器人靠得很近，逃离
 //        Main.printLog(isEmergency);
-        // if (robot.avoidRank >= Robot.avoidMid ) {
-        //     printLineSpeed = 0;
-        //     printTurnSpeed = 0;
-        //     return;
-        // }
         if (isEmergency){
             processEmergEvent();
         }else {
             processNormalEvent();
         }
+//        if ()
+
+    }
+
+    public boolean isNotInEdge() {
+
+        boolean flag1 = robot.pos.x - wallCoef * robot.getRadius() < 0 || robot.pos.y - wallCoef * robot.getRadius() < 0;
+        boolean flag2 = robot.pos.x + wallCoef * robot.getRadius() > 50 || robot.pos.y + wallCoef * robot.getRadius() > 50;
+
+        return !flag1 && !flag2;
     }
 
     private void processNormalEvent() {
@@ -108,7 +117,7 @@ class Route{
             double dis = robot.pos.calcDistance(rot.pos);
             if (dis < minDis){
                 rotateCoef = cos;
-                // todo，不能处理，方向斜碰撞情况 \/
+                // 不能处理，方向斜碰撞情况 \/
                 clockwise = calcAvoidBumpClockwise(speed,posVec);
             }
         }
@@ -119,7 +128,7 @@ class Route{
     private int calcAvoidBumpClockwise(Point speed,Point posVec) {
         int cw;
         double dot = speed.calcDot(posVec);
-        if (Math.abs(dot)<0.1) {
+        if (Math.abs(dot)<minDot) {
             cw = -1;
         }
         else {
@@ -138,13 +147,50 @@ class Route{
         Point speed = new Point(robot.lineVx,robot.lineVy);
         Point posVec = robot.pos.calcVector(emergencyPos);
         double angle = calcDeltaAngle(speed, posVec);
+
+//        if (angle<Robot.pi/2){
+//            printLineSpeed = 0;
+//        }else {
+//            printLineSpeed = 6;
+//        }
+//        clockwise = calcAvoidBumpClockwise(speed,posVec);
+//        printTurnSpeed = Robot.maxRotate * clockwise;
+
         if (angle<Robot.pi/2){
             printLineSpeed = 0;
         }else {
             printLineSpeed = 6;
         }
+
+          // 紧急事件中只会有1个机器人,解决同转问题
+        int id = unsafeRobotIds.get(0);
+        if (Main.clockCoef[robot.id] != -1) {   // 判断过了，被前面的机器人置为了 -1
+            Point speed1= new Point(robot.lineVx,robot.lineVy);
+            Point speed2 = new Point(Main.robots[id].lineVx,Main.robots[id].lineVy);
+            double radius = calcDeltaAngle(speed1, speed2);
+            if (radius > Robot.pi / 2) {
+                Main.clockCoef[id] *= -1;
+            }
+        }
         clockwise = calcAvoidBumpClockwise(speed,posVec);
-        printTurnSpeed = Robot.maxRotate * clockwise;
+        printTurnSpeed = Robot.maxRotate * clockwise * Main.clockCoef[robot.id];
+        Main.clockCoef[robot.id] = 1;
+//        clockwise = calcAvoidBumpClockwise(speed,posVec);
+//        printTurnSpeed = Robot.maxRotate * clockwise;
+
+
+//        if (realDistance< 1.8*stopMinDistance){
+//            printLineSpeed = 0;
+//            printTurnSpeed = 0;
+//        }else {
+//            if (angle<Robot.pi/2){
+//                printLineSpeed = 0;
+//            }else {
+//                printLineSpeed = 6;
+//            }
+//            clockwise = calcAvoidBumpClockwise(speed,posVec);
+//            printTurnSpeed = Robot.maxRotate * clockwise;
+//        }
     }
 
     // 当前移动是否安全
@@ -197,14 +243,22 @@ class Route{
     }
 
     private void calcSafePrintSpeed() {
+
+        // 若工作台在角落，需要提前减速，
+        if (target.nearWall()){
+            stopMinDistance +=cornerStopMinDistance;
+        }
+
         //计算线速度
         if (realAngleDistance < Robot.canForwardRad && stopMinDistance < realDistance){
             // 速度太小，加速
 //            printLineSpeed = Robot.maxSpeed;
             if (realAngleDistance < Robot.maxForwardRad){
                 printLineSpeed = Robot.maxSpeed;
-            }else {
+            }else if (isNotInEdge()){
                 printLineSpeed = Robot.rotateSpeedEquation.getY(realAngleDistance);
+            }else {
+                printLineSpeed = 0;
             }
 
         }else {
@@ -290,7 +344,7 @@ class Route{
         return calcDeltaAngle(vector,other);
     }
 
-    // 计算向量的模长
+    // 计算向量的角度
     public static double calcDeltaAngle(Point vector1,Point vector2) {
         double cosTheta = calcDeltaCos(vector1,vector2);
         double theta = Math.acos(cosTheta); // 将余弦值转化为弧度值

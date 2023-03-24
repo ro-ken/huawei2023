@@ -25,7 +25,10 @@ public class Main {
     public static final boolean test = false;    // 是否可写入
     public static final int robotNum = 4;
     public static boolean have9;
+    public static int mapSeq;   // 是第几号地图，做优化
+    public static boolean specialMapMode = true;   // 是否针对地图做优化
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
+    public static int[] clockCoef = new int[]{1, 1, 1, 1}; // 碰撞旋转系数
 
     public static void main(String[] args) throws FileNotFoundException {
 
@@ -147,6 +150,9 @@ public class Main {
     }
 
     private static void initialization() {
+
+        initMapSeq();
+
         for (int i = 0; i < stationNum; i++) {
             stations[i].initialization();
         }
@@ -163,6 +169,22 @@ public class Main {
 //         选择最有价值的生产流水线投入生产，明确一条流水线有哪些节点
 //         分配四个机器人去负责不同的流水线
         initWaterFlow();
+    }
+
+    // 初始化地图顺序
+    private static void initMapSeq() {
+        if (stations[0].type == 1){
+            mapSeq = 1;
+        }else if (stations[0].type == 6){
+            mapSeq = 2;
+        }else if (stations[0].type == 3){
+            mapSeq = 3;
+        }else if (stations[0].type == 7){
+            mapSeq = 4;
+        }else {
+            mapSeq = -1;    // 为初始化
+        }
+        Main.printLog("mapseq:"+mapSeq);
     }
 
 
@@ -187,6 +209,9 @@ public class Main {
             int[] ids = selectHighValueSt(4);
             Station[] clone = stations.clone();
             Arrays.sort(clone);
+            for (int i = 0; i < clone.length; i++) {
+                Main.printLog(clone[i] +":"+ clone[i].cycleAvgValue);
+            }
 
             for (int i = 0; i < 4; i++) {
                 WaterFlow flow = new WaterFlow(clone[i]);

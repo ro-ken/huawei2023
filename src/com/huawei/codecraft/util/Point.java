@@ -46,4 +46,8 @@ public class Point{
         return x*oth.y - oth.x*y;
     }
 
+    // 当前坐标是否靠近墙体
+    public boolean nearWall() {
+        return x < 1 || x > 49 || y < 1 || y > 49;
+    }
 }
