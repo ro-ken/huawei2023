@@ -32,8 +32,6 @@ class Route{
     boolean isEmergency;// 是否紧急
     Point emergencyPos;    // 紧急机器人位置;
 
-
-
     double perceptionDistanceCoef = 2;  // 刹车距离 * 2 + emergencyDistance;这个距离以内要做出反应
     double perceptionAngleRange = Robot.pi/4;   // 前方一半视野角度
     double emergencyAngle = Robot.pi/2;   // 前方一半视野角度
@@ -74,6 +72,11 @@ class Route{
     private void calcUnsafePrintSpeed() {
         // 紧急情况，和其他机器人靠得很近，逃离
 //        Main.printLog(isEmergency);
+        // if (robot.avoidRank >= Robot.avoidMid ) {
+        //     printLineSpeed = 0;
+        //     printTurnSpeed = 0;
+        //     return;
+        // }
         if (isEmergency){
             processEmergEvent();
         }else {
