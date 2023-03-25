@@ -12,7 +12,8 @@ import java.util.*;
 
 // 生产流水线
 public class WaterFlow {
-    Station target;     // 流水线终极目标
+    public Station target;     // 流水线终极目标
+    public Station target2;
     boolean isType7;    // 是否是7号工作站
     int sellMinFps;     // 卖掉 target货物的fps
     ArrayList<Robot> robots ;
@@ -106,10 +107,7 @@ public class WaterFlow {
                 // 位置没有预定，而且全空才考虑
                 double fps = st.distanceToFps(true,rob.pos);
                 double valueFps = st.fastestComposeMoney * 3 / (fps+ st.fastestComposeFps * 3);
-                Main.printLog(st);
-                Main.printLog(st.fastestComposeMoney/st.fastestComposeFps);
-                Main.printLog("fps:"+fps+":valueFps"+valueFps);
-                Main.printLog("fastestComposeMoney:"+st.fastestComposeMoney+":fastestComposeFps"+st.fastestComposeFps);
+
                 if (valueFps > target.cycleAvgValue){
                     if (fps < minFps){
                         minFps = fps;
@@ -140,16 +138,28 @@ public class WaterFlow {
         // 分配任务，分配后申请资源，离开释放
         // 选择目前进度最低的456，进度 = 完成数 + 任务被领取数
         // 进度相同，可按「距离」贪心选择 或 安装「价值」贪心选择
+
         ArrayList<Integer> tasks = selectSlowestTask();
         Main.printLog(tasks);
         Station task = null;
 
+        if (Main.specialMapMode && Main.mapSeq == 4){
+            task = newTask(4);
+            Main.printLog("task:" + task);
+            if (task != null){
+                rob.setTask(task);
+                return;
+            }
+        }
+
+        Main.printLog("task:" + task);
         if (tasks.size() == 1){
             // 有一个进度最低的，直接选择该任务
             task = newTask(tasks.get(0));
             Main.printLog("1:"+tasks.get(0));
         }else {
             int taskId = selectTaskByValue(tasks);
+            Main.printLog("best:"+taskId);
             task = newTask(taskId);
             if (task == null && tasks.size() == 2){
                 // 未分配成功，分配另一个
@@ -218,9 +228,15 @@ public class WaterFlow {
         for (Pair p :pairs){
             // 选择当前没有被占用,并且可以生产的station
             Station st = p.key;
+//            if (st.taskBook) continue;
+            Main.printLog("111");
+            boolean flag2 = (st.leftTime ==0 ||st.proStatus==1 && st.leftTime>0 ) && !st.haveEmptyPosition();
+            if (Main.specialMapMode && Main.mapSeq == 4 && st.type == 4 && st.bookNum2 <2 && !flag2) return st;
+            Main.printLog("222");
             if (st.taskBook) continue;
+            Main.printLog("333");
             if (st.leftTime >= 0 && !st.haveEmptyPosition()) continue;  // 阻塞，并且位置也满了
-
+            Main.printLog("444");
             return st;
         }
 
@@ -232,7 +248,7 @@ public class WaterFlow {
         int task4 = completed.get(4) + curTasks.get(4).size();
         int task5 = completed.get(5) + curTasks.get(5).size();
         int task6 = completed.get(6) + curTasks.get(6).size();
-        Main.printLog("4:"+task4+"  5:"+task5+"  6:"+task6);
+//        Main.printLog("4:"+task4+"  5:"+task5+"  6:"+task6);
 
         ArrayList<Integer> res = new ArrayList<>();
 
@@ -262,23 +278,29 @@ public class WaterFlow {
             if (next!=null){
                 robot.setTask(next);
             }else {
+//                if (target.proStatus == 1 && target.closest89.bookNum<=2){
                 if (target.proStatus == 1){
+                    // 机器人太多不好运送
                     robot.setSrcDest(target,target.closest89);
                 }else {
                     robot.setTask(target);
                 }
+//                robot.setTask(target);
             }
 
             return;
         }
 
+
+
         // 有两种类型的任务，一种是合成任务，给一个456工作台，让机器人自己去合成
         // 另外一个是运输任务，直接给源目的地，让机器人去搬运
         Station now = robot.lastStation;
         Main.printLog("now:"+now);
+        if (now == null) return;
         if (now.type <= 6){
             if (now.proStatus == 1){
-                boolean flag1 = !target.positionIsFull(now.type) && !target.bookRow[now.type];  // 有空位
+                boolean flag1 = target.canBuy(now.type);//!target.positionIsFull(now.type) && !target.bookRow[now.type];  // 有空位
                 double tt = now.distanceToFps(false,target.pos);    // 运送到 target的时间
                 // 下面变量含义：没有产品，且在生产，原料满了，没有预定，送过去以后就生产完了，刚好取走货物
                 boolean flag2 = !target.bookRow[now.type] && target.positionFull() && target.proStatus == 0 && target.leftTime < tt;
@@ -287,6 +309,7 @@ public class WaterFlow {
                     robot.setSrcDest(now,target);
 
                 }else {
+
                     //无空位,重新选择一个
                     urgentTask(robot);
                     //看目前有没有成品，送一个过去
@@ -301,19 +324,44 @@ public class WaterFlow {
                 }else urgentTask(robot);
             }
 
+//        }else if (target.proStatus == 1 && !target.bookPro){
+        }else{
+            if (target.proStatus == 1 && !target.bookPro){
+                    // 七八九的情况，判断7是否有物品
+                    //卖出 7号
+                    robot.setSrcDest(target,target.canSellStations.peek().getKey());
+            }else {
+                if (target2!=null && target2.proStatus == 1 && !target2.bookPro){
+                    robot.setSrcDest(target2,target2.canSellStations.peek().getKey());
+                }else {
+                    urgentTask(robot);
+                }
+            }
 
-        }else if (target.proStatus == 1 && !target.bookPro){
-            // 七八九的情况，判断7是否有物品
-               //卖出 7号
-            robot.setSrcDest(target,target.canSellStations.peek().getKey());
-        }else {
-            urgentTask(robot);
+            if (now.type == 7 && target2 != null){
+                // 如果满了，切换target
+                if (!target.haveEmptyPosition()){
+                    Station st = target;
+                    target = target2;
+                    target2 = st;
+                }
+            }
         }
-
     }
 
     //处理当前最需要处理的任务
     private void urgentTask(Robot robot) {
+
+        Main.printLog("555");
+        if (Main.specialMapMode && Main.mapSeq == 4){
+            Station task = newTask(4);
+            Main.printLog("ttkk"+task);
+            if (task != null){
+                robot.setTask(task);
+                return;
+            }
+        }
+
         // 最先判断7是否有空位，而且有产品，把产品运送到7，不能停下来
         ArrayList<Integer> empty = target.getEmptyRaw();
         Station src = null;

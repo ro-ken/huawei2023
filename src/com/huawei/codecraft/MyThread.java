@@ -12,7 +12,7 @@ public class MyThread extends Thread{
 
     @Override
     public void run() {
-        Main.printLog("Thread2 ... ");
+//        Main.printLog("Thread2 ... ");
 
         while (true){
             if (lastFrame == Main.frameID){

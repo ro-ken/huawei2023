@@ -23,7 +23,7 @@ public class Station implements Comparable{
     public int fastestComposeFps;
     public int fastestComposeMoney;
 
-    int Id;
+    public int Id;
     public int type;   // 1-9
     public Point pos;
 
@@ -32,13 +32,13 @@ public class Station implements Comparable{
     public int proStatus; // 产品格 状态 0 无 1 有
     public boolean[] bookRow;    // 原料空格是否预定
     public boolean bookPro;      // 产品空格是否预定
+    public int bookNum = 0; // 已经有多少机器人在往这个点赶
+    public int bookNum2 = 0; // 专用
 
     // 流水线参数
     public double cycleAvgValue;    // 生产一个周期的平均价值  ,赚的钱数/ 花费的时间
     public boolean taskBook;    // 任务是否被预定，针对456
     public WaterFlow waterFlow; // 目前处于那一条流水线
-
-
 
     static {
         item = new StationItem[10];
@@ -330,7 +330,7 @@ public class Station implements Comparable{
 
     public boolean haveEmptyPosition() {
         for (int tp : item[type].call) {
-            if (!positionIsFull(tp) && !bookRow[tp]){
+            if (canBuy(tp)){
                 return true;
             }
         }
@@ -363,6 +363,17 @@ public class Station implements Comparable{
 
     public boolean canBuy(int tp) {
         return !positionIsFull(tp) && !bookRow[tp];
+    }
+
+    public double getSafeDis() {
+        double dis1 = Robot.stationSafeDisCoef * Robot.fullRadius;
+        double dis2 = 0;
+        if (type <=3){
+            dis2 = emptyMinDistance/2;
+        }else {
+            dis2 = fullMinDistance/2;
+        }
+        return dis1 + dis2;
     }
 }
 

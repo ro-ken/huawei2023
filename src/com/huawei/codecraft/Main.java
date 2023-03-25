@@ -6,6 +6,7 @@ import java.io.PrintStream;
 import java.util.*;
 import com.huawei.codecraft.util.*;
 
+
 public class Main {
 
     private static final Scanner inStream = new Scanner(System.in);
@@ -22,7 +23,7 @@ public class Main {
     public static final int JudgeDuration = duration - 10 * 50;    //最后10s需判断买入的商品能否卖出
     public static final int JudgeDuration2 = duration - 20 * 50;    //最后20s需判断选择是否最佳，是否还有商品没有卖
     public static final int fps = 50;
-    public static final boolean test = false;    // 是否可写入
+    public static final boolean test = true;    // 是否可写入
     public static final int robotNum = 4;
     public static boolean have9;
     public static int mapSeq;   // 是第几号地图，做优化
@@ -69,6 +70,8 @@ public class Main {
                         }
                         printBuy(i);
                         robots[i].srcStation.bookPro = false;       //解除预定
+                        robots[i].srcStation.bookNum--;       //
+                        robots[i].destStation.bookNum++;       //
                         printLog("buy");
                         robots[i].changeTarget();
                         // 有物品就卖，没有就等待,逐帧判断
@@ -77,9 +80,12 @@ public class Main {
                         robots[i].destStation.bookRow[robots[i].srcStation.type] = false;   //解除预定
                         robots[i].destStation.setPosition(robots[i].srcStation.type);       // 卖了以后对应物品空格置1
 //                        bookRow[robots[i].srcStation.type] = false;   //解除预定
-
+                        robots[i].destStation.bookNum--;       //解除预定
+                        robots[i].destStation.bookNum2--;       //
                         printLog("sell");
                         robots[i].changeTarget();
+
+
                     }
                 }else{
                     // 没到目的地就继续前进
@@ -148,11 +154,13 @@ public class Main {
             printOk();
         }
     }
+    
+    
 
     private static void initialization() {
 
         initMapSeq();
-
+        initSpecialRobotParam();    // 初始化地图参数
         for (int i = 0; i < stationNum; i++) {
             stations[i].initialization();
         }
@@ -187,6 +195,21 @@ public class Main {
         Main.printLog("mapseq:"+mapSeq);
     }
 
+    public static void initSpecialRobotParam() {
+        if (mapSeq == 1) {
+            Route.emergencyAngle = Robot.pi/10;
+        }
+        if (mapSeq == 2) {
+            Route.emergencyDistanceCoef = 0.6;
+        }
+        if (mapSeq == 3) {
+            Route.perceptionAngleRange = Robot.pi/10;
+        }
+        if (mapSeq == 4) {
+            Route.lineSpeedCoef = 1.5;
+        }
+    }
+    
 
     private static void initWaterFlow() {
         if (map.containsKey(7)){
@@ -203,10 +226,22 @@ public class Main {
                     flow.assignRobot(2);    // 每条流水线两个机器人
                     waterFlows.add(flow);
                 }
+//                Collections.sort(sts);
+//                WaterFlow flow = new WaterFlow(sts.get(0));
+//                flow.assignRobot(4);    // 每条流水线两个机器人
+//                flow.target2 = sts.get(1);      // 2号target
+//                waterFlows.add(flow);
+
             }
+
+            for (Station st : sts) {
+                printLog("id" + st.Id + " value fps" + st.cycleAvgValue);
+            }
+
+            printLog(sts);
+
         }else {
             // 最多选择4条流水线
-            int[] ids = selectHighValueSt(4);
             Station[] clone = stations.clone();
             Arrays.sort(clone);
             for (int i = 0; i < clone.length; i++) {
@@ -222,10 +257,6 @@ public class Main {
         printLog(waterFlows);
     }
 
-    // 选择价值最高的几个节点
-    private static int[] selectHighValueSt(int i) {
-        return new int[0];
-    }
 
 
     private static boolean readUtilOK() {

@@ -21,8 +21,8 @@ public class Robot {
     public static final int maxForce = 250;//N
     public static final int maxRotateForce = 50;//N*m
 
-    public static final double canForwardRad = pi/2 ; // 行走最小角度偏移量
-    public static final double maxForwardRad = pi/4 ; // 最大速度的最小角度
+    public static  double canForwardRad = pi/2 ; // 行走最小角度偏移量
+    public static  double maxForwardRad = pi/4 ; // 最大速度的最小角度
 //    public static final double angleSpeedOffset = 0.1 ; //(rad)最大误差 0.003
     public static double emptyA;     //加速度
     public static double fullA;     //加速度
@@ -70,6 +70,7 @@ public class Robot {
 
     //下面参数可调
     public static double maxSpeedCoef = 1.5;
+    public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
     public static int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
 
 
@@ -97,6 +98,7 @@ public class Robot {
         topLine = new Line();
         belowLine = new Line();
         rotateSpeedEquation = new Line(new Point(maxForwardRad,maxSpeed/maxSpeedCoef),new Point(pi/2,0));
+
     }
 
 
@@ -142,6 +144,7 @@ public class Robot {
 
 
 
+
     // 选一个最佳的工作站
     public void selectBestStation() {
         if (waterFlow == null){
@@ -170,9 +173,9 @@ public class Robot {
 
         if (waterFlow.isType7) {
             // 有产品但没有机器人去
-            Main.printLog("123");
+
             if (srcStation != null && srcStation.type == 7) return;
-            Main.printLog("456");
+
             int t1 = waterFlow.target.distanceToFps(true,pos);   // 跑到target需要多久
             boolean flag1 = (waterFlow.target.proStatus == 1 || waterFlow.target.leftTime>0);
             if (!waterFlow.target.bookPro && flag1 && waterFlow.target.positionNoBook()){
@@ -184,7 +187,7 @@ public class Robot {
 
                 if (t<left-50 && t>left-4*50){
                     // 把产品取走
-                    Main.printLog("choose 7" + waterFlow.target);
+//                    Main.printLog("choose 7" + waterFlow.target);
                     setSrcDest(waterFlow.target,waterFlow.target.closest89);
                     flag = true;
                 }
@@ -238,6 +241,11 @@ public class Robot {
         if (destStation.type <= 7)  {   // 8,9 不需要预定
             destStation.bookRow[srcStation.type] = true;
         }
+
+        src.bookNum ++;
+        dest.bookNum2 ++;
+//        dest.bookNum ++;
+
         calcRoute();
     }
 
@@ -248,10 +256,37 @@ public class Robot {
             // 开始，这种情况是运输完了456,需要上边下发新任务
             waterFlow.assignTask(this);
         }else {
+
+            if (Main.specialMapMode){
+                if (Main.mapSeq == 4 && curTask.type == 4){
+
+                    if (curTask.canBuy(2)){
+                        setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
+                        return;
+                    }
+                    if (curTask.canBuy(1)){
+                        setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
+                        return;
+                    }
+
+                    if (!curTask.bookRow[2]){
+                        setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
+                        return;
+                    }
+                    if (!curTask.bookRow[1]){
+                        setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
+                        return;
+                    }
+                }
+
+            }
+
+
             // 还未完成生成，继续完成
             for (int ty : Station.item[curTask.type].call) {
                 // 列出需要的物品,若物品还为空，则说明需要去取
-                if (!curTask.positionIsFull(ty)){
+//                if (!curTask.positionIsFull(ty)){
+                if (curTask.canBuy(ty)){
 
                     if (Main.specialMapMode){
                         if (Main.mapSeq == 3 && curTask.Id == 32){
@@ -266,7 +301,6 @@ public class Robot {
                     // 已排序，取最近
                     Pair p = curTask.canBuyStationsMap.get(ty).peek();
                     setSrcDest(p.getKey(),curTask);
-
 
                 }
             }
@@ -385,6 +419,8 @@ public class Robot {
 //        }
 
 //        route.rush();
+
+        if (nextStation == null) return;
         route.rush2();
     }
 
@@ -444,12 +480,26 @@ public class Robot {
                 return;
             }
 
+            if (Main.specialMapMode && Main.mapSeq == 4 && curTask.type == 4){
+                if (curTask.proStatus == 1){    // 有产品先卖
+                    waterFlow.completed.put(curTask.type,waterFlow.completed.get(curTask.type) + 1);    // 完成数 + 1
+                    waterFlow.curTasks.get(curTask.type).remove(curTask);    // 删除任务
+                    curTask.taskBook = false;
+//            Main.printLog(curTask+"lock release");
+                    lastStation = nextStation;
+                    curTask = null;
+                    return;
+                }
+            }
+
             // 需判断当前任务是否完成，
             // 若有产品，也要结束，把产品先运过去
 //            if (curTask.haveEmptyPosition()) return;
             if (curTask.haveEmptyPosition()) {
-                if (!waterFlow.isType7)
+                if (!waterFlow.isType7){
+
                     return;
+                }
                 // 产品卖不出去才继续生产
                 if (curTask.proStatus == 0 || waterFlow.target.positionIsFull(curTask.type) || waterFlow.target.bookRow[curTask.type]) {
                     return;
@@ -555,11 +605,11 @@ public class Robot {
         // 检测两个机器人轨迹是否有交集
         if (routeBumpDetect(other)){
             double deltaVector = route.calcDeltaAngle(other.route.vector);
-            Main.printLog("deta "+deltaVector);
+//            Main.printLog("deta "+deltaVector);
             if (deltaVector < vectorNearOffset){
                 // 方向同向，后车饶
                 Point vec = new Point(other.pos.x - pos.x,other.pos.y - pos.y);
-                Main.printLog("vec det" + route.calcDeltaAngle(vec));
+//                Main.printLog("vec det" + route.calcDeltaAngle(vec));
                 if (route.calcDeltaAngle(vec) < pi/2){
                     //锐角，说明自己在后面
                     if (!setTmpPlace()){
@@ -673,14 +723,41 @@ public class Robot {
 
     public void setTask(Station task) {
 
-        if (task.taskBook) return;
+        if (Main.specialMapMode && Main.mapSeq == 4 && task.type == 4){
+            Main.printLog("666");
+            curTask = task;
+            if (curTask.canBuy(2)){
+                setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
+                Main.printLog("777");
+                return;
+            }
+            if (curTask.canBuy(1)){
+                setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
+                Main.printLog("888");
+                return;
+            }
+
+            if (!curTask.bookRow[2]){
+                setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
+                Main.printLog("999");
+                return;
+            }
+            if (!curTask.bookRow[1]){
+                setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
+                Main.printLog("ttt");
+                return;
+            }
+        }
+
+//        if (task.taskBook) return;
+        if (task.taskBook && !(Main.specialMapMode && Main.mapSeq == 4 && task.type == 4 && task.bookNum2 <2)) return;
         if (waterFlow.isType7 && !task.haveEmptyPosition()) return; // 没有空格位，若没有7的情况下，不用判断
         if (waterFlow.isType7 || task == waterFlow.target){
             waterFlow.curTasks.get(task.type).add(task);  // 加入队列
         }
         task.taskBook = true;   //加锁
         curTask = task;
-
+        Main.printLog("aaa");
         if (Main.specialMapMode){
             if (Main.mapSeq == 3 && curTask.Id == 32){
                 if (!curTask.positionIsFull(2)){
@@ -690,11 +767,10 @@ public class Robot {
                 }
                 return;
             }
+
         }
         // 若 task 的产品格都是满的，会报错
         setSrcDest(selectClosestSrcToDest(curTask),curTask);
-
-
 
     }
 
@@ -721,7 +797,7 @@ public class Robot {
             }
         }
         if (st == null){
-            Main.printLog("-------task"+dest);
+//            Main.printLog("-------task"+dest);
         }
         return st;
     }
