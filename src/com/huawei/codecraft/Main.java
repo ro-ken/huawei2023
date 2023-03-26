@@ -42,8 +42,8 @@ public class Main {
         schedule();
     }
 
-    // 核心代码，分析如何运动
-    private static void analyse() {
+      // 核心代码，分析如何运动
+      private static void analyse() {
 
         for (int i = 0; i < robotNum; i++) {
 //                printLog(robots[i].toString());
@@ -96,6 +96,15 @@ public class Main {
 
     }
 
+    // 计算向量的点积
+    public static double dotProduct(double x1,double y1, double x2,double y2) {
+        return x1 * x2 + y1 * y2;
+    }
+
+    // 计算向量的点积
+    public static double dotProduct(Point vector1,Point vector2) {
+        return dotProduct(vector1.x,vector1.y,vector2.x,vector2.y);
+    }
 
     public static void printSell(int robotId){
         outStream.printf("sell %d\n", robotId);
@@ -129,38 +138,10 @@ public class Main {
         }
     }
 
-    private static void schedule() {
-        initMap();
-        initialization();
-
-        outStream.println("OK");
-        outStream.flush();
-
-
-        while (inStream.hasNextLine()) {
-            String line = inStream.nextLine();
-            String[] parts = line.split(" ");
-            frameID = Integer.parseInt(parts[0]);
-            printLog(frameID);
-            readUtilOK();
-
-            printFrame(frameID);
-
-            long t1 = System.currentTimeMillis();
-            analyse();
-            long t2 = System.currentTimeMillis();
-//            printLog("time:"+String.valueOf(t2-t1));
-
-            printOk();
-        }
-    }
-    
-    
-
     private static void initialization() {
 
         initMapSeq();
-        initSpecialRobotParam();    // 初始化地图参数
+        initSpecialMapParam();    // 初始化地图参数
         for (int i = 0; i < stationNum; i++) {
             stations[i].initialization();
         }
@@ -179,6 +160,54 @@ public class Main {
         initWaterFlow();
     }
 
+    private static boolean initMap() {
+        String line;
+        int row = 101;
+        int stationId = 0;
+        int robotId= 0;
+        while (inStream.hasNextLine()) {
+            row --;
+            double y = row * 0.5 - 0.25;
+            line = inStream.nextLine();
+//            printLog(line);
+            if ("OK".equals(line)) {
+                stationNum = stationId;
+                for (Integer key: map.keySet()){
+                    printLog("type = " + key + "nums = " +map.get(key).size());
+                }
+                have9 = map.containsKey(9); // 是否有9号工作台
+//                printLog(robotId);
+//                printLog("hi");
+                return true;
+            }
+
+            for (int i=0;i<100;i++){
+                double x = i * 0.5 + 0.25;
+                char c = line.charAt(i);
+                if (c == '.') continue;
+                if (c == 'A'){
+                    robots[robotId] = new Robot(robotId,x,y,robotId);
+                    robotId++;
+                }else {
+                    int type = Character.getNumericValue(c);
+                    Station station = new Station(stationId,type,x,y);
+                    stations[stationId] = station;
+                    if (!map.containsKey(type)){
+                        ArrayList<Station> list = new ArrayList<>();
+                        list.add(station);
+                        map.put(type,list);
+                    }else {
+                        map.get(type).add(station);
+//                        stations[stationId];
+                    }
+                    stationId ++;
+                }
+            }
+            // do something;
+        }
+        return false;
+    }
+
     // 初始化地图顺序
     private static void initMapSeq() {
         if (stations[0].type == 1){
@@ -195,7 +224,7 @@ public class Main {
         Main.printLog("mapseq:"+mapSeq);
     }
 
-    public static void initSpecialRobotParam() {
+    public static void initSpecialMapParam() {
         if (mapSeq == 1) {
             Route.emergencyAngle = Robot.pi/10;
         }
@@ -257,7 +286,14 @@ public class Main {
         printLog(waterFlows);
     }
 
+    // 计算向量的模长
+    public static double norm(double x,double y) {
+        return Math.sqrt(x*x + y*y);
+    }
 
+    public static double norm(Point vector) {
+        return norm(vector.x, vector.y);
+    }
 
     private static boolean readUtilOK() {
         String line;
@@ -297,70 +333,29 @@ public class Main {
         return false;
     }
 
-    private static boolean initMap() {
-        String line;
-        int row = 101;
-        int stationId = 0;
-        int robotId= 0;
+    private static void schedule() {
+        initMap();
+        initialization();
+
+        outStream.println("OK");
+        outStream.flush();
+
+
         while (inStream.hasNextLine()) {
-            row --;
-            double y = row * 0.5 - 0.25;
-            line = inStream.nextLine();
-//            printLog(line);
-            if ("OK".equals(line)) {
-                stationNum = stationId;
-                for (Integer key: map.keySet()){
-                    printLog("type = " + key + "nums = " +map.get(key).size());
-                }
-                have9 = map.containsKey(9); // 是否有9号工作台
-//                printLog(robotId);
-//                printLog("hi");
-                return true;
-            }
+            String line = inStream.nextLine();
+            String[] parts = line.split(" ");
+            frameID = Integer.parseInt(parts[0]);
+            printLog(frameID);
+            readUtilOK();
 
-            for (int i=0;i<100;i++){
-                double x = i * 0.5 + 0.25;
-                char c = line.charAt(i);
-                if (c == '.') continue;
-                if (c == 'A'){
-                    robots[robotId] = new Robot(robotId,x,y,robotId);
-                    robotId++;
-                }else {
-                    int type = Character.getNumericValue(c);
-                    Station station = new Station(stationId,type,x,y);
-                    stations[stationId] = station;
-                    if (!map.containsKey(type)){
-                        ArrayList<Station> list = new ArrayList<>();
-                        list.add(station);
-                        map.put(type,list);
-                    }else {
-                        map.get(type).add(station);
-//                        stations[stationId];
-                    }
-                    stationId ++;
-                }
-            }
-            // do something;
+            printFrame(frameID);
+
+            long t1 = System.currentTimeMillis();
+            analyse();
+            long t2 = System.currentTimeMillis();
+//            printLog("time:"+String.valueOf(t2-t1));
+
+            printOk();
         }
-        return false;
     }
-
-    // 计算向量的点积
-    public static double dotProduct(double x1,double y1, double x2,double y2) {
-        return x1 * x2 + y1 * y2;
-    }
-
-    // 计算向量的点积
-    public static double dotProduct(Point vector1,Point vector2) {
-        return dotProduct(vector1.x,vector1.y,vector2.x,vector2.y);
-    }
-
-    // 计算向量的模长
-    public static double norm(double x,double y) {
-        return Math.sqrt(x*x + y*y);
-    }
-    public static double norm(Point vector) {
-        return norm(vector.x, vector.y);
-    }
-
 }

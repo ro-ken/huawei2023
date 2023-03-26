@@ -57,23 +57,15 @@ public class Station implements Comparable{
 
     }
 
-    public void setPosition(int type){
-        rowStatus = rowStatus | (1<<type);
+    // 构造函数
+    public Station(int id, int type, double x, double y) {
+        Id = id;
+        this.type = type;
+        pos = new Point(x,y);
+        bookPro = false;
+        bookRow = new boolean[8];
     }
-
-    public void clearPosition(int type){
-        rowStatus = rowStatus & (~(1<<type));
-    }
-
-    public boolean positionIsFull(int type){
-        return bitJudge(rowStatus,type);
-    }
-
-    //是否有某类型的货物
-    public boolean bitJudge(int goodStatus,int type){
-        return (goodStatus>>type & 1) == 1;
-    }
-
+    
     @Override
     public String toString() {
         return "Station{" +
@@ -86,17 +78,168 @@ public class Station implements Comparable{
                 '}';
     }
 
+    //是否有某类型的货物
+    public boolean bitJudge(int goodStatus,int type){
+        return (goodStatus>>type & 1) == 1;
+    }
+
+    private double calc456CycleAvgValue(Point pos) {
+        // 计算卖给9的钱和时间，算最佳
+        double theoryMoney = calcEarnMoney(pos);   // 不算碰撞
+        double allMoney = fastestComposeMoney + theoryMoney;
+        double allFps = fastestComposeFps + calcGoBackDistanceToFps(pos);
+        return allMoney/allFps;
+    }
+
+    private double calc7CycleAvgValue(Point pos) {
+        // 计算卖给89的钱和时间，算最佳
+
+        double allMoney = calcEarnMoney(pos);
+        double allFps = calcGoBackDistanceToFps(pos);        // 时间金钱三部分，123-456-7-89
+        for (PriorityQueue<Pair> queue : canBuyStationsMap.values()){
+            Station st = queue.peek().key;  // 取价值最高的计算钱和fps
+            allMoney += st.calcEarnMoney(pos);      // 456 - 7
+            allFps += st.calcGoBackDistanceToFps(pos);
+
+            allMoney += st.fastestComposeMoney ;// 123-456
+            allFps += st.fastestComposeFps ;// 123-456
+        }
+
+        return allMoney/allFps;
+    }
+    
+    public double calcEarnMoney(Point pos) {
+        int baseMoney = Goods.item[type].earn;
+        int fps1 = distanceToFps(false,pos);
+        double theoryMoney = (baseMoney * Robot.calcTimeValue(fps1));   // 不算碰撞
+        return theoryMoney;
+    }
+
+    private void calcFastestComposeFpsAndMoney() {
+        // 要求每种原材料赚的最多的钱，也要求出fps
+        fastestComposeFps = 0;
+        fastestComposeMoney = 0;
+        for (PriorityQueue<Pair> queue : canBuyStationsMap.values()){
+            Station st = queue.peek().key;  // 取价值最高的计算钱和fps
+            fastestComposeFps += st.calcGoBackDistanceToFps(pos);
+            fastestComposeMoney += st.calcEarnMoney(pos);
+        }
+    }
+
+    // 计算来回花费时间
+    public int calcGoBackDistanceToFps(Point p){
+        int go = distanceToFps(false,p);
+        int back = distanceToFps(true,p);
+        return go + back;
+    }
+
     private static double calcMinDistance(boolean isEmpty) {
         double a = isEmpty ? Robot.emptyA:Robot.fullA;
         return Math.pow(Robot.maxSpeed,2)/(a);
     }
 
-    public Station(int id, int type, double x, double y) {
-        Id = id;
-        this.type = type;
-        pos = new Point(x,y);
-        bookPro = false;
-        bookRow = new boolean[8];
+    public double calcSingleCycleAvgValue(Point other) {
+        int baseMoney = Goods.item[type].earn;
+        int fps1 = distanceToFps(false,other.x,other.y);
+        int fps2 = distanceToFps(true,other.x,other.y);
+        double theoryMoney = (baseMoney * Robot.calcTimeValue(fps1));   // 不算碰撞
+        double cycleAvgValue = theoryMoney/(fps1 + fps2);     // 来回时间，先不算转向花费
+        return cycleAvgValue;
+    }
+    
+    public int calcValue(double x1,double y1,boolean isEmpty) {
+
+        if (type>7) return 0;
+        int baseMoney = Goods.item[type].earn;
+        int fps = distanceToFps(isEmpty,x1,y1);
+        int theoryMoney = (int) (baseMoney * Robot.calcTimeValue(fps));
+
+        return theoryMoney;
+    }
+
+    // 是否有东西可以卖
+    public boolean canSell() {
+        return proStatus == 1 && !bookPro;
+    }
+
+    public boolean canBuy(int tp) {
+        return !positionIsFull(tp) && !bookRow[tp];
+    }
+
+    private void calcCanBuyStations() {
+        // 4-7节点
+        canBuyStationsMap = new HashMap<>();
+        for(int tp:item[type].call){
+            PriorityQueue<Pair> queue = new PriorityQueue<>();
+            canBuyStationsMap.put(tp,queue);
+            ArrayList<Station> stations = Main.map.get(tp);
+            for (Station st : stations) {
+                double value = 0;
+                if (type < 7){
+                    // type = (4,5，6) //节点为123
+                    value = calcGoBackDistanceToFps(st.pos);    //存储来回花费时间
+                }else {
+                    // type =  7节点为456，
+                    // 分别计算 456map的时间，加上456 到本工作站的时间
+                    for (PriorityQueue<Pair> p:st.canBuyStationsMap.values()){
+                        value += p.peek().value;    // 选取最前面一个也就是最近的一个
+                    }
+                    value += calcGoBackDistanceToFps(st.pos);   // 加上本身来回时间
+                }
+                Pair pair = new Pair(st, value);    // 以时间为标准
+                queue.add(pair);
+            }
+        }
+    }
+        
+    // 没有可用返回 null
+    public Station chooseAvailableNextStation() {
+        for(Pair pair : canSellStations){
+            Station oth = pair.getKey();
+            if (!oth.bookRow[type] && !oth.positionIsFull(type)){
+                availNextStation = oth;
+                return oth;
+            }
+        }
+        return null;
+    }
+
+    // 4567工作台使用
+    public Station chooseAvailablePreStation(int type) {
+        for(Pair pair : canBuyStationsMap.get(type)){
+            Station oth = pair.getKey();
+            if (!oth.bookRow[type] && !oth.positionIsFull(type)){
+                availNextStation = oth;
+                return oth;
+            }
+        }
+        return null;
+    }
+
+    private Station chooseClosestStation(int type) {
+        ArrayList<Station> stations = Main.map.get(type);
+        if (stations.size() == 1) return stations.get(0);
+         // 好几个选一个
+        double minDis = 10000;
+        Station minSta = null;
+        for(Station st:stations){
+            double dis = pos.calcDistance(st.pos);
+            if (dis < minDis){
+                minDis = dis;
+                minSta = st;
+            }
+        }
+        return minSta;
+    }
+    
+    @Override
+    public int compareTo(Object o) {
+        Station st = (Station) o;
+        return Double.compare(st.cycleAvgValue,cycleAvgValue);
+    }
+
+    public void clearPosition(int type){
+        rowStatus = rowStatus & (~(1<<type));
     }
 
     // 距离换算成时间, 0 -> v -> 0
@@ -126,13 +269,36 @@ public class Station implements Comparable{
         return distanceToFps(isEmpty,p.x,p.y);
     }
 
-    // 计算来回花费时间
-    public int calcGoBackDistanceToFps(Point p){
-        int go = distanceToFps(false,p);
-        int back = distanceToFps(true,p);
-        return go + back;
+    // 返回当前的空位，并且没有被预定的
+    public ArrayList<Integer> getEmptyRaw() {
+        ArrayList<Integer> empty = new ArrayList<>();
+        for (int tp : item[type].call) {
+            if (!bookRow[tp] && !positionIsFull(tp)){
+                empty.add(tp);
+            }
+        }
+        return empty;
     }
 
+    public double getSafeDis() {
+        double dis1 = Robot.stationSafeDisCoef * Robot.fullRadius;
+        double dis2 = 0;
+        if (type <=3){
+            dis2 = emptyMinDistance/2;
+        }else {
+            dis2 = fullMinDistance/2;
+        }
+        return dis1 + dis2;
+    }
+
+    public boolean haveEmptyPosition() {
+        for (int tp : item[type].call) {
+            if (canBuy(tp)){
+                return true;
+            }
+        }
+        return false;
+    }
 
     public void initialization() {
         // 初始化 1 ，给每个生产型节点设置售出节点的优先级队列
@@ -180,163 +346,6 @@ public class Station implements Comparable{
         }
     }
 
-    private double calc7CycleAvgValue(Point pos) {
-        // 计算卖给89的钱和时间，算最佳
-
-        double allMoney = calcEarnMoney(pos);
-        double allFps = calcGoBackDistanceToFps(pos);        // 时间金钱三部分，123-456-7-89
-        for (PriorityQueue<Pair> queue : canBuyStationsMap.values()){
-            Station st = queue.peek().key;  // 取价值最高的计算钱和fps
-            allMoney += st.calcEarnMoney(pos);      // 456 - 7
-            allFps += st.calcGoBackDistanceToFps(pos);
-
-            allMoney += st.fastestComposeMoney ;// 123-456
-            allFps += st.fastestComposeFps ;// 123-456
-        }
-
-        return allMoney/allFps;
-    }
-
-    public double calcEarnMoney(Point pos) {
-        int baseMoney = Goods.item[type].earn;
-        int fps1 = distanceToFps(false,pos);
-        double theoryMoney = (baseMoney * Robot.calcTimeValue(fps1));   // 不算碰撞
-        return theoryMoney;
-    }
-
-    private double calc456CycleAvgValue(Point pos) {
-        // 计算卖给9的钱和时间，算最佳
-        double theoryMoney = calcEarnMoney(pos);   // 不算碰撞
-        double allMoney = fastestComposeMoney + theoryMoney;
-        double allFps = fastestComposeFps + calcGoBackDistanceToFps(pos);
-        return allMoney/allFps;
-    }
-
-    private void calcFastestComposeFpsAndMoney() {
-        // 要求每种原材料赚的最多的钱，也要求出fps
-        fastestComposeFps = 0;
-        fastestComposeMoney = 0;
-        for (PriorityQueue<Pair> queue : canBuyStationsMap.values()){
-            Station st = queue.peek().key;  // 取价值最高的计算钱和fps
-            fastestComposeFps += st.calcGoBackDistanceToFps(pos);
-            fastestComposeMoney += st.calcEarnMoney(pos);
-        }
-    }
-
-    private void calcCanBuyStations() {
-        // 4-7节点
-        canBuyStationsMap = new HashMap<>();
-        for(int tp:item[type].call){
-            PriorityQueue<Pair> queue = new PriorityQueue<>();
-            canBuyStationsMap.put(tp,queue);
-            ArrayList<Station> stations = Main.map.get(tp);
-            for (Station st : stations) {
-                double value = 0;
-                if (type < 7){
-                    // type = (4,5，6) //节点为123
-                    value = calcGoBackDistanceToFps(st.pos);    //存储来回花费时间
-                }else {
-                    // type =  7节点为456，
-                    // 分别计算 456map的时间，加上456 到本工作站的时间
-                    for (PriorityQueue<Pair> p:st.canBuyStationsMap.values()){
-                        value += p.peek().value;    // 选取最前面一个也就是最近的一个
-                    }
-                    value += calcGoBackDistanceToFps(st.pos);   // 加上本身来回时间
-                }
-                Pair pair = new Pair(st, value);    // 以时间为标准
-                queue.add(pair);
-            }
-        }
-    }
-
-    private Station chooseClosestStation(int type) {
-        ArrayList<Station> stations = Main.map.get(type);
-        if (stations.size() == 1) return stations.get(0);
-         // 好几个选一个
-        double minDis = 10000;
-        Station minSta = null;
-        for(Station st:stations){
-            double dis = pos.calcDistance(st.pos);
-            if (dis < minDis){
-                minDis = dis;
-                minSta = st;
-            }
-        }
-        return minSta;
-    }
-
-
-    public int calcValue(double x1,double y1,boolean isEmpty) {
-
-        if (type>7) return 0;
-        int baseMoney = Goods.item[type].earn;
-        int fps = distanceToFps(isEmpty,x1,y1);
-        int theoryMoney = (int) (baseMoney * Robot.calcTimeValue(fps));
-
-        return theoryMoney;
-    }
-
-    public double calcSingleCycleAvgValue(Point other) {
-        int baseMoney = Goods.item[type].earn;
-        int fps1 = distanceToFps(false,other.x,other.y);
-        int fps2 = distanceToFps(true,other.x,other.y);
-        double theoryMoney = (baseMoney * Robot.calcTimeValue(fps1));   // 不算碰撞
-        double cycleAvgValue = theoryMoney/(fps1 + fps2);     // 来回时间，先不算转向花费
-        return cycleAvgValue;
-    }
-
-    // 没有可用返回 null
-    public Station chooseAvailableNextStation() {
-        for(Pair pair : canSellStations){
-            Station oth = pair.getKey();
-            if (!oth.bookRow[type] && !oth.positionIsFull(type)){
-                availNextStation = oth;
-                return oth;
-            }
-        }
-        return null;
-    }
-
-    // 4567工作台使用
-    public Station chooseAvailablePreStation(int type) {
-        for(Pair pair : canBuyStationsMap.get(type)){
-            Station oth = pair.getKey();
-            if (!oth.bookRow[type] && !oth.positionIsFull(type)){
-                availNextStation = oth;
-                return oth;
-            }
-        }
-        return null;
-    }
-
-
-
-    @Override
-    public int compareTo(Object o) {
-        Station st = (Station) o;
-        return Double.compare(st.cycleAvgValue,cycleAvgValue);
-    }
-
-    // 返回当前的空位，并且没有被预定的
-    public ArrayList<Integer> getEmptyRaw() {
-        ArrayList<Integer> empty = new ArrayList<>();
-        for (int tp : item[type].call) {
-            if (!bookRow[tp] && !positionIsFull(tp)){
-                empty.add(tp);
-            }
-        }
-        return empty;
-    }
-
-    public boolean haveEmptyPosition() {
-        for (int tp : item[type].call) {
-            if (canBuy(tp)){
-                return true;
-            }
-        }
-        return false;
-    }
-
     public boolean positionFull() {
         for (int tp : item[type].call) {
             if (!positionIsFull(tp)){
@@ -346,6 +355,11 @@ public class Station implements Comparable{
         return true;
     }
 
+    public boolean positionIsFull(int type){
+        return bitJudge(rowStatus,type);
+    }
+
+    
     // 原料格没人预定
     public boolean positionNoBook() {
         for (int tp : item[type].call) {
@@ -356,24 +370,8 @@ public class Station implements Comparable{
         return true;
     }
 
-    // 是否有东西可以卖
-    public boolean canSell() {
-        return proStatus == 1 && !bookPro;
-    }
-
-    public boolean canBuy(int tp) {
-        return !positionIsFull(tp) && !bookRow[tp];
-    }
-
-    public double getSafeDis() {
-        double dis1 = Robot.stationSafeDisCoef * Robot.fullRadius;
-        double dis2 = 0;
-        if (type <=3){
-            dis2 = emptyMinDistance/2;
-        }else {
-            dis2 = fullMinDistance/2;
-        }
-        return dis1 + dis2;
+    public void setPosition(int type){
+        rowStatus = rowStatus | (1<<type);
     }
 }
 

@@ -9,17 +9,17 @@ public class Pair implements Comparable{
         this.value = value;
     }
 
+    @Override
+    public int compareTo(Object o) {
+        Pair op = (Pair)o;
+        return Double.compare(value,op.value);
+    }
+    
     public Station getKey() {
         return key;
     }
 
     public double getValue() {
         return value;
-    }
-
-    @Override
-    public int compareTo(Object o) {
-        Pair op = (Pair)o;
-        return Double.compare(value,op.value);
     }
 }

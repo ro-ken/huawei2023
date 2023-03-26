@@ -38,15 +38,6 @@ public class Point{
     public double calcDistance(Point oth){
         return Math.sqrt(Math.pow(oth.x-x,2) + Math.pow(oth.y-y,2));
     }
-    public void set(double x,double y){
-        this.x = x;
-        this.y = y;
-    }
-
-    public void set(Point p){
-        set(p.x,p.y);
-    }
-
 
     public double calcDistance(double ox, double oy) {
         return Math.sqrt(Math.pow(ox-x,2) + Math.pow(oy-y,2));
@@ -60,9 +51,18 @@ public class Point{
     public double calcDot(Point oth){
         return x*oth.y - oth.x*y;
     }
-
+    
     // 当前坐标是否靠近墙体
     public boolean nearWall() {
         return x < 1 || x > 49 || y < 1 || y > 49;
+    }
+
+    public void set(double x,double y){
+        this.x = x;
+        this.y = y;
+    }
+
+    public void set(Point p){
+        set(p.x,p.y);
     }
 }

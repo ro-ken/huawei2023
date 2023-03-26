@@ -101,10 +101,128 @@ public class Robot {
 
     }
 
+    @Override
+    public String toString() {
+//        String s = route == null ? " ": ", tarturn=" + route.theoryTurn +", set=" + route.setMinAngle ;
+        return "Robot{" +
+                "id=" + id +
+                ", carry=" + carry +
+                ", Vr=" + angV +
+//                ", Vx=" + lineVx +
+//                ", Vy=" + lineVy +
+                ", turn=" + turn +
+                route +
+                '}';
+    }
+
+    private static double calcAcceleration(double radius) {
+        double s = pi * radius * radius;
+        double m = s * density;
+        double a = maxForce / m;
+        return a;
+    }
+
+    // 碰撞计算
+    public void calcBump(Robot other) {
+        if (route.vector.x == 0 || other.route.vector.x == 0) return;    //应该不会是垂直情况
+
+        // 检测两个机器人轨迹是否有交集
+        if (routeBumpDetect(other)){
+            double deltaVector = route.calcDeltaAngle(other.route.vector);
+//            Main.printLog("deta "+deltaVector);
+            if (deltaVector < vectorNearOffset){
+                // 方向同向，后车饶
+                Point vec = new Point(other.pos.x - pos.x,other.pos.y - pos.y);
+//                Main.printLog("vec det" + route.calcDeltaAngle(vec));
+                if (route.calcDeltaAngle(vec) < pi/2){
+                    //锐角，说明自己在后面
+                    if (!setTmpPlace()){
+                        setTmpPlace(false);//向右不能转，改为向左转
+                    }
+                }else {
+                    if (!other.setTmpPlace()){
+                        other.setTmpPlace(false);//改为向左转
+                    }
+                }
+
+            }else if(deltaVector>pi-vectorNearOffset){
+                // 方向相反，双车都绕
+                setTmpPlace();
+                other.setTmpPlace();
+
+            }else if (ifRangeConflict(other)){
+
+                setTmpPlace();
+                other.setTmpPlace();
+            }
+        }
+    }
+
+    public static double calcBumpValue(int impulse) {
+        return f(impulse,1000,0.8);
+    }
+    
+    // 根据两点，计算当前小车到达两点的时间
+    private double[] calcBumpTimeRange(Point p1, Point p2) {
+        double dis1 = pos.calcDistance(p1);
+        double dis2 = pos.calcDistance(p2);
+        double fps1 = calcFpsToPlaceInCurSpeed(dis1);
+        double fps2 = calcFpsToPlaceInCurSpeed(dis2);
+        double[] res;
+        if (fps1<fps2){
+            res = new double[]{fps1,fps2};
+        }else {
+            res = new double[]{fps2,fps1};
+        }
+        return res;
+    }
+    
+    // 计算最快到达需要多久
+    private int calcFpsToPlace(double dis) {
+        double time = 0;
+        double a = getAcceleration();
+        double minDistance = getMinDistance();
+        if (dis < minDistance/2){
+            time = Math.sqrt(2*dis/a);
+        }else {
+            double time1 = Math.sqrt(minDistance/a);
+            double time2 = (dis - minDistance/2)/maxSpeed;
+            time = time1 + time2;
+        }
+        return (int) (time*50);
+    }
+
+    // 若以当前速度加速到达，最快要多久
+    private int calcFpsToPlaceInCurSpeed(double dis) {
+        double time = 0;
+        double a = getAcceleration();
+        double v0 = Main.norm(lineVx,lineVy);
+        double x1 = (maxSpeed*maxSpeed - v0*v0)/(2*a);
+        if (dis<x1){
+            // x = v0t + 0.5at^2;   算不了，简单替代下v0= 0
+            time = (-v0 + Math.sqrt(v0 * v0 + 2 * a * dis)) / a;
+        }else{
+            time = (-v0 + Math.sqrt(v0 * v0 + 2 * a * x1)) / a;
+            time += (dis-x1)/maxSpeed;
+        }
+
+        return (int) (time*50);
+    }
 
     private static double calcMinAngle(boolean isEmpty) {
         double a = isEmpty ? emptyRotateA:fullRotateA;
         return Math.pow(maxRotate,2)/(a);
+    }
+
+    //计算机器人的轨迹方程，也就两条平行线
+    public void calcMoveEquation() {
+        if (route.vector.x == 0) return;// 不能是垂直的情况，在调用此函数之前事先要做出判断 todo
+        double radius = getRadius();
+        Point[] src = getPoints(pos.x,pos.y,radius);
+        Point[] dest = getPoints(route.target.x,route.target.y,radius);
+        topLine.setValue(src[0],dest[0]);
+        belowLine.setValue(src[1],dest[1]);
+
     }
 
     private static double calcRotateAcce(double radius) {
@@ -115,20 +233,38 @@ public class Robot {
         return rotateA;
     }
 
-    private static double calcAcceleration(double radius) {
-        double s = pi * radius * radius;
-        double m = s * density;
-        double a = maxForce / m;
-        return a;
+    // 计算路线
+    public void calcRoute() {
+        if (nextStation != null){
+            route = new Route(nextStation.pos.x,nextStation.pos.y,this);
+//            route.calcParam();
+        }
     }
-
 
     public static double calcTimeValue(int fps) {
         return f(fps,9000,0.8);
     }
 
-    public static double calcBumpValue(int impulse) {
-        return f(impulse,1000,0.8);
+    // 买入的商品是否有时间售出
+    public boolean canBugJudge() {
+        int needFPS = calcFpsToPlace(srcStation.pos.calcDistance(destStation.pos));
+        int leftFps = Main.duration - Main.frameID - cacheFps;   // 1s误差,后期可调整
+        return leftFps > needFPS;
+    }
+
+    public void changeTarget() {
+        if (nextStation == srcStation){
+            nextStation = destStation;
+            calcRoute();
+        }else {
+            if (waterFlow != null) {
+                useWaterFlowChangeMode();
+            }
+            nextStation = srcStation = destStation = null;
+
+        }
+        Main.printLog("state change");
+        Main.printLog("next station" + nextStation);
     }
 
     public static double f(int x, double maxX, double minRate){
@@ -142,8 +278,144 @@ public class Robot {
         }
     }
 
+    public double getAcceleration() {
+        return carry > 0? fullA:emptyA;
+    }
+
+    public double getAngleAcceleration() {
+        return carry > 0? fullRotateA:emptyRotateA;
+    }
+
+    public double getMinDistance() {
+        return carry > 0? Station.fullMinDistance : Station.emptyMinDistance;
+    }
+
+    public double getMinAngle() {
+        return carry > 0? fullMinAngle:emptyMinAngle;
+    }
+
+     // 通过当前速度减速到0 的最小距离
+     public double getMinDistanceByCurSpeed() {
+        double a = getAcceleration();
+        double v2 = Math.pow(lineVx,2) + Math.pow(lineVy,2);
+        double x = v2/(2*a);
+        return x;
+    }
 
 
+    public double getMinAngleDistanceByCurSpeed() {
+        double a = getAngleAcceleration();
+        double angle = angV * angV / (2*a);
+        return angle;
+    }
+
+    public double getRadius() {
+        return carry > 0?fullRadius:emptyRadius;
+    }
+
+    // 知道点，获取左右两坐标,输出点顺序为先上后下
+    public Point[] getPoints(double x,double y,double distance){
+
+        double[] direction = new double[]{route.vector.x,route.vector.y};   // 方向向量
+        double[] points = new double[4];
+        Point[] p = new Point[2];
+        // 求解过程
+        double tmp = direction[0];
+        direction[0] = -direction[1];
+        direction[1] = tmp;
+        double d = Math.sqrt(direction[0] * direction[0] + direction[1] * direction[1]); // 直线的长度
+        double dx = direction[0] / d; // 直线的单位向量在 x 方向上的分量
+        double dy = direction[1] / d; // 直线的单位向量在 y 方向上的分量
+        points[0] = x + dx * distance; // 求解 point2 在 x 方向上的坐标
+        points[1] = y + dy * distance; // 求解 point2 在 y 方向上的坐标
+
+        direction[0] = -direction[0];
+        direction[1] = -direction[1];
+        dx = direction[0] / d; // 直线的单位向量在 x 方向上的分量
+        dy = direction[1] / d; // 直线的单位向量在 y 方向上的分量
+        points[2] = x + dx * distance; // 求解 point2 在 x 方向上的坐标
+        points[3] = y + dy * distance; // 求解 point2 在 y 方向上的坐标
+        if (points[1]<points[3]){
+            p[0] = new Point(points[2],points[3]);
+            p[1] = new Point(points[0],points[1]);
+        }else{
+            p[0] = new Point(points[0],points[1]);
+            p[1] = new Point(points[2],points[3]);
+        }
+
+        return p;
+    }
+
+    // 判断目标点是否到达工作台
+    public boolean isArrive() {
+        if (StationId == nextStation.Id){
+//            Main.printLog("robot arrived id ="+StationId);
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    // 判断范围是否有冲突
+    private boolean ifRangeConflict(Robot other) {
+        Point p1 = topLine.calcIntersectionPoint(other.belowLine);
+        Point p2 = belowLine.calcIntersectionPoint(other.topLine);
+        // 3、预测机器人经过交集区域的时间帧区间
+        double[] t1 = calcBumpTimeRange(p1,p2);
+        double[] t2 = other.calcBumpTimeRange(p1,p2);
+        if (t1[0] > t2[1] || t2[0] > t1[1]){
+            return false;
+        }
+        return true;
+    }
+
+    private boolean posIsAllow(Point tmpPos) {
+        // 距离边界太近，则不合法
+        double dis = minDistanceForWall * getRadius();
+        if (tmpPos.x <= dis || tmpPos.x >= 50 - dis){
+            return false;
+        }
+        return !(tmpPos.y <= dis) && !(tmpPos.y >= 50 - dis);
+    }
+
+    // 检测路线是否有重叠区域
+    private boolean routeBumpDetect(Robot other) {
+        double left = Math.max(topLine.left.x,other.topLine.left.x);
+        double right = Math.min(topLine.right.x,other.topLine.right.x);
+        double m_l_min = belowLine.getY(left);
+        double m_l_max = topLine.getY(left);
+        double m_r_min = belowLine.getY(right);
+        double m_r_max = topLine.getY(right);
+
+        double o_l_min = other.belowLine.getY(left);
+        double o_l_max = other.topLine.getY(left);
+        double o_r_min = other.belowLine.getY(right);
+        double o_r_max = other.topLine.getY(right);
+
+        // 最小 > 最大 ，无交集
+        if (m_l_min > o_l_max && m_r_min > o_r_max || o_l_min > m_l_max && o_r_min > m_r_max){
+            return false;
+        }
+
+        return true;
+    }
+
+    public void rush() {
+
+        //        // 临时目的地判断是否到达
+        //        if (isTempPlace){
+        //            if (route.isArriveTarget()){
+        //                isTempPlace = false;
+        //                if (nextStation == null) return;
+        //                route.target.set(nextStation.pos);// 重新设置目的地
+        //            }
+        //        }
+        
+        //        route.rush();
+        
+        if (nextStation == null) return;
+        route.rush2();
+    }
 
     // 选一个最佳的工作站
     public void selectBestStation() {
@@ -161,6 +433,173 @@ public class Robot {
 //            taskIsOK();
         }
 
+    }
+    
+      private Station selectClosestSrcToDest(Station dest) {
+        // 选择距离dest和自己最近的src
+        // 距离 =  robot -> src -> dest
+        double minTime = 100000;
+        Station st = null;
+        for (int ty : Station.item[dest.type].call) {
+            if (waterFlow.isType7){
+                // 时间小于等于0 ，表明未生产，将会一直阻塞
+                if (dest.bookRow[ty] || dest.positionIsFull(ty)) continue;
+            }
+            for (Station s:Main.map.get(ty)){
+                // 第一段空载，第二段满载
+                double t1 = s.distanceToFps(true,pos);
+                double t2 = s.distanceToFps(false,dest.pos);
+                double t = t1 + t2;
+                if (t < minTime){
+                    minTime = t;
+                    st = s;
+                }
+            }
+        }
+        if (st == null){
+//            Main.printLog("-------task"+dest);
+        }
+        return st;
+    }
+
+    private Station selectClosestStation() {
+        Station closestStation = null;
+        double minDistance = 10000;
+        for(int i=0;i<Main.stationNum;i++){
+
+            Station station = Main.stations[i];
+            if (station.leftTime == -1 || station.bookPro) continue;
+            double dis = station.pos.calcDistance(pos);
+            if (dis < minDistance){
+                // 卖方有货，卖方有位置
+//                if (station.type>3 && station.leftTime ==-1) continue;  // 未生产产品
+                Station oth = station.chooseAvailableNextStation();
+                if (oth != null){
+                    closestStation = station;
+                    minDistance = dis;
+                }
+            }
+        }
+        return closestStation;
+    }
+
+    //选择取货时间最短的，取货时间 = max {走路时间，生成时间}
+    private Station selectTimeShortestStation() {
+        Station shortestStation = null;
+        double shortest = 10000;
+        for(int i=0;i<Main.stationNum;i++){
+
+            Station station = Main.stations[i];
+            if (station.leftTime == -1 || station.bookPro) continue;
+            double dis = station.pos.calcDistance(pos);
+            double time1 = calcFpsToPlace(dis);
+            double time = Math.max(time1,station.leftTime);
+            if (time < shortest){
+                // 卖方有货，卖方有位置
+                Station oth = station.chooseAvailableNextStation();
+                if (oth != null){
+                    shortestStation = station;
+                    shortest = time;
+                }
+            }
+        }
+        return shortestStation;
+    }
+    
+    public void setSrcDest(Station src, Station dest) {
+        nextStation = srcStation = src;
+        Main.printLog("src"+srcStation);
+        destStation = dest;
+        Main.printLog("dest" + destStation);
+        srcStation.bookPro = true;      // 预定位置
+
+        if (destStation.type <= 7)  {   // 8,9 不需要预定
+            destStation.bookRow[srcStation.type] = true;
+        }
+
+        src.bookNum ++;
+        dest.bookNum2 ++;
+//        dest.bookNum ++;
+
+        calcRoute();
+    }
+
+    public void setTask(Station task) {
+
+        if (Main.specialMapMode && Main.mapSeq == 4 && task.type == 4){
+            Main.printLog("666");
+            curTask = task;
+            if (curTask.canBuy(2)){
+                setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
+                Main.printLog("777");
+                return;
+            }
+            if (curTask.canBuy(1)){
+                setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
+                Main.printLog("888");
+                return;
+            }
+
+            if (!curTask.bookRow[2]){
+                setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
+                Main.printLog("999");
+                return;
+            }
+            if (!curTask.bookRow[1]){
+                setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
+                Main.printLog("ttt");
+                return;
+            }
+        }
+
+//        if (task.taskBook) return;
+        if (task.taskBook && !(Main.specialMapMode && Main.mapSeq == 4 && task.type == 4 && task.bookNum2 <2)) return;
+        if (waterFlow.isType7 && !task.haveEmptyPosition()) return; // 没有空格位，若没有7的情况下，不用判断
+        if (waterFlow.isType7 || task == waterFlow.target){
+            waterFlow.curTasks.get(task.type).add(task);  // 加入队列
+        }
+        task.taskBook = true;   //加锁
+        curTask = task;
+        Main.printLog("aaa");
+        if (Main.specialMapMode){
+            if (Main.mapSeq == 3 && curTask.Id == 32){
+                if (!curTask.positionIsFull(2)){
+                    setSrcDest(Main.stations[37], curTask);
+                }else {
+                    setSrcDest(Main.stations[28], curTask);
+                }
+                return;
+            }
+
+        }
+        // 若 task 的产品格都是满的，会报错
+        setSrcDest(selectClosestSrcToDest(curTask),curTask);
+
+    }
+
+    private boolean setTmpPlace() {
+        return setTmpPlace(true);
+    }
+
+    //  设置临时目的地，默认设置中点向右偏移
+    private boolean setTmpPlace(boolean right) {
+        double x = (route.target.x + pos.x)/2;
+        double y = (route.target.y + pos.y)/2;
+        Point[] points = getPoints(x, y, getRadius() * tmpPlaceOffset);
+        // 默认往右转
+        if (route.vector.x>0){
+            tmpPos = right?points[1]:points[0];
+        }else {
+            tmpPos =  right?points[0]:points[1];
+        }
+        if (!posIsAllow(tmpPos)){
+            return false;
+        }
+        // 重新设置轨迹
+        route.target.set(tmpPos);
+        isTempPlace = true;
+
+        return true;
     }
 
     // 判断当前任务是否具有可行性
@@ -231,24 +670,6 @@ public class Robot {
         }
     }
 
-    public void setSrcDest(Station src, Station dest) {
-        nextStation = srcStation = src;
-        Main.printLog("src"+srcStation);
-        destStation = dest;
-        Main.printLog("dest" + destStation);
-        srcStation.bookPro = true;      // 预定位置
-
-        if (destStation.type <= 7)  {   // 8,9 不需要预定
-            destStation.bookRow[srcStation.type] = true;
-        }
-
-        src.bookNum ++;
-        dest.bookNum2 ++;
-//        dest.bookNum ++;
-
-        calcRoute();
-    }
-
     // 使用流水线模式
     public void useWaterFlowSelectMode() {
 
@@ -307,161 +728,6 @@ public class Robot {
 
         }
 
-    }
-
-    private Station selectClosestStation() {
-        Station closestStation = null;
-        double minDistance = 10000;
-        for(int i=0;i<Main.stationNum;i++){
-
-            Station station = Main.stations[i];
-            if (station.leftTime == -1 || station.bookPro) continue;
-            double dis = station.pos.calcDistance(pos);
-            if (dis < minDistance){
-                // 卖方有货，卖方有位置
-//                if (station.type>3 && station.leftTime ==-1) continue;  // 未生产产品
-                Station oth = station.chooseAvailableNextStation();
-                if (oth != null){
-                    closestStation = station;
-                    minDistance = dis;
-                }
-            }
-        }
-        return closestStation;
-    }
-
-    //选择取货时间最短的，取货时间 = max {走路时间，生成时间}
-    private Station selectTimeShortestStation() {
-        Station shortestStation = null;
-        double shortest = 10000;
-        for(int i=0;i<Main.stationNum;i++){
-
-            Station station = Main.stations[i];
-            if (station.leftTime == -1 || station.bookPro) continue;
-            double dis = station.pos.calcDistance(pos);
-            double time1 = calcFpsToPlace(dis);
-            double time = Math.max(time1,station.leftTime);
-            if (time < shortest){
-                // 卖方有货，卖方有位置
-                Station oth = station.chooseAvailableNextStation();
-                if (oth != null){
-                    shortestStation = station;
-                    shortest = time;
-                }
-            }
-        }
-        return shortestStation;
-    }
-
-    // 计算最快到达需要多久
-    private int calcFpsToPlace(double dis) {
-        double time = 0;
-        double a = getAcceleration();
-        double minDistance = getMinDistance();
-        if (dis < minDistance/2){
-            time = Math.sqrt(2*dis/a);
-        }else {
-            double time1 = Math.sqrt(minDistance/a);
-            double time2 = (dis - minDistance/2)/maxSpeed;
-            time = time1 + time2;
-        }
-        return (int) (time*50);
-    }
-
-    // 若以当前速度加速到达，最快要多久
-    private int calcFpsToPlaceInCurSpeed(double dis) {
-        double time = 0;
-        double a = getAcceleration();
-        double v0 = Main.norm(lineVx,lineVy);
-        double x1 = (maxSpeed*maxSpeed - v0*v0)/(2*a);
-        if (dis<x1){
-            // x = v0t + 0.5at^2;   算不了，简单替代下v0= 0
-            time = (-v0 + Math.sqrt(v0 * v0 + 2 * a * dis)) / a;
-        }else{
-            time = (-v0 + Math.sqrt(v0 * v0 + 2 * a * x1)) / a;
-            time += (dis-x1)/maxSpeed;
-        }
-
-        return (int) (time*50);
-    }
-
-    // 计算路线
-    public void calcRoute() {
-        if (nextStation != null){
-            route = new Route(nextStation.pos.x,nextStation.pos.y,this);
-//            route.calcParam();
-        }
-    }
-
-    public double getMinDistance() {
-        return carry > 0? Station.fullMinDistance : Station.emptyMinDistance;
-    }
-
-    public double getMinAngle() {
-        return carry > 0? fullMinAngle:emptyMinAngle;
-    }
-    public double getAcceleration() {
-        return carry > 0? fullA:emptyA;
-    }
-    public double getAngleAcceleration() {
-        return carry > 0? fullRotateA:emptyRotateA;
-    }
-
-    public void rush() {
-
-//        // 临时目的地判断是否到达
-//        if (isTempPlace){
-//            if (route.isArriveTarget()){
-//                isTempPlace = false;
-//                if (nextStation == null) return;
-//                route.target.set(nextStation.pos);// 重新设置目的地
-//            }
-//        }
-
-//        route.rush();
-
-        if (nextStation == null) return;
-        route.rush2();
-    }
-
-    @Override
-    public String toString() {
-//        String s = route == null ? " ": ", tarturn=" + route.theoryTurn +", set=" + route.setMinAngle ;
-        return "Robot{" +
-                "id=" + id +
-                ", carry=" + carry +
-                ", Vr=" + angV +
-//                ", Vx=" + lineVx +
-//                ", Vy=" + lineVy +
-                ", turn=" + turn +
-                route +
-                '}';
-    }
-
-
-    // 判断目标点是否到达工作台
-    public boolean isArrive() {
-        if (StationId == nextStation.Id){
-//            Main.printLog("robot arrived id ="+StationId);
-            return true;
-        }else{
-            return false;
-        }
-    }
-
-    public void changeTarget() {
-        if (nextStation == srcStation){
-            nextStation = destStation;
-            calcRoute();
-        }else {
-            if (waterFlow != null) {
-                useWaterFlowChangeMode();
-            }
-            nextStation = srcStation = destStation = null;
-
-        }
-        Main.printLog("state change");
-        Main.printLog("next station" + nextStation);
     }
 
     private void useWaterFlowChangeMode() {
@@ -523,283 +789,6 @@ public class Robot {
             // 若为空，交给下一帧处理
             lastStation = nextStation;
         }
-    }
-
-    // 通过当前速度减速到0 的最小距离
-    public double getMinDistanceByCurSpeed() {
-        double a = getAcceleration();
-        double v2 = Math.pow(lineVx,2) + Math.pow(lineVy,2);
-        double x = v2/(2*a);
-        return x;
-    }
-
-
-    public double getMinAngleDistanceByCurSpeed() {
-        double a = getAngleAcceleration();
-        double angle = angV * angV / (2*a);
-        return angle;
-    }
-
-    // 买入的商品是否有时间售出
-    public boolean canBugJudge() {
-        int needFPS = calcFpsToPlace(srcStation.pos.calcDistance(destStation.pos));
-        int leftFps = Main.duration - Main.frameID - cacheFps;   // 1s误差,后期可调整
-        return leftFps > needFPS;
-    }
-
-
-    //计算机器人的轨迹方程，也就两条平行线
-    public void calcMoveEquation() {
-        if (route.vector.x == 0) return;// 不能是垂直的情况，在调用此函数之前事先要做出判断 todo
-        double radius = getRadius();
-        Point[] src = getPoints(pos.x,pos.y,radius);
-        Point[] dest = getPoints(route.target.x,route.target.y,radius);
-        topLine.setValue(src[0],dest[0]);
-        belowLine.setValue(src[1],dest[1]);
-
-    }
-
-    public double getRadius() {
-        return carry > 0?fullRadius:emptyRadius;
-    }
-
-    // 知道点，获取左右两坐标,输出点顺序为先上后下
-    public Point[] getPoints(double x,double y,double distance){
-
-        double[] direction = new double[]{route.vector.x,route.vector.y};   // 方向向量
-        double[] points = new double[4];
-        Point[] p = new Point[2];
-        // 求解过程
-        double tmp = direction[0];
-        direction[0] = -direction[1];
-        direction[1] = tmp;
-        double d = Math.sqrt(direction[0] * direction[0] + direction[1] * direction[1]); // 直线的长度
-        double dx = direction[0] / d; // 直线的单位向量在 x 方向上的分量
-        double dy = direction[1] / d; // 直线的单位向量在 y 方向上的分量
-        points[0] = x + dx * distance; // 求解 point2 在 x 方向上的坐标
-        points[1] = y + dy * distance; // 求解 point2 在 y 方向上的坐标
-
-        direction[0] = -direction[0];
-        direction[1] = -direction[1];
-        dx = direction[0] / d; // 直线的单位向量在 x 方向上的分量
-        dy = direction[1] / d; // 直线的单位向量在 y 方向上的分量
-        points[2] = x + dx * distance; // 求解 point2 在 x 方向上的坐标
-        points[3] = y + dy * distance; // 求解 point2 在 y 方向上的坐标
-        if (points[1]<points[3]){
-            p[0] = new Point(points[2],points[3]);
-            p[1] = new Point(points[0],points[1]);
-        }else{
-            p[0] = new Point(points[0],points[1]);
-            p[1] = new Point(points[2],points[3]);
-        }
-
-        return p;
-    }
-
-    // 碰撞计算
-    public void calcBump(Robot other) {
-        if (route.vector.x == 0 || other.route.vector.x == 0) return;    //应该不会是垂直情况
-
-
-
-        // 检测两个机器人轨迹是否有交集
-        if (routeBumpDetect(other)){
-            double deltaVector = route.calcDeltaAngle(other.route.vector);
-//            Main.printLog("deta "+deltaVector);
-            if (deltaVector < vectorNearOffset){
-                // 方向同向，后车饶
-                Point vec = new Point(other.pos.x - pos.x,other.pos.y - pos.y);
-//                Main.printLog("vec det" + route.calcDeltaAngle(vec));
-                if (route.calcDeltaAngle(vec) < pi/2){
-                    //锐角，说明自己在后面
-                    if (!setTmpPlace()){
-                        setTmpPlace(false);//向右不能转，改为向左转
-                    }
-                }else {
-                    if (!other.setTmpPlace()){
-                        other.setTmpPlace(false);//改为向左转
-                    }
-                }
-
-            }else if(deltaVector>pi-vectorNearOffset){
-                // 方向相反，双车都绕
-                setTmpPlace();
-                other.setTmpPlace();
-
-            }else if (ifRangeConflict(other)){
-
-                setTmpPlace();
-                other.setTmpPlace();
-            }
-        }
-    }
-
-    private boolean setTmpPlace() {
-        return setTmpPlace(true);
-    }
-
-    //  设置临时目的地，默认设置中点向右偏移
-    private boolean setTmpPlace(boolean right) {
-        double x = (route.target.x + pos.x)/2;
-        double y = (route.target.y + pos.y)/2;
-        Point[] points = getPoints(x, y, getRadius() * tmpPlaceOffset);
-        // 默认往右转
-        if (route.vector.x>0){
-            tmpPos = right?points[1]:points[0];
-        }else {
-            tmpPos =  right?points[0]:points[1];
-        }
-        if (!posIsAllow(tmpPos)){
-            return false;
-        }
-        // 重新设置轨迹
-        route.target.set(tmpPos);
-        isTempPlace = true;
-
-        return true;
-    }
-
-    private boolean posIsAllow(Point tmpPos) {
-        // 距离边界太近，则不合法
-        double dis = minDistanceForWall * getRadius();
-        if (tmpPos.x <= dis || tmpPos.x >= 50 - dis){
-            return false;
-        }
-        return !(tmpPos.y <= dis) && !(tmpPos.y >= 50 - dis);
-    }
-
-
-    // 判断范围是否有冲突
-    private boolean ifRangeConflict(Robot other) {
-        Point p1 = topLine.calcIntersectionPoint(other.belowLine);
-        Point p2 = belowLine.calcIntersectionPoint(other.topLine);
-        // 3、预测机器人经过交集区域的时间帧区间
-        double[] t1 = calcBumpTimeRange(p1,p2);
-        double[] t2 = other.calcBumpTimeRange(p1,p2);
-        if (t1[0] > t2[1] || t2[0] > t1[1]){
-            return false;
-        }
-        return true;
-    }
-
-    // 根据两点，计算当前小车到达两点的时间
-    private double[] calcBumpTimeRange(Point p1, Point p2) {
-        double dis1 = pos.calcDistance(p1);
-        double dis2 = pos.calcDistance(p2);
-        double fps1 = calcFpsToPlaceInCurSpeed(dis1);
-        double fps2 = calcFpsToPlaceInCurSpeed(dis2);
-        double[] res;
-        if (fps1<fps2){
-            res = new double[]{fps1,fps2};
-        }else {
-            res = new double[]{fps2,fps1};
-        }
-        return res;
-    }
-
-
-
-    // 检测路线是否有重叠区域
-    private boolean routeBumpDetect(Robot other) {
-        double left = Math.max(topLine.left.x,other.topLine.left.x);
-        double right = Math.min(topLine.right.x,other.topLine.right.x);
-        double m_l_min = belowLine.getY(left);
-        double m_l_max = topLine.getY(left);
-        double m_r_min = belowLine.getY(right);
-        double m_r_max = topLine.getY(right);
-
-        double o_l_min = other.belowLine.getY(left);
-        double o_l_max = other.topLine.getY(left);
-        double o_r_min = other.belowLine.getY(right);
-        double o_r_max = other.topLine.getY(right);
-
-        // 最小 > 最大 ，无交集
-        if (m_l_min > o_l_max && m_r_min > o_r_max || o_l_min > m_l_max && o_r_min > m_r_max){
-            return false;
-        }
-
-        return true;
-    }
-
-    public void setTask(Station task) {
-
-        if (Main.specialMapMode && Main.mapSeq == 4 && task.type == 4){
-            Main.printLog("666");
-            curTask = task;
-            if (curTask.canBuy(2)){
-                setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
-                Main.printLog("777");
-                return;
-            }
-            if (curTask.canBuy(1)){
-                setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
-                Main.printLog("888");
-                return;
-            }
-
-            if (!curTask.bookRow[2]){
-                setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
-                Main.printLog("999");
-                return;
-            }
-            if (!curTask.bookRow[1]){
-                setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
-                Main.printLog("ttt");
-                return;
-            }
-        }
-
-//        if (task.taskBook) return;
-        if (task.taskBook && !(Main.specialMapMode && Main.mapSeq == 4 && task.type == 4 && task.bookNum2 <2)) return;
-        if (waterFlow.isType7 && !task.haveEmptyPosition()) return; // 没有空格位，若没有7的情况下，不用判断
-        if (waterFlow.isType7 || task == waterFlow.target){
-            waterFlow.curTasks.get(task.type).add(task);  // 加入队列
-        }
-        task.taskBook = true;   //加锁
-        curTask = task;
-        Main.printLog("aaa");
-        if (Main.specialMapMode){
-            if (Main.mapSeq == 3 && curTask.Id == 32){
-                if (!curTask.positionIsFull(2)){
-                    setSrcDest(Main.stations[37], curTask);
-                }else {
-                    setSrcDest(Main.stations[28], curTask);
-                }
-                return;
-            }
-
-        }
-        // 若 task 的产品格都是满的，会报错
-        setSrcDest(selectClosestSrcToDest(curTask),curTask);
-
-    }
-
-
-    private Station selectClosestSrcToDest(Station dest) {
-        // 选择距离dest和自己最近的src
-        // 距离 =  robot -> src -> dest
-        double minTime = 100000;
-        Station st = null;
-        for (int ty : Station.item[dest.type].call) {
-            if (waterFlow.isType7){
-                // 时间小于等于0 ，表明未生产，将会一直阻塞
-                if (dest.bookRow[ty] || dest.positionIsFull(ty)) continue;
-            }
-            for (Station s:Main.map.get(ty)){
-                // 第一段空载，第二段满载
-                double t1 = s.distanceToFps(true,pos);
-                double t2 = s.distanceToFps(false,dest.pos);
-                double t = t1 + t2;
-                if (t < minTime){
-                    minTime = t;
-                    st = s;
-                }
-            }
-        }
-        if (st == null){
-//            Main.printLog("-------task"+dest);
-        }
-        return st;
     }
 }
 

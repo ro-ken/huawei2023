@@ -17,9 +17,17 @@ public class Line {
         this.right = right;
     }
 
-    public void setValue(Point left, Point right) {
-        this.left = left;
-        this.right = right;
+    // 计算两条直线交点
+    public Point calcIntersectionPoint(Line other) {
+        double k1 = getK();
+        double b1 = getB(k1);
+        double k2 = other.getK();
+        double b2 = other.getB(k2);
+
+        double x = (b2-b1)/(k2-k1);
+        double y = k1 * x + b1;
+
+        return new Point(x,y);
     }
 
     public double getY(double x){
@@ -40,17 +48,9 @@ public class Line {
         return k;
     }
 
-    // 计算两条直线交点
-    public Point calcIntersectionPoint(Line other) {
-        double k1 = getK();
-        double b1 = getB(k1);
-        double k2 = other.getK();
-        double b2 = other.getB(k2);
-
-        double x = (b2-b1)/(k2-k1);
-        double y = k1 * x + b1;
-
-        return new Point(x,y);
+    public void setValue(Point left, Point right) {
+        this.left = left;
+        this.right = right;
     }
 }
 

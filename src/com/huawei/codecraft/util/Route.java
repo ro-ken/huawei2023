@@ -50,6 +50,320 @@ public class Route{
         unsafeRobotIds = new ArrayList<>();
     }
 
+    @Override
+    public String toString() {
+        return "Route{" +
+                "clockwise=" + clockwise +
+                ", realA=" + realAngleDistance +
+                ", theoryTurn=" + theoryTurn +
+                ", stopA=" + stopMinAngleDistance +
+                '}';
+    }
+
+    private int calcAvoidBumpClockwise(Point speed,Point posVec) {
+        int cw;
+        double dot = speed.calcDot(posVec);
+
+        if (dot < 0){
+            // speed 在逆时针方位
+            cw = 1;
+        }else {
+            cw = -1;
+        }
+        return cw;
+    }
+
+    public void calcClockwiseCoef() {
+        // 紧急事件中只会有1个机器人,解决同转问题
+        int id = unsafeRobotIds.get(0);
+        if (Main.clockCoef[robot.id] != -1) {   // 判断过了，被前面的机器人置为了 -1
+            // 计算两个向量的旋转角度是否一致
+            Point speed1= new Point(robot.lineVx,robot.lineVy);
+            Point speed2 = new Point(Main.robots[id].lineVx,Main.robots[id].lineVy);
+            Point vec1 = robot.pos.calcVector(Main.robots[id].pos);//new Point(Main.robots[id].pos.x - robot.pos.x, Main.robots[id].pos.y - robot.pos.y);
+            Point vec2 = Main.robots[id].pos.calcVector(robot.pos);//new Point(robot.pos.x - Main.robots[id].pos.x, robot.pos.y - Main.robots[id].pos.y);
+            double dot1 = speed1.calcDot(vec1);
+            double dot2 = speed2.calcDot(vec2);
+            if (dot1 * dot2 <= 0) {
+                Main.clockCoef[id] *= -1;
+            }
+        }
+    }
+
+    public void calcClockwise() {
+        if (theoryTurn>robot.turn && theoryTurn - robot.turn < Robot.pi || theoryTurn<robot.turn && robot.turn - theoryTurn > Robot.pi){
+            clockwise = 1;
+        }else {
+            clockwise = -1;
+        }
+    }
+
+    // 计算向量的模长
+    public double calcDeltaAngle(Point other) {
+        return calcDeltaAngle(vector,other);
+    }
+
+    // 计算向量的角度
+    public static double calcDeltaAngle(Point vector1,Point vector2) {
+        double cosTheta = calcDeltaCos(vector1,vector2);
+        double theta = Math.acos(cosTheta); // 将余弦值转化为弧度值
+        return theta;
+    }
+
+    // 计算向量的模长
+    public static double calcDeltaCos(Point vector1,Point vector2) {
+        double dotProduct = Main.dotProduct(vector1,vector2); // 计算点积
+        double normA = Main.norm(vector1); // 计算向量a的模长
+        double normB = Main.norm(vector2); // 计算向量b的模长
+
+        double cosTheta = dotProduct / (normA * normB); // 计算余弦值
+        return cosTheta;
+    }
+
+//    public void calcSetMinDistance() {
+//
+//        angleOffset = Math.abs(Math.atan2(0.4, realDistance));
+//        if (realDistance <= robot.getMinDistance()){
+//            setMinDistance = realDistance/2;
+//        }else {
+//            setMinDistance = robot.getMinDistance()/2;
+//        }
+//    }
+
+    // 计算当前速度减速到0需要多长的距离
+    private void calcMinDistance() {
+        stopMinDistance = robot.getMinDistanceByCurSpeed();
+        stopMinAngleDistance = robot.getMinAngleDistanceByCurSpeed();
+    }
+
+    public void calcParamEveryFrame() {
+
+        calcVector();   // 距离矢量
+        calcTheoryTurn();//理论偏角
+        calcClockwise();    // 转动方向
+        calcMinDistance();
+    }
+
+    public void calcSetMinAngle() {
+        double tmpAngle = Math.abs(robot.turn - theoryTurn);
+        double deltaAngle = Math.min(tmpAngle,2* Robot.pi-tmpAngle);
+        double minAngle = robot.getMinAngle();
+        if (deltaAngle <= minAngle){
+            setMinAngle = deltaAngle/2;
+//            turnSpeedCoef = 0.4;
+        }else {
+            setMinAngle = robot.getMinAngle()/2;
+//            turnSpeedCoef = 0.8;
+        }
+    }
+
+    private void calcSafePrintSpeed() {
+
+        // 若工作台在角落，需要提前减速，
+        if (target.nearWall()){
+            stopMinDistance +=cornerStopMinDistance;
+        }
+
+        //计算线速度
+        if (realAngleDistance < Robot.canForwardRad && stopMinDistance < realDistance){
+            // 速度太小，加速
+//            printLineSpeed = Robot.maxSpeed;
+            if (realAngleDistance < Robot.maxForwardRad){
+                printLineSpeed = Robot.maxSpeed;
+            }else if (isNotInEdge()){
+                printLineSpeed = Robot.rotateSpeedEquation.getY(realAngleDistance);
+            }else {
+                printLineSpeed = 0;
+            }
+
+        }else {
+            // 减速
+            printLineSpeed = 0;
+        }
+
+        //计算角速度
+        if (stopMinAngleDistance < realAngleDistance){
+            printTurnSpeed = Robot.maxRotate * clockwise;
+        }else {
+            printTurnSpeed = 0;
+        }
+
+    }
+
+    public void calcTheoryTurn() {
+        // 计算夹角弧度
+        theoryTurn = Math.atan2(vector.y, vector.x);
+        double tmp = Math.abs(robot.turn - theoryTurn);
+        realAngleDistance = Math.min(tmp,2* Robot.pi-tmp);
+//        Main.printLog("tmp"+tmp+"real"+realAngleDistance);
+    }
+
+    private void calcUnsafePrintSpeed() {
+        // 紧急情况，和其他机器人靠得很近，逃离
+//        Main.printLog(isEmergency);
+
+        if (isEmergency){
+            processEmergEvent();
+        }else {
+            processNormalEvent();
+        }
+//        calcClockwiseCoef();
+//        Main.clockCoef[robot.id] = 1;
+    }
+
+    // 关键参数，每一帧需要重新计算
+    private void calcVector() {
+        vector.x = target.x - robot.pos.x;
+        vector.y = target.y - robot.pos.y;
+        realDistance = Main.norm(vector);
+
+    }
+
+    private double calcVerticalDistance(Point pos) {
+        // 先算线速度，夹角小于pi/2 刹车，大于pi/2 全速
+        Point speed = new Point(robot.lineVx,robot.lineVy);
+        Point posVec = robot.pos.calcVector(pos);
+        double dis = Main.norm(posVec);
+        double angle = calcDeltaAngle(speed,posVec);
+        double verDis = dis * Math.sin(angle); // 垂直距离 = 斜边 * sin (t)
+        return verDis;
+    }
+
+     // 前方有障碍物，不能移动
+     private boolean frontNotSafe() {
+        boolean safe = true;
+
+        for (int i = 0; i < 4; i++) {
+            if (i == robot.id) continue;
+
+            double dis = target.calcDistance(Main.robots[i].pos);
+            Point vec = robot.pos.calcVector(Main.robots[i].pos);
+            double verDis = calcVerticalDistance(Main.robots[i].pos);// 计算向量和速度垂直的距离
+            double angle = calcDeltaAngle(vec);
+            double verSafeDis = verticalSafeDistanceCoef * robot.getRadius() + 2 * robot.getRadius();
+            if (angle < staPerAngleRange && dis < realDistance){
+                if (Robot.judgeWidth && verDis > verSafeDis){
+                    continue;
+                }
+                safe = false;
+            }
+        }
+        return !safe;
+    }
+
+    
+    // 判断是否到达了目的地
+    public boolean isArriveTarget() {
+        double dis = target.calcDistance(robot.pos);
+        return dis < robot.getRadius() * robot.arriveMinDistance;
+    }
+
+    // 当前移动是否安全
+    private boolean isMoveSafe() {
+        boolean safe = true;
+        isEmergency = false;
+
+        unsafeRobotIds.clear(); // 先清空
+        double emgDis = emergencyDistanceCoef * robot.getRadius() + 2 * robot.getRadius();
+        double verSafeDis = verticalSafeDistanceCoef * robot.getRadius() + 2 * robot.getRadius();
+        double safeDis = perceptionDistanceCoef * stopMinDistance + emgDis;
+        for (int i = 0; i < 4; i++) {
+            if (i == robot.id) continue;
+//            if (robot.carry ==0 && Main.robots[i].carry==0) continue;   // 空载不检测碰撞
+            double dis = robot.pos.calcDistance(Main.robots[i].pos);
+            if (dis<safeDis){
+                // 目前只判断了两个条件，夹角和是否在内圈，后面第二圈也可以加一下判断
+                Point vec = robot.pos.calcVector(Main.robots[i].pos);
+                double verDis = calcVerticalDistance(Main.robots[i].pos);// 计算向量和速度垂直的距离
+                double angle = calcDeltaAngle(vec);
+                if (dis < emgDis && angle < emergencyAngle) {
+                    // 目前只考虑一个紧急情况，若有多个，选取最紧急的
+                    safe = false;
+                    isEmergency = true;
+                    emergencyPos = Main.robots[i].pos;
+                    unsafeRobotIds.add(i);
+                    break;  // 紧急情况
+                }else {
+                    if (angle < perceptionAngleRange){
+                        if (Robot.judgeWidth && verDis > verSafeDis){
+                            continue;
+                        }
+                        safe = false;
+                        unsafeRobotIds.add(i);
+                    }
+                }
+            }
+        }
+        return safe;
+    }
+    
+    
+    public boolean isNotInEdge() {
+
+        boolean flag1 = robot.pos.x - wallCoef * robot.getRadius() < 0 || robot.pos.y - wallCoef * robot.getRadius() < 0;
+        boolean flag2 = robot.pos.x + wallCoef * robot.getRadius() > 50 || robot.pos.y + wallCoef * robot.getRadius() > 50;
+
+        return !flag1 && !flag2;
+    }
+
+    private void processEmergEvent() {
+        // 先算线速度，夹角小于pi/2 刹车，大于pi/2 全速
+        Point speed = new Point(robot.lineVx,robot.lineVy);
+        Point posVec = robot.pos.calcVector(emergencyPos);
+        double angle = calcDeltaAngle(speed, posVec);
+
+//        if (angle<Robot.pi/2){
+//            printLineSpeed = 0;
+//        }else {
+//            printLineSpeed = 6;
+//        }
+//        clockwise = calcAvoidBumpClockwise(speed,posVec);
+//        printTurnSpeed = Robot.maxRotate * clockwise;
+
+        if (angle<Robot.pi/2){
+            printLineSpeed = 0;
+        }else {
+            printLineSpeed = 6;
+        }
+
+
+        clockwise = calcAvoidBumpClockwise(speed,posVec);
+        printTurnSpeed = Robot.maxRotate * clockwise * Main.clockCoef[robot.id];
+
+    }
+
+    private void processNormalEvent() {
+        // 总体思想，前方物体在越靠近中心，速度越小，转向越大
+        // 若有前方多个物体，速度按最靠中心的，转向选择最近的计算
+
+        double speedCoef = 1;
+        double rotateCoef = 1;
+        double minDis = 10000;
+        Point speed = new Point(robot.lineVx,robot.lineVy);
+        assert unsafeRobotIds.size() != 0;
+        for(Integer i:unsafeRobotIds){
+            Robot rot = Main.robots[i];
+            Point posVec = robot.pos.calcVector(rot.pos);
+            double angle = calcDeltaAngle(posVec, speed);
+            double cos = calcDeltaCos(speed, posVec);
+//            if ( 1-cos < speedCoef){
+//                speedCoef = 1-cos;    //速度选择小的 安全
+//            }
+            double y = angle * lineSpeedCoef;
+            if ( y < speedCoef){
+                speedCoef = y;    //速度选择小的 安全
+            }
+            double dis = robot.pos.calcDistance(rot.pos);
+            if (dis < minDis){
+                rotateCoef = cos;
+                // 不能处理，方向斜碰撞情况 \/
+                clockwise = calcAvoidBumpClockwise(speed,posVec);
+            }
+        }
+        printLineSpeed = Robot.maxSpeed * speedCoef;
+        printTurnSpeed = Robot.maxRotate * clockwise * rotateCoef;
+    }
+    
     // 给定设置角度和速度
     public void rush() {
         calcParamEveryFrame();    // 参数计算
@@ -98,28 +412,6 @@ public class Route{
 
     }
 
-    // 前方有障碍物，不能移动
-    private boolean frontNotSafe() {
-        boolean safe = true;
-
-        for (int i = 0; i < 4; i++) {
-            if (i == robot.id) continue;
-
-            double dis = target.calcDistance(Main.robots[i].pos);
-            Point vec = robot.pos.calcVector(Main.robots[i].pos);
-            double verDis = calcVerticalDistance(Main.robots[i].pos);// 计算向量和速度垂直的距离
-            double angle = calcDeltaAngle(vec);
-            double verSafeDis = verticalSafeDistanceCoef * robot.getRadius() + 2 * robot.getRadius();
-            if (angle < staPerAngleRange && dis < realDistance){
-                if (Robot.judgeWidth && verDis > verSafeDis){
-                    continue;
-                }
-                safe = false;
-            }
-        }
-        return !safe;
-    }
-
     // 有很多机器人去这个工作站，我不是最近的一个
     private boolean selfNotClosest() {
         boolean flag = false;
@@ -137,299 +429,4 @@ public class Route{
         }
         return flag;
     }
-
-    private void calcUnsafePrintSpeed() {
-        // 紧急情况，和其他机器人靠得很近，逃离
-//        Main.printLog(isEmergency);
-
-        if (isEmergency){
-            processEmergEvent();
-        }else {
-            processNormalEvent();
-        }
-//        calcClockwiseCoef();
-//        Main.clockCoef[robot.id] = 1;
-    }
-
-    public boolean isNotInEdge() {
-
-        boolean flag1 = robot.pos.x - wallCoef * robot.getRadius() < 0 || robot.pos.y - wallCoef * robot.getRadius() < 0;
-        boolean flag2 = robot.pos.x + wallCoef * robot.getRadius() > 50 || robot.pos.y + wallCoef * robot.getRadius() > 50;
-
-        return !flag1 && !flag2;
-    }
-
-    private void processNormalEvent() {
-        // 总体思想，前方物体在越靠近中心，速度越小，转向越大
-        // 若有前方多个物体，速度按最靠中心的，转向选择最近的计算
-
-        double speedCoef = 1;
-        double rotateCoef = 1;
-        double minDis = 10000;
-        Point speed = new Point(robot.lineVx,robot.lineVy);
-        assert unsafeRobotIds.size() != 0;
-        for(Integer i:unsafeRobotIds){
-            Robot rot = Main.robots[i];
-            Point posVec = robot.pos.calcVector(rot.pos);
-            double angle = calcDeltaAngle(posVec, speed);
-            double cos = calcDeltaCos(speed, posVec);
-//            if ( 1-cos < speedCoef){
-//                speedCoef = 1-cos;    //速度选择小的 安全
-//            }
-            double y = angle * lineSpeedCoef;
-            if ( y < speedCoef){
-                speedCoef = y;    //速度选择小的 安全
-            }
-            double dis = robot.pos.calcDistance(rot.pos);
-            if (dis < minDis){
-                rotateCoef = cos;
-                // 不能处理，方向斜碰撞情况 \/
-                clockwise = calcAvoidBumpClockwise(speed,posVec);
-            }
-        }
-        printLineSpeed = Robot.maxSpeed * speedCoef;
-        printTurnSpeed = Robot.maxRotate * clockwise * rotateCoef;
-    }
-
-    private int calcAvoidBumpClockwise(Point speed,Point posVec) {
-        int cw;
-        double dot = speed.calcDot(posVec);
-
-        if (dot < 0){
-            // speed 在逆时针方位
-            cw = 1;
-        }else {
-            cw = -1;
-        }
-        return cw;
-    }
-
-    public void calcClockwiseCoef() {
-        // 紧急事件中只会有1个机器人,解决同转问题
-        int id = unsafeRobotIds.get(0);
-        if (Main.clockCoef[robot.id] != -1) {   // 判断过了，被前面的机器人置为了 -1
-            // 计算两个向量的旋转角度是否一致
-            Point speed1= new Point(robot.lineVx,robot.lineVy);
-            Point speed2 = new Point(Main.robots[id].lineVx,Main.robots[id].lineVy);
-            Point vec1 = robot.pos.calcVector(Main.robots[id].pos);//new Point(Main.robots[id].pos.x - robot.pos.x, Main.robots[id].pos.y - robot.pos.y);
-            Point vec2 = Main.robots[id].pos.calcVector(robot.pos);//new Point(robot.pos.x - Main.robots[id].pos.x, robot.pos.y - Main.robots[id].pos.y);
-            double dot1 = speed1.calcDot(vec1);
-            double dot2 = speed2.calcDot(vec2);
-            if (dot1 * dot2 <= 0) {
-                Main.clockCoef[id] *= -1;
-            }
-        }
-    }
-
-    private void processEmergEvent() {
-        // 先算线速度，夹角小于pi/2 刹车，大于pi/2 全速
-        Point speed = new Point(robot.lineVx,robot.lineVy);
-        Point posVec = robot.pos.calcVector(emergencyPos);
-        double angle = calcDeltaAngle(speed, posVec);
-
-//        if (angle<Robot.pi/2){
-//            printLineSpeed = 0;
-//        }else {
-//            printLineSpeed = 6;
-//        }
-//        clockwise = calcAvoidBumpClockwise(speed,posVec);
-//        printTurnSpeed = Robot.maxRotate * clockwise;
-
-        if (angle<Robot.pi/2){
-            printLineSpeed = 0;
-        }else {
-            printLineSpeed = 6;
-        }
-
-
-        clockwise = calcAvoidBumpClockwise(speed,posVec);
-        printTurnSpeed = Robot.maxRotate * clockwise * Main.clockCoef[robot.id];
-
-    }
-
-    // 当前移动是否安全
-    private boolean isMoveSafe() {
-        boolean safe = true;
-        isEmergency = false;
-
-        unsafeRobotIds.clear(); // 先清空
-        double emgDis = emergencyDistanceCoef * robot.getRadius() + 2 * robot.getRadius();
-        double verSafeDis = verticalSafeDistanceCoef * robot.getRadius() + 2 * robot.getRadius();
-        double safeDis = perceptionDistanceCoef * stopMinDistance + emgDis;
-        for (int i = 0; i < 4; i++) {
-            if (i == robot.id) continue;
-//            if (robot.carry ==0 && Main.robots[i].carry==0) continue;   // 空载不检测碰撞
-            double dis = robot.pos.calcDistance(Main.robots[i].pos);
-            if (dis<safeDis){
-                // 目前只判断了两个条件，夹角和是否在内圈，后面第二圈也可以加一下判断
-                Point vec = robot.pos.calcVector(Main.robots[i].pos);
-                double verDis = calcVerticalDistance(Main.robots[i].pos);// 计算向量和速度垂直的距离
-                double angle = calcDeltaAngle(vec);
-                if (dis < emgDis && angle < emergencyAngle) {
-                    // 目前只考虑一个紧急情况，若有多个，选取最紧急的
-                    safe = false;
-                    isEmergency = true;
-                    emergencyPos = Main.robots[i].pos;
-                    unsafeRobotIds.add(i);
-                    break;  // 紧急情况
-                }else {
-                    if (angle < perceptionAngleRange){
-                        if (Robot.judgeWidth && verDis > verSafeDis){
-                            continue;
-                        }
-                        safe = false;
-                        unsafeRobotIds.add(i);
-                    }
-                }
-            }
-        }
-        return safe;
-    }
-
-    private double calcVerticalDistance(Point pos) {
-        // 先算线速度，夹角小于pi/2 刹车，大于pi/2 全速
-        Point speed = new Point(robot.lineVx,robot.lineVy);
-        Point posVec = robot.pos.calcVector(pos);
-        double dis = Main.norm(posVec);
-        double angle = calcDeltaAngle(speed,posVec);
-        double verDis = dis * Math.sin(angle); // 垂直距离 = 斜边 * sin (t)
-        return verDis;
-    }
-
-    private void calcSafePrintSpeed() {
-
-        // 若工作台在角落，需要提前减速，
-        if (target.nearWall()){
-            stopMinDistance +=cornerStopMinDistance;
-        }
-
-        //计算线速度
-        if (realAngleDistance < Robot.canForwardRad && stopMinDistance < realDistance){
-            // 速度太小，加速
-//            printLineSpeed = Robot.maxSpeed;
-            if (realAngleDistance < Robot.maxForwardRad){
-                printLineSpeed = Robot.maxSpeed;
-            }else if (isNotInEdge()){
-                printLineSpeed = Robot.rotateSpeedEquation.getY(realAngleDistance);
-            }else {
-                printLineSpeed = 0;
-            }
-
-        }else {
-            // 减速
-            printLineSpeed = 0;
-        }
-
-        //计算角速度
-        if (stopMinAngleDistance < realAngleDistance){
-            printTurnSpeed = Robot.maxRotate * clockwise;
-        }else {
-            printTurnSpeed = 0;
-        }
-
-    }
-
-
-    public void calcTheoryTurn() {
-        // 计算夹角弧度
-        theoryTurn = Math.atan2(vector.y, vector.x);
-        double tmp = Math.abs(robot.turn - theoryTurn);
-        realAngleDistance = Math.min(tmp,2* Robot.pi-tmp);
-//        Main.printLog("tmp"+tmp+"real"+realAngleDistance);
-    }
-
-    public void calcClockwise() {
-        if (theoryTurn>robot.turn && theoryTurn - robot.turn < Robot.pi || theoryTurn<robot.turn && robot.turn - theoryTurn > Robot.pi){
-            clockwise = 1;
-        }else {
-            clockwise = -1;
-        }
-    }
-
-    public void calcSetMinAngle() {
-        double tmpAngle = Math.abs(robot.turn - theoryTurn);
-        double deltaAngle = Math.min(tmpAngle,2* Robot.pi-tmpAngle);
-        double minAngle = robot.getMinAngle();
-        if (deltaAngle <= minAngle){
-            setMinAngle = deltaAngle/2;
-//            turnSpeedCoef = 0.4;
-        }else {
-            setMinAngle = robot.getMinAngle()/2;
-//            turnSpeedCoef = 0.8;
-        }
-    }
-
-//    public void calcSetMinDistance() {
-//
-//        angleOffset = Math.abs(Math.atan2(0.4, realDistance));
-//        if (realDistance <= robot.getMinDistance()){
-//            setMinDistance = realDistance/2;
-//        }else {
-//            setMinDistance = robot.getMinDistance()/2;
-//        }
-//    }
-
-
-    public void calcParamEveryFrame() {
-
-        calcVector();   // 距离矢量
-        calcTheoryTurn();//理论偏角
-        calcClockwise();    // 转动方向
-        calcMinDistance();
-    }
-
-
-    // 计算当前速度减速到0需要多长的距离
-    private void calcMinDistance() {
-        stopMinDistance = robot.getMinDistanceByCurSpeed();
-        stopMinAngleDistance = robot.getMinAngleDistanceByCurSpeed();
-    }
-
-    // 关键参数，每一帧需要重新计算
-    private void calcVector() {
-        vector.x = target.x - robot.pos.x;
-        vector.y = target.y - robot.pos.y;
-        realDistance = Main.norm(vector);
-
-    }
-
-    // 计算向量的模长
-    public double calcDeltaAngle(Point other) {
-        return calcDeltaAngle(vector,other);
-    }
-
-    // 计算向量的角度
-    public static double calcDeltaAngle(Point vector1,Point vector2) {
-        double cosTheta = calcDeltaCos(vector1,vector2);
-        double theta = Math.acos(cosTheta); // 将余弦值转化为弧度值
-        return theta;
-    }
-
-    // 计算向量的模长
-    public static double calcDeltaCos(Point vector1,Point vector2) {
-        double dotProduct = Main.dotProduct(vector1,vector2); // 计算点积
-        double normA = Main.norm(vector1); // 计算向量a的模长
-        double normB = Main.norm(vector2); // 计算向量b的模长
-
-        double cosTheta = dotProduct / (normA * normB); // 计算余弦值
-        return cosTheta;
-    }
-
-
-    // 判断是否到达了目的地
-    public boolean isArriveTarget() {
-        double dis = target.calcDistance(robot.pos);
-        return dis < robot.getRadius() * robot.arriveMinDistance;
-    }
-
-    @Override
-    public String toString() {
-        return "Route{" +
-                "clockwise=" + clockwise +
-                ", realA=" + realAngleDistance +
-                ", theoryTurn=" + theoryTurn +
-                ", stopA=" + stopMinAngleDistance +
-                '}';
-    }
-
 }
