@@ -2,6 +2,7 @@ package com.huawei.codecraft.util;
 
 import java.util.Objects;
 
+// 可表示点，也可表示原点为0,0的向量
 public class Point{
     public double x,y;
 
@@ -36,7 +37,7 @@ public class Point{
     }
 
     public double calcDistance(Point oth){
-        return Math.sqrt(Math.pow(oth.x-x,2) + Math.pow(oth.y-y,2));
+        return calcDistance(oth.x,oth.y);
     }
 
     public double calcDistance(double ox, double oy) {
@@ -48,6 +49,7 @@ public class Point{
         return new Point(dest.x-x, dest.y-y);
     }
 
+    // 计算两点的叉积
     public double calcDot(Point oth){
         return x*oth.y - oth.x*y;
     }

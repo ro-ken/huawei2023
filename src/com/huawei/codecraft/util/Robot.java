@@ -73,8 +73,6 @@ public class Robot {
     public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
     public static int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
 
-
-
     Route route;
 
     static {
@@ -103,7 +101,7 @@ public class Robot {
 
     @Override
     public String toString() {
-//        String s = route == null ? " ": ", tarturn=" + route.theoryTurn +", set=" + route.setMinAngle ;
+
         return "Robot{" +
                 "id=" + id +
                 ", carry=" + carry +
@@ -216,7 +214,7 @@ public class Robot {
 
     //计算机器人的轨迹方程，也就两条平行线
     public void calcMoveEquation() {
-        if (route.vector.x == 0) return;// 不能是垂直的情况，在调用此函数之前事先要做出判断 todo
+        if (route.vector.x == 0) return;// 不能是垂直的情况，在调用此函数之前事先要做出判断
         double radius = getRadius();
         Point[] src = getPoints(pos.x,pos.y,radius);
         Point[] dest = getPoints(route.target.x,route.target.y,radius);
@@ -252,6 +250,7 @@ public class Robot {
         return leftFps > needFPS;
     }
 
+    // 到达一个目的地，更换下一个
     public void changeTarget() {
         if (nextStation == srcStation){
             nextStation = destStation;
@@ -421,7 +420,6 @@ public class Robot {
     public void selectBestStation() {
         if (waterFlow == null){
             Station station = selectTimeShortestStation();
-//        Station maxStation = selectBestValueStation();
             if (station == null){
                 Main.printLog("no available station ! wait...");
                 return;
@@ -526,52 +524,14 @@ public class Robot {
 
     public void setTask(Station task) {
 
-        if (Main.specialMapMode && Main.mapSeq == 4 && task.type == 4){
-            Main.printLog("666");
-            curTask = task;
-            if (curTask.canBuy(2)){
-                setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
-                Main.printLog("777");
-                return;
-            }
-            if (curTask.canBuy(1)){
-                setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
-                Main.printLog("888");
-                return;
-            }
-
-            if (!curTask.bookRow[2]){
-                setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
-                Main.printLog("999");
-                return;
-            }
-            if (!curTask.bookRow[1]){
-                setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
-                Main.printLog("ttt");
-                return;
-            }
-        }
-
-//        if (task.taskBook) return;
-        if (task.taskBook && !(Main.specialMapMode && Main.mapSeq == 4 && task.type == 4 && task.bookNum2 <2)) return;
+        if (task.taskBook) return;
         if (waterFlow.isType7 && !task.haveEmptyPosition()) return; // 没有空格位，若没有7的情况下，不用判断
         if (waterFlow.isType7 || task == waterFlow.target){
             waterFlow.curTasks.get(task.type).add(task);  // 加入队列
         }
         task.taskBook = true;   //加锁
         curTask = task;
-        Main.printLog("aaa");
-        if (Main.specialMapMode){
-            if (Main.mapSeq == 3 && curTask.Id == 32){
-                if (!curTask.positionIsFull(2)){
-                    setSrcDest(Main.stations[37], curTask);
-                }else {
-                    setSrcDest(Main.stations[28], curTask);
-                }
-                return;
-            }
 
-        }
         // 若 task 的产品格都是满的，会报错
         setSrcDest(selectClosestSrcToDest(curTask),curTask);
 
@@ -602,7 +562,7 @@ public class Robot {
         return true;
     }
 
-    // 判断当前任务是否具有可行性
+    // 判断当前任务是否具有可行性，若不可行选一个近的任务
     private void taskIsOK() {
         // 主要是看剩余时间是否够
         if (Main.frameID < Main.JudgeDuration2) return;
@@ -677,48 +637,11 @@ public class Robot {
             // 开始，这种情况是运输完了456,需要上边下发新任务
             waterFlow.assignTask(this);
         }else {
-
-            if (Main.specialMapMode){
-                if (Main.mapSeq == 4 && curTask.type == 4){
-
-                    if (curTask.canBuy(2)){
-                        setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
-                        return;
-                    }
-                    if (curTask.canBuy(1)){
-                        setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
-                        return;
-                    }
-
-                    if (!curTask.bookRow[2]){
-                        setSrcDest(curTask.canBuyStationsMap.get(2).peek().getKey(), curTask);
-                        return;
-                    }
-                    if (!curTask.bookRow[1]){
-                        setSrcDest(curTask.canBuyStationsMap.get(1).peek().getKey(), curTask);
-                        return;
-                    }
-                }
-
-            }
-
-
             // 还未完成生成，继续完成
             for (int ty : Station.item[curTask.type].call) {
                 // 列出需要的物品,若物品还为空，则说明需要去取
 //                if (!curTask.positionIsFull(ty)){
                 if (curTask.canBuy(ty)){
-
-                    if (Main.specialMapMode){
-                        if (Main.mapSeq == 3 && curTask.Id == 32){
-                            if (ty == 2){
-                                setSrcDest(Main.stations[37], curTask);
-                            }else {
-                                setSrcDest(Main.stations[28], curTask);
-                            }
-                            return;
-                        }
-                    }
                     // 已排序，取最近
                     Pair p = curTask.canBuyStationsMap.get(ty).peek();
                     setSrcDest(p.getKey(),curTask);
@@ -746,24 +669,11 @@ public class Robot {
                 return;
             }
 
-            if (Main.specialMapMode && Main.mapSeq == 4 && curTask.type == 4){
-                if (curTask.proStatus == 1){    // 有产品先卖
-                    waterFlow.completed.put(curTask.type,waterFlow.completed.get(curTask.type) + 1);    // 完成数 + 1
-                    waterFlow.curTasks.get(curTask.type).remove(curTask);    // 删除任务
-                    curTask.taskBook = false;
-//            Main.printLog(curTask+"lock release");
-                    lastStation = nextStation;
-                    curTask = null;
-                    return;
-                }
-            }
-
             // 需判断当前任务是否完成，
             // 若有产品，也要结束，把产品先运过去
 //            if (curTask.haveEmptyPosition()) return;
             if (curTask.haveEmptyPosition()) {
                 if (!waterFlow.isType7){
-
                     return;
                 }
                 // 产品卖不出去才继续生产
@@ -776,13 +686,11 @@ public class Robot {
                     curTask = null;
                     return;
                 }
-
             }
                 // 当前任务已经完成，释放资源
             waterFlow.completed.put(curTask.type,waterFlow.completed.get(curTask.type) + 1);    // 完成数 + 1
             waterFlow.curTasks.get(curTask.type).remove(curTask);    // 删除任务
             curTask.taskBook = false;
-//            Main.printLog(curTask+"lock release");
             lastStation = nextStation;
             curTask = null;
         }else {

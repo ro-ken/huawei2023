@@ -7,24 +7,22 @@ import java.util.ArrayList;
 // 运动过程描述
 public class Route{
     Robot robot;
-    public Point target;
-//    double ox,oy;
+    public Point target;    // 目标点
     public Point vector;    //两点的向量
-//    double rx,ry;   // 距离矢量
     double clockwise = 0;    // 1为正向，-1为反向 ，0 不动
 
     double printLineSpeed;
     double printTurnSpeed;
 
-
     public double realDistance;
-    private double realAngleDistance;
+    public double realAngleDistance;
     public double setMinAngle;   // 设置临界减速角度
     public double setMinDistance;   // 设置临界减速距离
     double theoryTurn;
     double angleOffset;
     double stopMinDistance;
     double stopMinAngleDistance;
+    public boolean endWaitMode = false; // 是否使用终点等待模式
 
     public static double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
     public static double verticalSafeDistanceCoef = 1.5;   // 半径乘子，每个机器人紧急距离，外人不得靠近
@@ -120,15 +118,6 @@ public class Route{
         return cosTheta;
     }
 
-//    public void calcSetMinDistance() {
-//
-//        angleOffset = Math.abs(Math.atan2(0.4, realDistance));
-//        if (realDistance <= robot.getMinDistance()){
-//            setMinDistance = realDistance/2;
-//        }else {
-//            setMinDistance = robot.getMinDistance()/2;
-//        }
-//    }
 
     // 计算当前速度减速到0需要多长的距离
     private void calcMinDistance() {
@@ -144,18 +133,6 @@ public class Route{
         calcMinDistance();
     }
 
-    public void calcSetMinAngle() {
-        double tmpAngle = Math.abs(robot.turn - theoryTurn);
-        double deltaAngle = Math.min(tmpAngle,2* Robot.pi-tmpAngle);
-        double minAngle = robot.getMinAngle();
-        if (deltaAngle <= minAngle){
-            setMinAngle = deltaAngle/2;
-//            turnSpeedCoef = 0.4;
-        }else {
-            setMinAngle = robot.getMinAngle()/2;
-//            turnSpeedCoef = 0.8;
-        }
-    }
 
     private void calcSafePrintSpeed() {
 
@@ -312,20 +289,11 @@ public class Route{
         Point posVec = robot.pos.calcVector(emergencyPos);
         double angle = calcDeltaAngle(speed, posVec);
 
-//        if (angle<Robot.pi/2){
-//            printLineSpeed = 0;
-//        }else {
-//            printLineSpeed = 6;
-//        }
-//        clockwise = calcAvoidBumpClockwise(speed,posVec);
-//        printTurnSpeed = Robot.maxRotate * clockwise;
-
         if (angle<Robot.pi/2){
             printLineSpeed = 0;
         }else {
             printLineSpeed = 6;
         }
-
 
         clockwise = calcAvoidBumpClockwise(speed,posVec);
         printTurnSpeed = Robot.maxRotate * clockwise * Main.clockCoef[robot.id];
@@ -377,25 +345,28 @@ public class Route{
 
         calcParamEveryFrame();    // 参数计算
 
-        // 若到了终点附件需判断,如果预定数量大于1，并且我不是最近的，或者我前面有其他station，需要减速暂停
-        if (robot.nextStation.bookNum >= 1 && !target.nearWall() && Main.mapSeq !=1){  // 靠墙容易堵住
-            if(realDistance < robot.nextStation.getSafeDis()){
-                boolean flag1 = selfNotClosest();
-                boolean flag2 = frontNotSafe();
 
-                if (flag1 || flag2){
-                    printLineSpeed = 0;     // 需要暂停
+        // 若到了终点附件需判断,如果预定数量大于1，并且我不是最近的，或者我前面有其他station，需要减速暂停，终点等待模式
+        if (endWaitMode){
+            if (robot.nextStation.bookNum >= 1 && !target.nearWall()){  // 靠墙容易堵住
+                if(realDistance < robot.nextStation.getSafeDis()){
+                    boolean flag1 = selfNotClosest();
+                    boolean flag2 = frontNotSafe();
 
-                    //计算角速度，朝向目标
-                    if (stopMinAngleDistance < realAngleDistance){
-                        printTurnSpeed = Robot.maxRotate * clockwise;
-                    }else {
-                        printTurnSpeed = 0;
+                    if (flag1 || flag2){
+                        printLineSpeed = 0;     // 需要暂停
+
+                        //计算角速度，朝向目标
+                        if (stopMinAngleDistance < realAngleDistance){
+                            printTurnSpeed = Robot.maxRotate * clockwise;
+                        }else {
+                            printTurnSpeed = 0;
+                        }
+
+                        Main.printForward(robot.id,printLineSpeed);
+                        Main.printRotate(robot.id,printTurnSpeed);
+                        return;
                     }
-
-                    Main.printForward(robot.id,printLineSpeed);
-                    Main.printRotate(robot.id,printTurnSpeed);
-                    return;
                 }
             }
         }

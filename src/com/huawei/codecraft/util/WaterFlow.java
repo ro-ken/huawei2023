@@ -73,6 +73,7 @@ public class WaterFlow {
        public void assignTask(Robot robot) {
 
         if (!isType7){
+            // 456 -> 9
             Station next = selectDeadStation(robot);
             Main.printLog("next"+ next);
             if (next!=null){
@@ -107,11 +108,8 @@ public class WaterFlow {
                     robot.setSrcDest(now,target);
 
                 }else {
-
                     //无空位,重新选择一个
                     urgentTask(robot);
-                    //看目前有没有成品，送一个过去
-//                  assign456Task(robot);
                 }
 
             }else {
@@ -170,15 +168,6 @@ public class WaterFlow {
         ArrayList<Integer> tasks = selectSlowestTask();
         Main.printLog(tasks);
         Station task = null;
-
-        if (Main.specialMapMode && Main.mapSeq == 4){
-            task = newTask(4);
-            Main.printLog("task:" + task);
-            if (task != null){
-                rob.setTask(task);
-                return;
-            }
-        }
 
         Main.printLog("task:" + task);
         if (tasks.size() == 1){
@@ -266,11 +255,11 @@ public class WaterFlow {
 
     private int selectTaskByValue(ArrayList<Integer> tasks) {
         if (tasks.size() == 0) {
-            if (Main.specialMapMode){
-                if (Main.mapSeq == 2 || Main.mapSeq == 4){
-                    return 4;
-                }
-            }
+//            if (Main.specialMapMode){     //设置优先级
+//                if (Main.mapSeq == 2 || Main.mapSeq == 4){
+//                    return 4;
+//                }
+//            }
             return 6;    // 6 最高
         }
         return Math.max(tasks.get(0),tasks.get(1)); // 2个任务 选最大  4 < 5 < 6
@@ -307,15 +296,8 @@ public class WaterFlow {
         for (Pair p :pairs){
             // 选择当前没有被占用,并且可以生产的station
             Station st = p.key;
-//            if (st.taskBook) continue;
-            Main.printLog("111");
-            boolean flag2 = (st.leftTime ==0 ||st.proStatus==1 && st.leftTime>0 ) && !st.haveEmptyPosition();
-            if (Main.specialMapMode && Main.mapSeq == 4 && st.type == 4 && st.bookNum2 <2 && !flag2) return st;
-            Main.printLog("222");
             if (st.taskBook) continue;
-            Main.printLog("333");
             if (st.leftTime >= 0 && !st.haveEmptyPosition()) continue;  // 阻塞，并且位置也满了
-            Main.printLog("444");
             return st;
         }
 
@@ -324,16 +306,17 @@ public class WaterFlow {
 
     private Station newAvailableTask() {
         Station task = null;
-        if (Main.specialMapMode){
-            if (Main.mapSeq == 2 || Main.mapSeq == 4){
-                // 设置优先级 4最高
-                task = newAvailableTaskBySeq(new int[]{4,6,5});
-            }else {
-                task = newAvailableTaskBySeq(new int[]{6,5,4});
-            }
-        }else {
-            task = newAvailableTaskBySeq(new int[]{6,5,4});
-        }
+//        if (Main.specialMapMode){
+//            if (Main.mapSeq == 2 || Main.mapSeq == 4){
+//                // 设置优先级 4最高
+//                task = newAvailableTaskBySeq(new int[]{4,6,5});
+//            }else {
+//                task = newAvailableTaskBySeq(new int[]{6,5,4});
+//            }
+//        }else {
+//            task = newAvailableTaskBySeq(new int[]{6,5,4});
+//        }
+        task = newAvailableTaskBySeq(new int[]{6,5,4});
         return task;
     }
 
@@ -349,16 +332,6 @@ public class WaterFlow {
 
     //处理当前最需要处理的任务
     private void urgentTask(Robot robot) {
-
-        Main.printLog("555");
-        if (Main.specialMapMode && Main.mapSeq == 4){
-            Station task = newTask(4);
-            Main.printLog("ttkk"+task);
-            if (task != null){
-                robot.setTask(task);
-                return;
-            }
-        }
 
         // 最先判断7是否有空位，而且有产品，把产品运送到7，不能停下来
         ArrayList<Integer> empty = target.getEmptyRaw();
@@ -386,14 +359,6 @@ public class WaterFlow {
             robot.setSrcDest(src,target);
         }else {
             assign456Task(robot);       // 不送7了，
-//            // 若没有物品，判断7是否有物品
-//            if (target.proStatus == 1 && !target.bookPro){
-//                // 若能运送，则运送
-//                robot.setSrcDest(target,target.closest89);
-//            }else {
-//                // 若7也没有，则处理一个456号任务
-//                assign456Task(robot);
-//            }
         }
     }
 }

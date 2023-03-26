@@ -27,7 +27,7 @@ public class Main {
     public static final int robotNum = 4;
     public static boolean have9;
     public static int mapSeq;   // 是第几号地图，做优化
-    public static boolean specialMapMode = true;   // 是否针对地图做优化
+    public static boolean specialMapMode = false;   // 是否针对地图做优化
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
     public static int[] clockCoef = new int[]{1, 1, 1, 1}; // 碰撞旋转系数
 
@@ -46,15 +46,11 @@ public class Main {
       private static void analyse() {
 
         for (int i = 0; i < robotNum; i++) {
-//                printLog(robots[i].toString());
 
             if (robots[i].nextStation == null){
                 robots[i].selectBestStation();
                 robots[i].rush();
             }else {
-
-                // 碰撞检测
-//                robots[i].calcMoveEquation();
 
                 if (robots[i].isArrive()){
 //                    Main.printLog("arrive");
@@ -255,9 +251,9 @@ public class Main {
                     flow.assignRobot(2);    // 每条流水线两个机器人
                     waterFlows.add(flow);
                 }
-//                Collections.sort(sts);
+
 //                WaterFlow flow = new WaterFlow(sts.get(0));
-//                flow.assignRobot(4);    // 每条流水线两个机器人
+//                flow.assignRobot(4);    // 流水线4个机器人 ，两个7号
 //                flow.target2 = sts.get(1);      // 2号target
 //                waterFlows.add(flow);
 
