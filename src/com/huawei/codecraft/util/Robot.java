@@ -24,17 +24,18 @@ public class Robot {
     public static  double canForwardRad = pi/2 ; // 行走最小角度偏移量
     public static  double maxForwardRad = pi/4 ; // 最大速度的最小角度
 //    public static final double angleSpeedOffset = 0.1 ; //(rad)最大误差 0.003
-    public static double emptyA;     //加速度
-    public static double fullA;     //加速度
+    public static double emptyA;     //加速度,19.6487587,刹车距离 = 36/2a = 0.916, 刹车时间 = 6/a = 0.30536s  fps = 15.26
+    public static double fullA;     //加速度,14.164733,刹车距离 = 36/2a = 1.27,刹车时间 = 6/a = 0.4236     fps =  21.18
 
-    public static double emptyRotateA;     //角加速度
-    public static double fullRotateA;     //角加速度
+    public static double emptyRotateA;     //角加速度,  38.8  刹车角度 = pi * pi / 2a = 0.127 7.276° 刹车时间 = pi/a = 0.08  fps = 4
+    public static double fullRotateA;     //角加速度,20.17  刹车角度 = pi * pi / 2a = 0.245 14° 刹车时间 = pi/a = 0.156  fps = 7.79
     public static double emptyMinAngle; // 加速减速临界值 ,空载
     public static double fullMinAngle; // 加速减速临界值 ，满载
     public static Line rotateSpeedEquation; // 转向速度方程
 
 
     int id;
+    public int zoneId = 1;  // 联通区域编号
     public int StationId; // -1 无 ，从0 开始 表示第几个工作台
     public int carry;  // 携带物品 1-7
     public double timeValue;  // 时间价值系数 [0.8 - 1]
@@ -73,7 +74,7 @@ public class Robot {
     public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
     public static int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
 
-    Route route;
+    public Route route;
 
     static {
         emptyA = calcAcceleration(emptyRadius);
@@ -194,7 +195,7 @@ public class Robot {
     private int calcFpsToPlaceInCurSpeed(double dis) {
         double time = 0;
         double a = getAcceleration();
-        double v0 = Main.norm(lineVx,lineVy);
+        double v0 = Point.norm(lineVx,lineVy);
         double x1 = (maxSpeed*maxSpeed - v0*v0)/(2*a);
         if (dis<x1){
             // x = v0t + 0.5at^2;   算不了，简单替代下v0= 0
@@ -214,6 +215,7 @@ public class Robot {
 
     //计算机器人的轨迹方程，也就两条平行线
     public void calcMoveEquation() {
+//        Main.printLog(route.vector.x);
         if (route.vector.x == 0) return;// 不能是垂直的情况，在调用此函数之前事先要做出判断
         double radius = getRadius();
         Point[] src = getPoints(pos.x,pos.y,radius);
@@ -347,7 +349,7 @@ public class Robot {
 
     // 判断目标点是否到达工作台
     public boolean isArrive() {
-        if (StationId == nextStation.Id){
+        if (StationId == nextStation.id){
 //            Main.printLog("robot arrived id ="+StationId);
             return true;
         }else{
@@ -378,7 +380,8 @@ public class Robot {
     }
 
     // 检测路线是否有重叠区域
-    private boolean routeBumpDetect(Robot other) {
+    public boolean routeBumpDetect(Robot other) {
+        if (topLine.left == null||other.topLine.left == null) return true;
         double left = Math.max(topLine.left.x,other.topLine.left.x);
         double right = Math.min(topLine.right.x,other.topLine.right.x);
         double m_l_min = belowLine.getY(left);
@@ -410,10 +413,12 @@ public class Robot {
         //            }
         //        }
         
-        //        route.rush();
-        
-        if (nextStation == null) return;
-        route.rush2();
+        if (nextStation == null) {
+            Main.printLog("nextStation is null");
+            return;
+        }
+
+        route.rush();
     }
 
     // 选一个最佳的工作站

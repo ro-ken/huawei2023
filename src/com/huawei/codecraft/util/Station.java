@@ -22,8 +22,9 @@ public class Station implements Comparable{
     public Station closest89;
     public int fastestComposeFps;
     public int fastestComposeMoney;
+    public int zoneId = 1;  // 联通区域编号
 
-    public int Id;
+    public int id;
     public int type;   // 1-9
     public Point pos;
 
@@ -59,7 +60,7 @@ public class Station implements Comparable{
 
     // 构造函数
     public Station(int id, int type, double x, double y) {
-        Id = id;
+        this.id = id;
         this.type = type;
         pos = new Point(x,y);
         bookPro = false;
@@ -69,7 +70,7 @@ public class Station implements Comparable{
     @Override
     public String toString() {
         return "Station{" +
-                "Id=" + Id +
+                "Id=" + id +
                 ", type=" + type +
                 ", rowStatus=" + rowStatus +
                 ", proStatus=" + proStatus +

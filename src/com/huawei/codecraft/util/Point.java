@@ -1,5 +1,7 @@
 package com.huawei.codecraft.util;
 
+import com.huawei.codecraft.Main;
+
 import java.util.Objects;
 
 // 可表示点，也可表示原点为0,0的向量
@@ -67,4 +69,42 @@ public class Point{
     public void set(Point p){
         set(p.x,p.y);
     }
+
+    // 计算自己与其他的角度
+    public double calcDeltaAngle(Point vec) {
+        double cosTheta = calcDeltaCos(vec);
+        double theta = Math.acos(cosTheta); // 将余弦值转化为弧度值
+        return theta;
+    }
+
+
+    // 计算自己与其他的角度的cos
+    public double calcDeltaCos(Point vec) {
+        double dotProduct = dotProduct(vec); // 计算点积
+        double normA = norm(); // 计算向量a的模长
+        double normB = vec.norm(); // 计算向量b的模长
+
+        double cosTheta = dotProduct / (normA * normB); // 计算余弦值
+        return cosTheta;
+    }
+
+
+    public double norm() {
+        return norm(x, y);
+    }
+
+    // 计算向量的模长
+    public static double norm(double x,double y) {
+        return Math.sqrt(x*x + y*y);
+    }
+    // 计算向量的点积
+    public double dotProduct(Point vec) {
+        return dotProduct(x,y,vec.x,vec.y);
+    }
+    // 计算向量的点积
+    public static double dotProduct(double x1,double y1, double x2,double y2) {
+        return x1 * x2 + y1 * y2;
+    }
+
+
 }

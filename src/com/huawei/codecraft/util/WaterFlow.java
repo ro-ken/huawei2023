@@ -13,7 +13,7 @@ import java.util.*;
 // 生产流水线
 public class WaterFlow {
     public Station target;     // 流水线终极目标
-    public Station target2;
+    public Station target2;     // 流水线备用目标
     boolean isType7;    // 是否是7号工作站
     int sellMinFps;     // 卖掉 target货物的fps
     ArrayList<Robot> robots ;
@@ -166,7 +166,7 @@ public class WaterFlow {
         // 进度相同，可按「距离」贪心选择 或 安装「价值」贪心选择
 
         ArrayList<Integer> tasks = selectSlowestTask();
-        Main.printLog(tasks);
+//        Main.printLog(tasks);
         Station task = null;
 
         Main.printLog("task:" + task);

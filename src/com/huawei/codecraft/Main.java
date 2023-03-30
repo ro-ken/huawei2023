@@ -19,7 +19,7 @@ public class Main {
     public static Station[] stations = new Station[50];
     public static Map<Integer, ArrayList<Station>> map = new HashMap<>(); // 类型，以及对应的工作站
     public static int stationNum = 0;
-    public static final int duration = 3 * 60 * 50;
+    public static final int duration = 5 * 60 * 50;
     public static final int JudgeDuration = duration - 10 * 50;    //最后10s需判断买入的商品能否卖出
     public static final int JudgeDuration2 = duration - 20 * 50;    //最后20s需判断选择是否最佳，是否还有商品没有卖
     public static final int fps = 50;
@@ -42,11 +42,42 @@ public class Main {
         schedule();
     }
 
+    private static void schedule() {
+        initMap();
+        initialization();
+        outStream.println("OK");
+        outStream.flush();
+        while (inStream.hasNextLine()) {
+            String line = inStream.nextLine();
+            String[] parts = line.split(" ");
+            frameID = Integer.parseInt(parts[0]);
+            printLog(frameID);
+            readUtilOK();
+
+            printFrame(frameID);
+
+//            long t1 = System.currentTimeMillis();
+            handleFrame();
+//            long t2 = System.currentTimeMillis();
+//            printLog("time:"+String.valueOf(t2-t1));
+
+            printOk();
+        }
+    }
+
       // 核心代码，分析如何运动
-      private static void analyse() {
+      private static void handleFrame() {
+
+            // 先计算每个机器人的参数，后面好用
+          for (int i = 0; i < robotNum; i++) {
+              if (robots[i].nextStation == null){
+                  robots[i].selectBestStation();
+              }
+              robots[i].route.calcParamEveryFrame();    // 通用参数
+              robots[i].calcMoveEquation();     //  运动方程
+          }
 
         for (int i = 0; i < robotNum; i++) {
-
             if (robots[i].nextStation == null){
                 robots[i].selectBestStation();
                 robots[i].rush();
@@ -55,8 +86,8 @@ public class Main {
                 if (robots[i].isArrive()){
 //                    Main.printLog("arrive");
                     // 有物品就买，没有就等待,逐帧判断
-                    Main.printLog(robots[i].nextStation == robots[i].srcStation);
-                    Main.printLog(robots[i].nextStation);
+//                    Main.printLog(robots[i].nextStation == robots[i].srcStation);
+//                    Main.printLog(robots[i].nextStation);
                     if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){
 //                        Main.printLog("arrive");
                         if (frameID > JudgeDuration){
@@ -81,7 +112,6 @@ public class Main {
                         printLog("sell");
                         robots[i].changeTarget();
 
-
                     }
                 }else{
                     // 没到目的地就继续前进
@@ -90,48 +120,6 @@ public class Main {
             }
         }
 
-    }
-
-    // 计算向量的点积
-    public static double dotProduct(double x1,double y1, double x2,double y2) {
-        return x1 * x2 + y1 * y2;
-    }
-
-    // 计算向量的点积
-    public static double dotProduct(Point vector1,Point vector2) {
-        return dotProduct(vector1.x,vector1.y,vector2.x,vector2.y);
-    }
-
-    public static void printSell(int robotId){
-        outStream.printf("sell %d\n", robotId);
-    }
-    public static void printBuy(int robotId){
-        outStream.printf("buy %d\n", robotId);
-    }
-    public static void printForward(int robotId,int speed){
-        outStream.printf("forward %d %d\n", robotId, speed);
-    }
-    public static void printForward(int robotId,double speed){
-        outStream.printf("forward %d %f\n", robotId, speed);
-    }
-
-    public static void printRotate(int robotId,double angleSpeed){
-        outStream.printf("rotate %d %f\n", robotId, angleSpeed);
-    }
-    public static void printDestroy(int robotId){
-        outStream.printf("destroy %d\n", robotId);
-    }
-    public static void printOk(){
-        outStream.print("OK\n");
-        outStream.flush();
-    }
-    public static void printFrame(int frameID){
-        outStream.printf("%d\n", frameID);
-    }
-    public static void printLog(Object log){
-        if (test){
-            System.out.println(log);
-        }
     }
 
     private static void initialization() {
@@ -150,6 +138,8 @@ public class Main {
                 }
             }
         }
+
+
 //         station 初始化完毕
 //         选择最有价值的生产流水线投入生产，明确一条流水线有哪些节点
 //         分配四个机器人去负责不同的流水线
@@ -181,6 +171,7 @@ public class Main {
                 double x = i * 0.5 + 0.25;
                 char c = line.charAt(i);
                 if (c == '.') continue;
+                if (c == '#') continue;
                 if (c == 'A'){
                     robots[robotId] = new Robot(robotId,x,y,robotId);
                     robotId++;
@@ -260,7 +251,7 @@ public class Main {
             }
 
             for (Station st : sts) {
-                printLog("id" + st.Id + " value fps" + st.cycleAvgValue);
+                printLog("id" + st.id + " value fps" + st.cycleAvgValue);
             }
 
             printLog(sts);
@@ -282,14 +273,7 @@ public class Main {
         printLog(waterFlows);
     }
 
-    // 计算向量的模长
-    public static double norm(double x,double y) {
-        return Math.sqrt(x*x + y*y);
-    }
 
-    public static double norm(Point vector) {
-        return norm(vector.x, vector.y);
-    }
 
     private static boolean readUtilOK() {
         String line;
@@ -329,29 +313,38 @@ public class Main {
         return false;
     }
 
-    private static void schedule() {
-        initMap();
-        initialization();
 
-        outStream.println("OK");
+
+    public static void printSell(int robotId){
+        outStream.printf("sell %d\n", robotId);
+    }
+    public static void printBuy(int robotId){
+        outStream.printf("buy %d\n", robotId);
+    }
+    public static void printForward(int robotId,int speed){
+        outStream.printf("forward %d %d\n", robotId, speed);
+    }
+    public static void printForward(int robotId,double speed){
+        outStream.printf("forward %d %f\n", robotId, speed);
+    }
+
+    public static void printRotate(int robotId,double angleSpeed){
+        outStream.printf("rotate %d %f\n", robotId, angleSpeed);
+    }
+    public static void printDestroy(int robotId){
+        outStream.printf("destroy %d\n", robotId);
+    }
+    public static void printOk(){
+        outStream.print("OK\n");
         outStream.flush();
-
-
-        while (inStream.hasNextLine()) {
-            String line = inStream.nextLine();
-            String[] parts = line.split(" ");
-            frameID = Integer.parseInt(parts[0]);
-            printLog(frameID);
-            readUtilOK();
-
-            printFrame(frameID);
-
-            long t1 = System.currentTimeMillis();
-            analyse();
-            long t2 = System.currentTimeMillis();
-//            printLog("time:"+String.valueOf(t2-t1));
-
-            printOk();
+    }
+    public static void printFrame(int frameID){
+        outStream.printf("%d\n", frameID);
+    }
+    public static void printLog(Object log){
+        if (test){
+            System.out.println(log);
         }
     }
+
 }
