@@ -2,15 +2,15 @@ package com.huawei.codecraft.util;
 
 import com.huawei.codecraft.Main;
 
+import java.util.LinkedList;
 import java.util.Objects;
+import java.util.Queue;
 
 // 可表示点，也可表示原点为0,0的向量
 public class Point{
     public double x,y;
 
-    public Point() {
-
-    }
+    public Point() { }
 
     @Override
     public boolean equals(Object o) {
@@ -88,7 +88,6 @@ public class Point{
         return cosTheta;
     }
 
-
     public double norm() {
         return norm(x, y);
     }
@@ -107,4 +106,32 @@ public class Point{
     }
 
 
+    // 获取从源到目的地的一些列路径
+    public Queue<Point> getPath(Point target) {
+        // todo 到时候算法进行替换
+        Queue<Point> path = new LinkedList<>();
+//        path.add(this);
+        path.add(target);
+        return path;
+    }
+
+    public double distanceToSecond(boolean isEmpty, Point other){
+        //两种情况， 加速，匀速，减速  or  加速 ，减速
+        double minDistance = isEmpty?Station.emptyMinDistance:Station.fullMinDistance;
+        double a = isEmpty ? Robot.emptyA:Robot.fullA;
+        double distance = calcDistance(other);
+        double second ;
+        if (distance <= minDistance){
+            second = Math.sqrt(distance/a)*2;   // t = sqrt(2*d/2 /a) * 2
+        }else {
+            second = Math.sqrt(minDistance/a)*2 + (distance-minDistance)/a;
+        }
+        return second;
+    }
+
+    public int distanceToFps(boolean isEmpty, Point p){
+        double second = distanceToSecond(isEmpty,p);
+        int fps = (int) (second * 50);
+        return fps;
+    }
 }

@@ -412,10 +412,13 @@ public class Robot {
         //                route.target.set(nextStation.pos);// 重新设置目的地
         //            }
         //        }
-        
+
         if (nextStation == null) {
             Main.printLog("nextStation is null");
             return;
+        }
+        if (route.arriveNext()){
+            route.updateNext();
         }
 
         route.rush();
@@ -450,8 +453,8 @@ public class Robot {
             }
             for (Station s:Main.map.get(ty)){
                 // 第一段空载，第二段满载
-                double t1 = s.distanceToFps(true,pos);
-                double t2 = s.distanceToFps(false,dest.pos);
+                double t1 = s.pathToFps(true,pos);
+                double t2 = s.pathToFps(false,dest.pos);
                 double t = t1 + t2;
                 if (t < minTime){
                     minTime = t;
@@ -580,7 +583,7 @@ public class Robot {
 
             if (srcStation != null && srcStation.type == 7) return;
 
-            int t1 = waterFlow.target.distanceToFps(true,pos);   // 跑到target需要多久
+            int t1 = waterFlow.target.pathToFps(true,pos);   // 跑到target需要多久
             boolean flag1 = (waterFlow.target.proStatus == 1 || waterFlow.target.leftTime>0);
             if (!waterFlow.target.bookPro && flag1 && waterFlow.target.positionNoBook()){
                 // 如果有产品或在生产
@@ -600,8 +603,8 @@ public class Robot {
         if (srcStation == null) return;
         if (!flag){
             // 判断其他情况,在剩余时间是否能完成当前任务
-            int t1 = srcStation.distanceToFps(true,pos);
-            int t2 = srcStation.distanceToFps(false,destStation.pos);
+            int t1 = srcStation.pathToFps(true,pos);
+            int t2 = srcStation.pathToFps(false,destStation.pos);
             int t= t1 + t2 + 100;  // 加上1s的误差，有旋转时间
             if (t<left){
                 // 当前任务可能完不成了，找找有没有其他能完成的任务，赚点小钱
@@ -611,11 +614,11 @@ public class Robot {
                 for (int i = 0; i < Main.stationNum; i++) {
                     Station st = Main.stations[i];
                     if (st.canSell() && st.type<=6){
-                        t1 = st.distanceToFps(true,pos);
+                        t1 = st.pathToFps(true,pos);
                         for (Pair p : st.canSellStations) {
                             Station s = p.key;
                             if (s.canBuy(st.type)){
-                                t2 = st.distanceToFps(false,s.pos);
+                                t2 = st.pathToFps(false,s.pos);
                                 t= t1 + t2 + 100;  // 加上2s的误差，有旋转时间
                                 double earn = st.calcEarnMoney(s.pos);
                                 if (t<left && earn > value){
@@ -640,7 +643,7 @@ public class Robot {
 
         if (curTask == null){
             // 开始，这种情况是运输完了456,需要上边下发新任务
-            waterFlow.assignTask(this);
+            waterFlow.scheduler(this);
         }else {
             // 还未完成生成，继续完成
             for (int ty : Station.item[curTask.type].call) {

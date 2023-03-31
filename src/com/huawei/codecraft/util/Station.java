@@ -111,7 +111,7 @@ public class Station implements Comparable{
     
     public double calcEarnMoney(Point pos) {
         int baseMoney = Goods.item[type].earn;
-        int fps1 = distanceToFps(false,pos);
+        int fps1 = pathToFps(false,pos);
         double theoryMoney = (baseMoney * Robot.calcTimeValue(fps1));   // 不算碰撞
         return theoryMoney;
     }
@@ -129,8 +129,8 @@ public class Station implements Comparable{
 
     // 计算来回花费时间
     public int calcGoBackDistanceToFps(Point p){
-        int go = distanceToFps(false,p);
-        int back = distanceToFps(true,p);
+        int go = pathToFps(false,p);
+        int back = pathToFps(true,p);
         return go + back;
     }
 
@@ -141,22 +141,13 @@ public class Station implements Comparable{
 
     public double calcSingleCycleAvgValue(Point other) {
         int baseMoney = Goods.item[type].earn;
-        int fps1 = distanceToFps(false,other.x,other.y);
-        int fps2 = distanceToFps(true,other.x,other.y);
+        int fps1 = pathToFps(false,other);
+        int fps2 = pathToFps(true,other);
         double theoryMoney = (baseMoney * Robot.calcTimeValue(fps1));   // 不算碰撞
         double cycleAvgValue = theoryMoney/(fps1 + fps2);     // 来回时间，先不算转向花费
         return cycleAvgValue;
     }
-    
-    public int calcValue(double x1,double y1,boolean isEmpty) {
 
-        if (type>7) return 0;
-        int baseMoney = Goods.item[type].earn;
-        int fps = distanceToFps(isEmpty,x1,y1);
-        int theoryMoney = (int) (baseMoney * Robot.calcTimeValue(fps));
-
-        return theoryMoney;
-    }
 
     // 是否有东西可以卖
     public boolean canSell() {
@@ -244,30 +235,11 @@ public class Station implements Comparable{
     }
 
     // 距离换算成时间, 0 -> v -> 0
-    public double distanceToSecond(boolean isEmpty, double ox,double oy){
-        //两种情况， 加速，匀速，减速  or  加速 ，减速
-        double minDistance = isEmpty?emptyMinDistance:fullMinDistance;
-        double a = isEmpty ? Robot.emptyA:Robot.fullA;
-        double distance = pos.calcDistance(ox,oy);
-        double second ;
-        if (distance <= minDistance){
-            second = Math.sqrt(distance/a)*2;   // t = sqrt(2*d/2 /a) * 2
-        }else {
-            second = Math.sqrt(minDistance/a)*2 + (distance-minDistance)/a;
-        }
-        return second;
-    }
 
-    // 距离换算成帧数
-    public int distanceToFps(boolean isEmpty, double ox,double oy){
-        double second = distanceToSecond(isEmpty,ox,oy);
-        int fps = (int) (second * 50);
+    // 距离换算成帧数  todo 要改
+    public int pathToFps(boolean isEmpty, Point p){
+        int fps = (int) (pos.distanceToFps(isEmpty,p));
         return fps;
-    }
-
-    // 距离换算成帧数
-    public int distanceToFps(boolean isEmpty, Point p){
-        return distanceToFps(isEmpty,p.x,p.y);
     }
 
     // 返回当前的空位，并且没有被预定的
@@ -313,7 +285,7 @@ public class Station implements Comparable{
                 ArrayList<Station> stations = Main.map.get(tp);
                 for (Station st : stations) {
 //                    double value = calcValue(st.pos.x, st.pos.y, false);
-                    double value = distanceToFps(false,st.pos.x,st.pos.y);  //以时间排序
+                    double value = pathToFps(false,st.pos);  //以时间排序
                     Pair pair = new Pair(st, value);
                     canSellStations.add(pair);
                 }

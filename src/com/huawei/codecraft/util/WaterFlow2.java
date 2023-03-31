@@ -2,7 +2,10 @@ package com.huawei.codecraft.util;
 
 import com.huawei.codecraft.Main;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.PriorityQueue;
 
 /**
  * @Author: ro_kin
@@ -10,8 +13,8 @@ import java.util.*;
  * @Description: TODO
  */
 
-// 生产流水线
-public class WaterFlow {
+// 这是原来的流水线，留着作为备用
+public class WaterFlow2 {
     public Station target;     // 流水线终极目标
     public Station target2;     // 流水线备用目标
     boolean isType7;    // 是否是7号工作站
@@ -21,7 +24,7 @@ public class WaterFlow {
     Map<Integer,Integer> completed; // 完成的任务数量
 
     // 构造函数
-    public WaterFlow(Station target) {
+    public WaterFlow2(Station target) {
         this.target = target;
         isType7 = target.type == 7;
         curTasks = new HashMap<>();
@@ -40,126 +43,112 @@ public class WaterFlow {
                 '}';
     }
 
-    public void assignRobot(int robotNum) {
+//    public void assignRobot(int robotNum) {
+//
+//        if (robotNum == 1){
+//            for (int i = 0; i < robotNum; i++) {
+//                Robot rob = selectClosestRobot();
+//                if (rob != null){
+//                    rob.waterFlow = this;
+//                    robots.add(rob);
+//                }
+//            }
+//        }else {
+//            for (int i = 0; i < 4; i++) {
+//                Robot rob = Main.robots[i];
+//                if (rob.waterFlow == null){
+//                    rob.waterFlow = this;
+//                    robots.add(rob);
+//                    if (robots.size() == robotNum) {
+//                        break;
+//                    }
+//                }
+//            }
+//        }
+//
+//        // 预先分配一个任务
+//        for (Robot rob : robots){
+//            assign456Task(rob);
+//        }
+//    }
 
-        if (robotNum == 1){
-            for (int i = 0; i < robotNum; i++) {
-                Robot rob = selectClosestRobot();
-                if (rob != null){
-                    rob.waterFlow = this;
-                    robots.add(rob);
-                }
-            }
-        }else {
-            for (int i = 0; i < 4; i++) {
-                Robot rob = Main.robots[i];
-                if (rob.waterFlow == null){
-                    rob.waterFlow = this;
-                    robots.add(rob);
-                    if (robots.size() == robotNum) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        // 预先分配一个任务
-        for (Robot rob : robots){
-            assign456Task(rob);
-        }
-    }
-
-       // 机器人流水线全局调度器
+       // 机器人执行完毕，重新分配任务
        public void scheduler(Robot robot) {
-           if (!isType7){
-               simpleSched(robot);
-           }else if (robot.lastStation != null) {
-               if (robot.lastStation.type <= 6){
-                   sta456Sched(robot);
-               }else{
-                   sta789Sched(robot);
-               }
-           }
-       }
 
-       // 机器人在789号工作台时的调度
-    private void sta789Sched(Robot robot) {
-        Station now = robot.lastStation;
-        if (target.proStatus == 1 && !target.bookPro){
-            // 七八九的情况，判断7是否有物品
-            //卖出 7号
-            robot.setSrcDest(target,target.canSellStations.peek().getKey());
-        }else {
-            if (target2!=null && target2.proStatus == 1 && !target2.bookPro){
-                robot.setSrcDest(target2,target2.canSellStations.peek().getKey());
+        if (!isType7){
+            // 456 -> 9
+            Station next = selectDeadStation(robot);
+            Main.printLog("next"+ next);
+            if (next!=null){
+                robot.setTask(next);
             }else {
-                urgentTask(robot);
-            }
-        }
-
-        if (now.type == 7 && target2 != null){
-            // 如果满了，切换target
-            if (!target.haveEmptyPosition()){
-                Station st = target;
-                target = target2;
-                target2 = st;
-            }
-        }
-    }
-
-    // 机器人在456工作台时的调度
-    private void sta456Sched(Robot robot) {
-        Station now = robot.lastStation;
-        if (now.proStatus == 1){
-
-            boolean flag1 = target.canBuy(now.type); // 有空位
-            double tt = now.pathToFps(false,target.pos);    // 运送到 target的时间
-            // 下面变量含义：没有产品，且在生产，原料满了，没有预定，送过去以后就生产完了，刚好取走货物
-            boolean flag2 = !target.bookRow[now.type] && target.positionFull() && target.proStatus == 0 && target.leftTime < tt;
-            if (flag1 || flag2){
-                // 有空位 送
-                robot.setSrcDest(now,target);
-
-            }else {
-                //无空位,重新选择一个
-                urgentTask(robot);
-            }
-
-        }else {
-            sta456BestSelect(robot);
-
-        }
-    }
-
-    // 在456策略选择，是继续合成本产品还是去合成其他的456
-    private void sta456BestSelect(Robot robot) {
-//            // 没有产品，继续当前生成
-        if (robot.lastStation.haveEmptyPosition())
-        {
-            robot.setTask(robot.lastStation);
-        }else urgentTask(robot);
-    }
-
-    // 机器人的target为456时的调度
-    private void simpleSched(Robot robot) {
-        // 456 -> 9
-        Station next = selectDeadStation(robot);
-        Main.printLog("next"+ next);
-        if (next!=null){
-            robot.setTask(next);
-        }else {
 //                if (target.proStatus == 1 && target.closest89.bookNum<=2){
-            if (target.proStatus == 1){
-                // 机器人太多不好运送
-                robot.setSrcDest(target,target.closest89);
-            }else {
-                robot.setTask(target);
-            }
+                if (target.proStatus == 1){
+                    // 机器人太多不好运送
+                    robot.setSrcDest(target,target.closest89);
+                }else {
+                    robot.setTask(target);
+                }
 //                robot.setTask(target);
+            }
+
+            return;
+        }
+
+        // 有两种类型的任务，一种是合成任务，给一个456工作台，让机器人自己去合成
+        // 另外一个是运输任务，直接给源目的地，让机器人去搬运
+        Station now = robot.lastStation;
+        Main.printLog("now:"+now);
+        if (now == null) return;
+        if (now.type <= 6){
+            if (now.proStatus == 1){
+                boolean flag1 = target.canBuy(now.type);//!target.positionIsFull(now.type) && !target.bookRow[now.type];  // 有空位
+                double tt = now.pathToFps(false,target.pos);    // 运送到 target的时间
+                // 下面变量含义：没有产品，且在生产，原料满了，没有预定，送过去以后就生产完了，刚好取走货物
+                boolean flag2 = !target.bookRow[now.type] && target.positionFull() && target.proStatus == 0 && target.leftTime < tt;
+                if (flag1 || flag2){
+                    // 有空位 送
+                    robot.setSrcDest(now,target);
+
+                }else {
+                    //无空位,重新选择一个
+                    urgentTask(robot);
+                }
+
+            }else {
+                // 没有产品，继续当前生成
+                if (now.haveEmptyPosition())
+                {
+                    robot.setTask(now);
+                }else urgentTask(robot);
+            }
+
+//        }else if (target.proStatus == 1 && !target.bookPro){
+        }else{
+            if (target.proStatus == 1 && !target.bookPro){
+                    // 七八九的情况，判断7是否有物品
+                    //卖出 7号
+                    robot.setSrcDest(target,target.canSellStations.peek().getKey());
+            }else {
+                if (target2!=null && target2.proStatus == 1 && !target2.bookPro){
+                    robot.setSrcDest(target2,target2.canSellStations.peek().getKey());
+                }else {
+                    urgentTask(robot);
+                }
+            }
+
+            if (now.type == 7 && target2 != null){
+                // 如果满了，切换target
+                if (!target.haveEmptyPosition()){
+                    Station st = target;
+                    target = target2;
+                    target2 = st;
+                }
+            }
         }
     }
 
-    // 分配一个456号任务，必须把curTask字段赋值
+     // 分配一个456号任务，必须把curTask字段赋值
      private void assign456Task(Robot rob) {
 
         if (!isType7){

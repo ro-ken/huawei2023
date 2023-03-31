@@ -3,12 +3,13 @@ package com.huawei.codecraft.util;
 import com.huawei.codecraft.Main;
 
 import java.util.ArrayList;
+import java.util.Queue;
 
 // 运动过程描述
 public class Route{
     Robot robot;
     public Point target;    // 目标点
-    public ArrayList<Point> path;   // 要经过的一些列点
+    public Queue<Point> path;   // 要经过的一些列点
     public Point next;  // 下一个要到的点
 
     public Point vector;    //两点的向量
@@ -40,8 +41,11 @@ public class Route{
     public static double perceptionAngleRange = Robot.pi/4;   // 前方一半视野角度
     public static double staPerAngleRange = Robot.pi/6;   // 静态视野
     public static double emergencyAngle = Robot.pi/2;   // 前方一半视野角度
-
     public static double cornerStopMinDistance = 0.3;   // 在墙角，提前多少减速
+
+    // 下面是新加参数
+    public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的向隔距离
+
 
     ArrayList<Integer> unsafeRobotIds;
     public int unsafeLevel;     //当前不安全级别  (1-3)
@@ -52,6 +56,8 @@ public class Route{
         speed = new Point();
         this.robot = robot;
         unsafeRobotIds = new ArrayList<>();
+        path = robot.pos.getPath(target);
+        next = path.poll();     // 取出下一个点
     }
 
     @Override
@@ -132,7 +138,7 @@ public class Route{
     public void calcSafePrintSpeed() {
 
         // 若工作台在角落，需要提前减速，
-        if (target.nearWall()){
+        if (next.nearWall()){
             stopMinDistance +=cornerStopMinDistance;
         }
 
@@ -235,8 +241,8 @@ public class Route{
 
     // 关键参数，每一帧需要重新计算
     private void calcVector() {
-        vector.x = target.x - robot.pos.x;
-        vector.y = target.y - robot.pos.y;
+        vector.x = next.x - robot.pos.x;
+        vector.y = next.y - robot.pos.y;
         realDistance = vector.norm();
         speed.x = robot.lineVx;
         speed.y = robot.lineVy;
@@ -274,12 +280,6 @@ public class Route{
         return !safe;
     }
 
-    
-    // 判断是否到达了目的地
-    public boolean isArriveTarget() {
-        double dis = target.calcDistance(robot.pos);
-        return dis < robot.getRadius() * robot.arriveMinDistance;
-    }
 
     // 当前移动是否安全
     private boolean isMoveSafe2() {
@@ -359,8 +359,8 @@ public class Route{
     // 两个机器人符合对撞的条件
     private boolean fitMeetCase(Robot oth) {
         double dis = robot.pos.calcDistance(oth.pos);   //相对距离
-        double d1 = robot.pos.calcDistance(target);
-        double d2 = oth.pos.calcDistance(oth.route.target);
+        double d1 = robot.pos.calcDistance(next);
+        double d2 = oth.pos.calcDistance(oth.route.next);
         if (dis >= d1 || dis >= d2){
             return false;   // 不符合条件
         }
@@ -462,8 +462,6 @@ public class Route{
 
     // 给定设置角度和速度时设置减速偏转策略
     public void rush() {
-
-        calcParamEveryFrame();    // 参数计算
         calcSafePrintSpeed();   // 先计算安全速度
 
         if (endWaitMode){
@@ -516,5 +514,20 @@ public class Route{
             }
         }
         return flag;
+    }
+
+    // 是否到达下一个点
+    public boolean arriveNext() {
+        double dis = robot.pos.calcDistance(next);
+        return dis <= robotInPointDis;
+    }
+
+    // 更换下一个点
+    public void updateNext() {
+        if (path.size() == 0){
+            Main.printLog("path error");
+        }
+
+        next = path.poll();
     }
 }

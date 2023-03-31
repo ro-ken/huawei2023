@@ -55,12 +55,8 @@ public class Main {
             readUtilOK();
 
             printFrame(frameID);
-
 //            long t1 = System.currentTimeMillis();
             handleFrame();
-//            long t2 = System.currentTimeMillis();
-//            printLog("time:"+String.valueOf(t2-t1));
-
             printOk();
         }
     }
@@ -86,10 +82,7 @@ public class Main {
                 if (robots[i].isArrive()){
 //                    Main.printLog("arrive");
                     // 有物品就买，没有就等待,逐帧判断
-//                    Main.printLog(robots[i].nextStation == robots[i].srcStation);
-//                    Main.printLog(robots[i].nextStation);
                     if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){
-//                        Main.printLog("arrive");
                         if (frameID > JudgeDuration){
                             if (!robots[i].canBugJudge()){
                                 continue;
@@ -114,7 +107,8 @@ public class Main {
 
                     }
                 }else{
-                    // 没到目的地就继续前进
+                    // 如果到中间点要换下一个点
+
                     robots[i].rush();
                 }
             }
