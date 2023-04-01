@@ -89,6 +89,8 @@ public class WaterFlow {
                }
            }
        }
+
+    //通用调度算法，也是兜底算法，把所有情况都考虑进去，不能让机器人闲着
     private void commonSched(Robot robot) {
 
         if (!isType7){
@@ -273,63 +275,6 @@ public class WaterFlow {
         }
     }
 
-    // 分配一个456号任务，必须把curTask字段赋值
-//     private void assign456Task(Robot rob) {
-//
-//        if (!isType7){
-//            Station next = selectDeadStation(rob);
-//
-//            if (next != null){
-//                rob.setTask(next);
-//            }else {
-//                rob.setTask(target);
-//            }
-////
-////            rob.setTask(target);
-//            return;
-//        }
-//
-//        // 分配任务，分配后申请资源，离开释放
-//        // 选择目前进度最低的456，进度 = 完成数 + 任务被领取数
-//        // 进度相同，可按「距离」贪心选择 或 安装「价值」贪心选择
-//
-//        ArrayList<Integer> tasks = selectSlowestTask();
-////        Main.printLog(tasks);
-//        Station task = null;
-//
-//        Main.printLog("task:" + task);
-//        if (tasks.size() == 1){
-//            // 有一个进度最低的，直接选择该任务
-//            task = newTask(tasks.get(0));
-//            Main.printLog("1:"+tasks.get(0));
-//        }else {
-//            int taskId = fairSelectTask(tasks);
-//            Main.printLog("best:"+taskId);
-//            task = newTask(taskId);
-//            if (task == null && tasks.size() == 2){
-//                // 未分配成功，分配另一个
-//                if (tasks.get(0) == taskId){
-//                    taskId = tasks.get(1);
-//                }else {
-//                    taskId = tasks.get(0);
-//                }
-//                task = newTask(taskId);
-//            }
-//        }
-//        if (task == null){
-//            //当前任务机器人过多，分配可用的
-//
-//            task = newAvailableTask();
-//        }
-//        if (task == null){
-//            // 456被占满，分配无效,等待
-//            Main.printLog("no task");
-//            return;
-//        }
-//
-//        rob.setTask(task);
-////                curTask = task;
-//    }
 
     private Robot selectClosestRobot() {
         // 选择距离target最近的机器人
@@ -443,35 +388,6 @@ public class WaterFlow {
         }
         return null;
     }
-
-//    private Station newAvailableTask() {
-//        Station task = null;
-////        if (Main.specialMapMode){
-////            if (Main.mapSeq == 2 || Main.mapSeq == 4){
-////                // 设置优先级 4最高
-////                task = newAvailableTaskBySeq(new int[]{4,6,5});
-////            }else {
-////                task = newAvailableTaskBySeq(new int[]{6,5,4});
-////            }
-////        }else {
-////            task = newAvailableTaskBySeq(new int[]{6,5,4});
-////        }
-//        task = newAvailableTaskBySeq(new int[]{6,5,4});
-//        return task;
-//    }
-
-//    private Station newAvailableTaskBySeq(int[] seq) {
-//        Station task = null;
-//        for (int i = 0; i < 3; i++) {
-//            if (task == null){
-//                task = newTask(seq[i]);
-//            }
-//        }
-//        return task;
-//    }
-
-    //通用调度算法，也是兜底算法，把所有情况都考虑进去，不能让机器人闲着
-
 
     // 进度最慢的工作站
     private Station selectSlowestStation() {
