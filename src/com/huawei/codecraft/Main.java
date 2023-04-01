@@ -20,7 +20,7 @@ public class Main {
     public static Map<Integer, ArrayList<Station>> map = new HashMap<>(); // 类型，以及对应的工作站
     public static int stationNum = 0;
     public static final int duration = 5 * 60 * 50;
-    public static final int JudgeDuration = duration - 10 * 50;    //最后10s需判断买入的商品能否卖出
+    public static final int JudgeDuration = duration - 20 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int JudgeDuration2 = duration - 20 * 50;    //最后20s需判断选择是否最佳，是否还有商品没有卖
     public static final int fps = 50;
     public static final boolean test = true;    // 是否可写入
@@ -101,7 +101,6 @@ public class Main {
                         robots[i].destStation.setPosition(robots[i].srcStation.type);       // 卖了以后对应物品空格置1
 //                        bookRow[robots[i].srcStation.type] = false;   //解除预定
                         robots[i].destStation.bookNum--;       //解除预定
-                        robots[i].destStation.bookNum2--;       //
                         printLog("sell");
                         robots[i].changeTarget();
 
@@ -149,15 +148,12 @@ public class Main {
             row --;
             double y = row * 0.5 - 0.25;
             line = inStream.nextLine();
-//            printLog(line);
             if ("OK".equals(line)) {
                 stationNum = stationId;
                 for (Integer key: map.keySet()){
-                    printLog("type = " + key + "nums = " +map.get(key).size());
+                    printLog("type = " + key + " , nums = " +map.get(key).size());
                 }
                 have9 = map.containsKey(9); // 是否有9号工作台
-//                printLog(robotId);
-//                printLog("hi");
                 return true;
             }
 
@@ -165,7 +161,7 @@ public class Main {
                 double x = i * 0.5 + 0.25;
                 char c = line.charAt(i);
                 if (c == '.') continue;
-                if (c == '#') continue;
+                if (c == '#') continue;     // todo 初始化地图
                 if (c == 'A'){
                     robots[robotId] = new Robot(robotId,x,y,robotId);
                     robotId++;
@@ -200,9 +196,9 @@ public class Main {
         }else if (stations[0].type == 7){
             mapSeq = 4;
         }else {
-            mapSeq = -1;    // 为初始化
+            mapSeq = -1;    // 未初始化
         }
-        Main.printLog("mapseq:"+mapSeq);
+        Main.printLog("mapSeq:"+mapSeq);
     }
 
     public static void initSpecialMapParam() {

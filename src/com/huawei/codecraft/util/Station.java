@@ -34,11 +34,10 @@ public class Station implements Comparable{
     public boolean[] bookRow;    // 原料空格是否预定
     public boolean bookPro;      // 产品空格是否预定
     public int bookNum = 0; // 已经有多少机器人在往这个点赶
-    public int bookNum2 = 0; // 专用
+//    public int bookNum2 = 0; // 专用
 
     // 流水线参数
     public double cycleAvgValue;    // 生产一个周期的平均价值  ,赚的钱数/ 花费的时间
-    public boolean taskBook;    // 任务是否被预定，针对456
     public WaterFlow waterFlow; // 目前处于那一条流水线
 
     static {
@@ -158,10 +157,31 @@ public class Station implements Comparable{
         return !positionIsFull(tp) && !bookRow[tp];
     }
 
+    // 可以购买的数量
+    public int canBuyNum() {
+        int num = 0;
+        for(int tp:getRaws()){
+            if (canBuy(tp)){
+                num ++;
+            }
+        }
+        return num;
+    }
+
+    public ArrayList<Integer> canBuyRaws() {
+        ArrayList<Integer> raws = new ArrayList<>();
+        for(int tp:getRaws()){
+            if (canBuy(tp)){
+                raws.add(tp);
+            }
+        }
+        return raws;
+    }
+
     private void calcCanBuyStations() {
         // 4-7节点
         canBuyStationsMap = new HashMap<>();
-        for(int tp:item[type].call){
+        for(int tp:getRaws()){
             PriorityQueue<Pair> queue = new PriorityQueue<>();
             canBuyStationsMap.put(tp,queue);
             ArrayList<Station> stations = Main.map.get(tp);
@@ -188,7 +208,7 @@ public class Station implements Comparable{
     public Station chooseAvailableNextStation() {
         for(Pair pair : canSellStations){
             Station oth = pair.getKey();
-            if (!oth.bookRow[type] && !oth.positionIsFull(type)){
+            if (oth.canBuy(type)){
                 availNextStation = oth;
                 return oth;
             }
@@ -238,15 +258,15 @@ public class Station implements Comparable{
 
     // 距离换算成帧数  todo 要改
     public int pathToFps(boolean isEmpty, Point p){
-        int fps = (int) (pos.distanceToFps(isEmpty,p));
+        int fps = pos.distanceToFps(isEmpty,p);
         return fps;
     }
 
     // 返回当前的空位，并且没有被预定的
     public ArrayList<Integer> getEmptyRaw() {
         ArrayList<Integer> empty = new ArrayList<>();
-        for (int tp : item[type].call) {
-            if (!bookRow[tp] && !positionIsFull(tp)){
+        for (int tp : getRaws()) {
+            if (canBuy(tp)){
                 empty.add(tp);
             }
         }
@@ -284,7 +304,6 @@ public class Station implements Comparable{
                 }
                 ArrayList<Station> stations = Main.map.get(tp);
                 for (Station st : stations) {
-//                    double value = calcValue(st.pos.x, st.pos.y, false);
                     double value = pathToFps(false,st.pos);  //以时间排序
                     Pair pair = new Pair(st, value);
                     canSellStations.add(pair);
@@ -305,6 +324,7 @@ public class Station implements Comparable{
         }
 
         if (type>=4 && type <=6){
+            //
             calcCanBuyStations();
             calcFastestComposeFpsAndMoney();
             if (Main.have9){
@@ -345,6 +365,12 @@ public class Station implements Comparable{
 
     public void setPosition(int type){
         rowStatus = rowStatus | (1<<type);
+    }
+
+
+    // 返回所有原料
+    public int[] getRaws() {
+        return item[type].call;
     }
 }
 

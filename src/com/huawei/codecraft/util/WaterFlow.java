@@ -19,6 +19,7 @@ public class WaterFlow {
     ArrayList<Robot> robots ;
     Map<Integer,ArrayList<Station>> curTasks ;  //  7号工作站的456号任务
     Map<Integer,Integer> completed; // 完成的任务数量
+    Map<Integer,Integer> halfComp; // 456 现有原料的数量，合成后completed +1,这个减2
 
     // 构造函数
     public WaterFlow(Station target) {
@@ -26,11 +27,18 @@ public class WaterFlow {
         isType7 = target.type == 7;
         curTasks = new HashMap<>();
         completed = new HashMap<>();
+        halfComp = new HashMap<>();
         robots = new ArrayList<>();
         sellMinFps = target.pathToFps(false,target.closest89.pos);
         init();
     }
-
+    private void init() {
+        for (int i = 4; i <=6 ; i++) {
+            curTasks.put(i,new ArrayList<>());
+            completed.put(i,0);
+            halfComp.put(i,0);
+        }
+    }
     @Override
     public String toString() {
         return "WaterFlow{" +
@@ -65,7 +73,7 @@ public class WaterFlow {
 
         // 预先分配一个任务
         for (Robot rob : robots){
-            assign456Task(rob);
+            commonSched(rob);
         }
     }
 
@@ -81,37 +89,56 @@ public class WaterFlow {
                }
            }
        }
+    private void commonSched(Robot robot) {
 
-       // 机器人在789号工作台时的调度
-    private void sta789Sched(Robot robot) {
-        Station now = robot.lastStation;
-        if (target.proStatus == 1 && !target.bookPro){
-            // 七八九的情况，判断7是否有物品
-            //卖出 7号
-            robot.setSrcDest(target,target.canSellStations.peek().getKey());
-        }else {
-            if (target2!=null && target2.proStatus == 1 && !target2.bookPro){
-                robot.setSrcDest(target2,target2.canSellStations.peek().getKey());
-            }else {
-                urgentTask(robot);
-            }
+        if (!isType7){
+            simpleSched(robot);
+            return;
         }
 
-        if (now.type == 7 && target2 != null){
-            // 如果满了，切换target
-            if (!target.haveEmptyPosition()){
-                Station st = target;
-                target = target2;
-                target2 = st;
-            }
+        // 1、是否有456要运送的
+        Station src = closestAndHaveProSta(robot);
+        if (src != null && src.bookNum==0){
+            // todo 是否有近的123 可带一个过去
+            robot.setSrcDest(src,target);
+            return;
+        }
+
+        // 2、是否有需要做的任务
+        Station dest = selectSlowestStation();
+        if (dest != null){
+            src = selectClosestSrcToDest(robot,dest);
+            robot.setSrcDest(src,dest);
+            return;
+        }
+
+        // 3、是否有7号产品出售
+        if (target.canSell()){
+            robot.setSrcDest(target,target.closest89);
+            return;
+        }
+
+        // 4、买卖任何可买卖商品
+        dest = robot.selectTimeShortestStation();
+        if (dest != null){
+            robot.setSrcDest(dest,dest.availNextStation);
+        }
+    }
+
+    // 机器人在789号工作台时的调度
+    private void sta789Sched(Robot robot) {
+        if (target.proStatus == 1 && !target.bookPro){
+            // 七八九的情况，判断7是否有物品
+            robot.setSrcDest(target,target.canSellStations.peek().getKey());
+        }else {
+            commonSched(robot);
         }
     }
 
     // 机器人在456工作台时的调度
     private void sta456Sched(Robot robot) {
         Station now = robot.lastStation;
-        if (now.proStatus == 1){
-
+        if (now.canSell()){
             boolean flag1 = target.canBuy(now.type); // 有空位
             double tt = now.pathToFps(false,target.pos);    // 运送到 target的时间
             // 下面变量含义：没有产品，且在生产，原料满了，没有预定，送过去以后就生产完了，刚好取走货物
@@ -119,111 +146,191 @@ public class WaterFlow {
             if (flag1 || flag2){
                 // 有空位 送
                 robot.setSrcDest(now,target);
-
-            }else {
-                //无空位,重新选择一个
-                urgentTask(robot);
+                return;
             }
-
-        }else {
-            sta456BestSelect(robot);
-
         }
+        // 若能送过去就送，不能送就调用本地最佳选择策略
+        sta456BestSelect(robot);
     }
 
     // 在456策略选择，是继续合成本产品还是去合成其他的456
     private void sta456BestSelect(Robot robot) {
-//            // 没有产品，继续当前生成
-        if (robot.lastStation.haveEmptyPosition())
-        {
-            robot.setTask(robot.lastStation);
-        }else urgentTask(robot);
+        // 本产品最少 || 就缺这个产品 -> 合成该产品
+        boolean isLeast = typeIsLeast(robot.lastStation.type);
+        boolean targetNeed = target.canBuyNum() == 1 && target.canBuy(robot.lastStation.type);
+        Station[] srcDest = selectOtherStation(robot.lastStation);
+        if (isLeast || targetNeed || srcDest == null){
+            setTask(robot,robot.lastStation);
+        }else {
+            robot.setSrcDest(srcDest[0],srcDest[1]);
+        }
+    }
+
+    private Station[] selectOtherStation(Station cur) {
+        // 如果发现去合成别的station更近的话，就选择更换station
+        // 如果时间选择时间太长，就别选了 todo ，留着，最后来写
+        Station[] srcDest = null;
+        int type = cur.type;
+        for (int i = 4; i <=6 ; i++) {
+            if (i != type){
+                Station st = Objects.requireNonNull(target.canBuyStationsMap.get(i).peek()).key;    // 目前只判断一个
+                for (int tp : st.getRaws()) {
+                    // 遍历所有的123，判断距离是否更近
+                    for (Pair pair : st.canBuyStationsMap.get(tp)) {
+                        Station src = pair.key;
+                    }
+
+                }
+
+            }
+
+        }
+
+        return srcDest;
+    }
+
+    // 合成算法 购买原料 合成task station
+    private void setTask(Robot robot, Station task) {
+        if (task.haveEmptyPosition()){
+            // 能合成就合成，不能合成调通用
+            Station src = selectClosestSrcToDest(robot,task);
+            robot.setSrcDest(src,task);
+        }else {
+            commonSched(robot);
+        }
+    }
+
+    private void setSimpleTask(Robot robot, Station task) {
+        // 查看有几个空位，有两个，选最近的，有一个直接选，
+        Station src = null;
+        ArrayList<Integer> raws = task.canBuyRaws();
+        if (raws.size() == 2){
+           src = selectClosestSrcToDest(robot,task);
+        }else if (raws.size() == 1){
+            src = Objects.requireNonNull(task.canBuyStationsMap.get(raws.get(0)).peek()).key;   // 只有一个取最近的一个
+        }else {
+            // 原料格满了，如果还能装，没有产品，也没人预定，等生产完成就可以继续装
+            if (task.positionFull() && task.positionNoBook() && task.proStatus==0 && task.leftTime >0){
+                src = selectClosestSrcToDest(robot,task);
+            }
+        }
+        if (src != null){
+            robot.setSrcDest(src,task);
+        }
+    }
+
+    public Station selectClosestSrcToDest(Robot robot,Station dest) {
+        // 选择距离dest和自己最近的src
+        // 距离 =  robot -> src -> dest
+        double minTime = 100000;
+        Station st = null;
+        Main.printLog(dest);
+        for (int ty : dest.getRaws()) {
+            if (isType7){
+                // 时间小于等于0 ，表明未生产，将会一直阻塞
+                if (dest.bookRow[ty] || dest.positionIsFull(ty)) continue;
+            }
+            for (Station s:Main.map.get(ty)){
+                // 第一段空载，第二段满载
+                double t1 = s.pathToFps(true,robot.pos); // 若寻路算法高效，需换成robot的pos todo
+                double t2 = s.pathToFps(false,dest.pos);
+                double t = t1 + t2;
+                if (t < minTime){
+                    minTime = t;
+                    st = s;
+                }
+            }
+        }
+        Main.printLog(st);
+        return st;
+    }
+
+    private boolean typeIsLeast(int type) {
+        // 判断此类型的产品完成数是否是最少的
+        int num = completed.get(type);
+        for (int i = 4; i <= 6; i++) {
+            if (i != type){
+                if (completed.get(i)<=num){
+                    return false;
+                }
+            }
+        }
+        // 所有产品比它大才为true;
+        return true;
     }
 
     // 机器人的target为456时的调度
     private void simpleSched(Robot robot) {
-        // 456 -> 9
-        Station next = selectDeadStation(robot);
-        Main.printLog("next"+ next);
-        if (next!=null){
-            robot.setTask(next);
+        if (target.type <=3){
+            robot.setSrcDest(target,target.closest89);
         }else {
-//                if (target.proStatus == 1 && target.closest89.bookNum<=2){
+            // 456 -> 9
             if (target.proStatus == 1){
-                // 机器人太多不好运送
                 robot.setSrcDest(target,target.closest89);
             }else {
-                robot.setTask(target);
+                setSimpleTask(robot,target);
             }
-//                robot.setTask(target);
         }
     }
 
     // 分配一个456号任务，必须把curTask字段赋值
-     private void assign456Task(Robot rob) {
-
-        if (!isType7){
-            Station next = selectDeadStation(rob);
-
-            if (next != null){
-                rob.setTask(next);
-            }else {
-                rob.setTask(target);
-            }
+//     private void assign456Task(Robot rob) {
 //
-//            rob.setTask(target);
-            return;
-        }
+//        if (!isType7){
+//            Station next = selectDeadStation(rob);
+//
+//            if (next != null){
+//                rob.setTask(next);
+//            }else {
+//                rob.setTask(target);
+//            }
+////
+////            rob.setTask(target);
+//            return;
+//        }
+//
+//        // 分配任务，分配后申请资源，离开释放
+//        // 选择目前进度最低的456，进度 = 完成数 + 任务被领取数
+//        // 进度相同，可按「距离」贪心选择 或 安装「价值」贪心选择
+//
+//        ArrayList<Integer> tasks = selectSlowestTask();
+////        Main.printLog(tasks);
+//        Station task = null;
+//
+//        Main.printLog("task:" + task);
+//        if (tasks.size() == 1){
+//            // 有一个进度最低的，直接选择该任务
+//            task = newTask(tasks.get(0));
+//            Main.printLog("1:"+tasks.get(0));
+//        }else {
+//            int taskId = fairSelectTask(tasks);
+//            Main.printLog("best:"+taskId);
+//            task = newTask(taskId);
+//            if (task == null && tasks.size() == 2){
+//                // 未分配成功，分配另一个
+//                if (tasks.get(0) == taskId){
+//                    taskId = tasks.get(1);
+//                }else {
+//                    taskId = tasks.get(0);
+//                }
+//                task = newTask(taskId);
+//            }
+//        }
+//        if (task == null){
+//            //当前任务机器人过多，分配可用的
+//
+//            task = newAvailableTask();
+//        }
+//        if (task == null){
+//            // 456被占满，分配无效,等待
+//            Main.printLog("no task");
+//            return;
+//        }
+//
+//        rob.setTask(task);
+////                curTask = task;
+//    }
 
-        // 分配任务，分配后申请资源，离开释放
-        // 选择目前进度最低的456，进度 = 完成数 + 任务被领取数
-        // 进度相同，可按「距离」贪心选择 或 安装「价值」贪心选择
-
-        ArrayList<Integer> tasks = selectSlowestTask();
-//        Main.printLog(tasks);
-        Station task = null;
-
-        Main.printLog("task:" + task);
-        if (tasks.size() == 1){
-            // 有一个进度最低的，直接选择该任务
-            task = newTask(tasks.get(0));
-            Main.printLog("1:"+tasks.get(0));
-        }else {
-            int taskId = selectTaskByValue(tasks);
-            Main.printLog("best:"+taskId);
-            task = newTask(taskId);
-            if (task == null && tasks.size() == 2){
-                // 未分配成功，分配另一个
-                if (tasks.get(0) == taskId){
-                    taskId = tasks.get(1);
-                }else {
-                    taskId = tasks.get(0);
-                }
-                task = newTask(taskId);
-            }
-        }
-        if (task == null){
-            //当前任务机器人过多，分配可用的
-
-            task = newAvailableTask();
-        }
-        if (task == null){
-            // 456被占满，分配无效,等待
-            Main.printLog("no task");
-            return;
-        }
-
-        rob.setTask(task);
-//                curTask = task;
-    }
-
-    private void init() {
-        for (int i = 4; i <=6 ; i++) {
-            curTasks.put(i,new ArrayList<>());
-            completed.put(i,0);
-        }
-    }
-    
     private Robot selectClosestRobot() {
         // 选择距离target最近的机器人
         double minDis = 100000;
@@ -250,10 +357,10 @@ public class WaterFlow {
         Station next = null;
         for (int i = 0; i < Main.stationNum; i++) {
             Station st = Main.stations[i];
-            if (st.type<=3 || st.type >=7 || st.taskBook) continue;
+            if (st.type<=3 || st.type >=7) continue;
             if (st.positionNoBook() && st.rowStatus == 0){
                 // 位置没有预定，而且全空才考虑
-                double fps = st.pathToFps(true,rob.pos);
+                double fps = st.pathToFps(true,rob.pos);    // todo，计算量有些大了
                 double valueFps = st.fastestComposeMoney * 3 / (fps+ st.fastestComposeFps * 3);
 
                 if (valueFps > target.cycleAvgValue){
@@ -267,86 +374,142 @@ public class WaterFlow {
         return next;
     }
 
-    private int selectTaskByValue(ArrayList<Integer> tasks) {
-        if (tasks.size() == 0) {
-//            if (Main.specialMapMode){     //设置优先级
-//                if (Main.mapSeq == 2 || Main.mapSeq == 4){
-//                    return 4;
-//                }
-//            }
-            return 6;    // 6 最高
+    // 公平选择某个任务
+    private int fairSelectTask(ArrayList<Integer> tasks) {
+        // 1、首先按照工作站类型的数量来选择，某种类型的工作站只有一个的优先
+        int min = 3;
+        ArrayList<Integer> list = new ArrayList<>();
+        for (int tp : tasks) {
+            int size = target.canBuyStationsMap.get(tp).size()>1?2:1;   // 超过2个算2个
+            if (size < min){
+                list.clear();
+                list.add(tp);
+                min = size;
+            }else if (size == min){
+                list.add(tp);
+            }
         }
-        return Math.max(tasks.get(0),tasks.get(1)); // 2个任务 选最大  4 < 5 < 6
+        // 有唯一最小值，返回
+        if (list.size() == 1){
+            return list.get(0);
+        }
+
+        // 若只有一个，有多个最小值，按照距离远的搬运，防止出现等待的情况
+        // 若有2个以上，价值高的先搬运
+        if (min == 1){
+            double max = 0;
+            int maxId = 0;
+            for (int tp : list) {
+                double fps = Objects.requireNonNull(target.canBuyStationsMap.get(tp).peek()).value;
+                if (fps > max){
+                    max = fps;
+                    maxId = tp;
+                }
+            }
+            return maxId;
+        }else {
+            if (list.size() == 3){
+                return 6;
+            }
+            return Math.max(list.get(0),list.get(1)); // 2个任务 选最大  4 < 5 < 6
+        }
     }
 
     // 选择一个完成度最低的任务
     private ArrayList<Integer> selectSlowestTask() {
-        int task4 = completed.get(4) + curTasks.get(4).size();
-        int task5 = completed.get(5) + curTasks.get(5).size();
-        int task6 = completed.get(6) + curTasks.get(6).size();
-//        Main.printLog("4:"+task4+"  5:"+task5+"  6:"+task6);
-
+        int[] task = new int[3];
         ArrayList<Integer> res = new ArrayList<>();
-
-        if (task4 == task5 && task4 == task6){
-            return res;   // 为空表示有三个
+        for (int i = 0; i < 3; i++) {
+            task[i] = completed.get(i+4)*2 + halfComp.get(i+4);
         }
-        int min = Math.min(task4,task5);
-        min = Math.min(min,task6);
-        if (task4 == min){
-            res.add(4);
-        }
-        if (task5 == min){
-            res.add(5);
-        }
-        if (task6 == min){
-            res.add(6);
+        int min = Math.min(Math.min(task[0],task[1]),task[2]);
+        for (int i = 0; i < 3; i++) {
+            if (task[i] == min){
+                res.add(i+4);
+            }
         }
         return res;
     }
 
+    // 从target选一个能用的new task
     private Station newTask(int taskId) {
         PriorityQueue<Pair> pairs = target.canBuyStationsMap.get(taskId);
         for (Pair p :pairs){
             // 选择当前没有被占用,并且可以生产的station
             Station st = p.key;
-            if (st.taskBook) continue;
-            if (st.leftTime >= 0 && !st.haveEmptyPosition()) continue;  // 阻塞，并且位置也满了
-            return st;
+            if(st.haveEmptyPosition()){
+                return st;
+            }
         }
-
         return null;
     }
 
-    private Station newAvailableTask() {
-        Station task = null;
-//        if (Main.specialMapMode){
-//            if (Main.mapSeq == 2 || Main.mapSeq == 4){
-//                // 设置优先级 4最高
-//                task = newAvailableTaskBySeq(new int[]{4,6,5});
-//            }else {
-//                task = newAvailableTaskBySeq(new int[]{6,5,4});
-//            }
-//        }else {
-//            task = newAvailableTaskBySeq(new int[]{6,5,4});
-//        }
-        task = newAvailableTaskBySeq(new int[]{6,5,4});
-        return task;
-    }
+//    private Station newAvailableTask() {
+//        Station task = null;
+////        if (Main.specialMapMode){
+////            if (Main.mapSeq == 2 || Main.mapSeq == 4){
+////                // 设置优先级 4最高
+////                task = newAvailableTaskBySeq(new int[]{4,6,5});
+////            }else {
+////                task = newAvailableTaskBySeq(new int[]{6,5,4});
+////            }
+////        }else {
+////            task = newAvailableTaskBySeq(new int[]{6,5,4});
+////        }
+//        task = newAvailableTaskBySeq(new int[]{6,5,4});
+//        return task;
+//    }
 
-    private Station newAvailableTaskBySeq(int[] seq) {
-        Station task = null;
-        for (int i = 0; i < 3; i++) {
-            if (task == null){
-                task = newTask(seq[i]);
+//    private Station newAvailableTaskBySeq(int[] seq) {
+//        Station task = null;
+//        for (int i = 0; i < 3; i++) {
+//            if (task == null){
+//                task = newTask(seq[i]);
+//            }
+//        }
+//        return task;
+//    }
+
+    //通用调度算法，也是兜底算法，把所有情况都考虑进去，不能让机器人闲着
+
+
+    // 进度最慢的工作站
+    private Station selectSlowestStation() {
+        ArrayList<Integer> tasks = selectSlowestTask();
+        int taskId = -1;
+        HashSet<Integer> used = new HashSet<>();
+        if (tasks.size() == 1){
+            // 有一个进度最低的，直接选择该任务
+            taskId = tasks.get(0);
+        }else {
+            taskId = fairSelectTask(tasks);
+        }
+        used.add(taskId);
+        Station task = newTask(taskId);
+        if (task == null && tasks.size() == 2){
+            // 未分配成功，分配另一个
+            if (tasks.get(0) == taskId){
+                taskId = tasks.get(1);
+            }else {
+                taskId = tasks.get(0);
+            }
+            used.add(taskId);
+            task = newTask(taskId);
+        }
+        if (task == null){
+            for (int i = 4; i <=6 ; i++) {
+                if (!used.contains(i)){
+                    task = newTask(i);
+                    if (task != null) {
+                        break;  // 找到一个可用的
+                    }
+                }
             }
         }
         return task;
     }
 
-    //处理当前最需要处理的任务
-    private void urgentTask(Robot robot) {
-
+    private Station closestAndHaveProSta(Robot robot) {
         // 最先判断7是否有空位，而且有产品，把产品运送到7，不能停下来
         ArrayList<Integer> empty = target.getEmptyRaw();
         Station src = null;
@@ -356,24 +519,18 @@ public class WaterFlow {
             for(int tp:empty){
                 for (Pair pair : target.canBuyStationsMap.get(tp)) {
                     Station st = pair.key;
-                    if (st.taskBook ) continue; // 有机器人在生产
-                    if (st.proStatus == 0 || st.bookPro) continue;  // 没有产品，或被预定
-                    double dis = robot.pos.calcDistance(st.pos);
-                    if (dis < minDis){
-                        minDis = dis;
-                        src = st;
-                        break;
+                    if (st.canSell()) {
+                        double dis = st.pathToFps(true,robot.pos);  // todo 需要实时计算路径长度
+                        if (dis < minDis){
+                            minDis = dis;
+                            src = st;
+                            break;
+                        }
                     }
                 }
             }
         }
-
-        // 不为空，可以搬运
-        if (src != null){
-            robot.setSrcDest(src,target);
-        }else {
-            assign456Task(robot);       // 不送7了，
-        }
+        return src;
     }
 }
 

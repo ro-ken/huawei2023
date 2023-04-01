@@ -260,6 +260,7 @@ public class Robot {
         }else {
             if (waterFlow != null) {
                 useWaterFlowChangeMode();
+//                lastStation = nextStation;
             }
             nextStation = srcStation = destStation = null;
 
@@ -440,33 +441,6 @@ public class Robot {
         }
 
     }
-    
-      private Station selectClosestSrcToDest(Station dest) {
-        // 选择距离dest和自己最近的src
-        // 距离 =  robot -> src -> dest
-        double minTime = 100000;
-        Station st = null;
-        for (int ty : Station.item[dest.type].call) {
-            if (waterFlow.isType7){
-                // 时间小于等于0 ，表明未生产，将会一直阻塞
-                if (dest.bookRow[ty] || dest.positionIsFull(ty)) continue;
-            }
-            for (Station s:Main.map.get(ty)){
-                // 第一段空载，第二段满载
-                double t1 = s.pathToFps(true,pos);
-                double t2 = s.pathToFps(false,dest.pos);
-                double t = t1 + t2;
-                if (t < minTime){
-                    minTime = t;
-                    st = s;
-                }
-            }
-        }
-        if (st == null){
-//            Main.printLog("-------task"+dest);
-        }
-        return st;
-    }
 
     private Station selectClosestStation() {
         Station closestStation = null;
@@ -490,7 +464,7 @@ public class Robot {
     }
 
     //选择取货时间最短的，取货时间 = max {走路时间，生成时间}
-    private Station selectTimeShortestStation() {
+    public Station selectTimeShortestStation() {
         Station shortestStation = null;
         double shortest = 10000;
         for(int i=0;i<Main.stationNum;i++){
@@ -498,7 +472,7 @@ public class Robot {
             Station station = Main.stations[i];
             if (station.leftTime == -1 || station.bookPro) continue;
             double dis = station.pos.calcDistance(pos);
-            double time1 = calcFpsToPlace(dis);
+            double time1 = calcFpsToPlace(dis);         // todo 时间要改
             double time = Math.max(time1,station.leftTime);
             if (time < shortest){
                 // 卖方有货，卖方有位置
@@ -514,8 +488,8 @@ public class Robot {
     
     public void setSrcDest(Station src, Station dest) {
         nextStation = srcStation = src;
-        Main.printLog("src"+srcStation);
         destStation = dest;
+        Main.printLog("src"+srcStation);
         Main.printLog("dest" + destStation);
         srcStation.bookPro = true;      // 预定位置
 
@@ -524,24 +498,23 @@ public class Robot {
         }
 
         src.bookNum ++;
-        dest.bookNum2 ++;
-//        dest.bookNum ++;
+        if (dest.type <= 6){
+            waterFlow.halfComp.put(dest.type,waterFlow.halfComp.get(dest.type) +1);    // 原料数 +1
+        }
 
         calcRoute();
     }
 
     public void setTask(Station task) {
 
-        if (task.taskBook) return;
         if (waterFlow.isType7 && !task.haveEmptyPosition()) return; // 没有空格位，若没有7的情况下，不用判断
         if (waterFlow.isType7 || task == waterFlow.target){
             waterFlow.curTasks.get(task.type).add(task);  // 加入队列
         }
-        task.taskBook = true;   //加锁
         curTask = task;
 
         // 若 task 的产品格都是满的，会报错
-        setSrcDest(selectClosestSrcToDest(curTask),curTask);
+        setSrcDest(waterFlow.selectClosestSrcToDest(this,curTask),curTask);
 
     }
 
@@ -641,23 +614,25 @@ public class Robot {
     // 使用流水线模式
     public void useWaterFlowSelectMode() {
 
-        if (curTask == null){
-            // 开始，这种情况是运输完了456,需要上边下发新任务
-            waterFlow.scheduler(this);
-        }else {
-            // 还未完成生成，继续完成
-            for (int ty : Station.item[curTask.type].call) {
-                // 列出需要的物品,若物品还为空，则说明需要去取
-//                if (!curTask.positionIsFull(ty)){
-                if (curTask.canBuy(ty)){
-                    // 已排序，取最近
-                    Pair p = curTask.canBuyStationsMap.get(ty).peek();
-                    setSrcDest(p.getKey(),curTask);
+        waterFlow.scheduler(this);
 
-                }
-            }
-
-        }
+//        if (curTask == null){
+//            // 开始，这种情况是运输完了456,需要上边下发新任务
+//            waterFlow.scheduler(this);
+//        }else {
+//            // 还未完成生成，继续完成
+//            for (int ty : Station.item[curTask.type].call) {
+//                // 列出需要的物品,若物品还为空，则说明需要去取
+////                if (!curTask.positionIsFull(ty)){
+//                if (curTask.canBuy(ty)){
+//                    // 已排序，取最近
+//                    Pair p = curTask.canBuyStationsMap.get(ty).peek();
+//                    setSrcDest(p.getKey(),curTask);
+//
+//                }
+//            }
+//
+//        }
 
     }
 
@@ -669,7 +644,6 @@ public class Robot {
                 // 说明是临时任务，
                 if (!curTask.haveEmptyPosition() && curTask.proStatus == 1 && curTask.leftTime>=0){
                     //以经满了
-                    curTask.taskBook = false;
                     curTask = null;
                     lastStation = nextStation;
 
@@ -689,7 +663,7 @@ public class Robot {
                     return;
                 }else {
                     waterFlow.curTasks.get(curTask.type).remove(curTask);    // 删除任务
-                    curTask.taskBook = false;
+
                     lastStation = nextStation;
                     curTask = null;
                     return;
@@ -697,12 +671,18 @@ public class Robot {
             }
                 // 当前任务已经完成，释放资源
             waterFlow.completed.put(curTask.type,waterFlow.completed.get(curTask.type) + 1);    // 完成数 + 1
+            waterFlow.halfComp.put(curTask.type,waterFlow.halfComp.get(curTask.type) - 2);    // 原料数 -2
             waterFlow.curTasks.get(curTask.type).remove(curTask);    // 删除任务
-            curTask.taskBook = false;
+
             lastStation = nextStation;
             curTask = null;
         }else {
-            // 若为空，交给下一帧处理
+            Main.printLog("nextStation"+ nextStation);
+            // 如果两个物品格满了算作完成一个任务
+            if (nextStation.positionFull() && nextStation.type <=6){
+                waterFlow.completed.put(nextStation.type,waterFlow.completed.get(nextStation.type) + 1);    // 完成数 + 1
+                waterFlow.halfComp.put(nextStation.type,waterFlow.halfComp.get(nextStation.type) - 2);    // 原料数 -2
+            }
             lastStation = nextStation;
         }
     }
