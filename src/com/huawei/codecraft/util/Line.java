@@ -6,8 +6,8 @@ package com.huawei.codecraft.util;
  * @Description: TODO
  */
 public class Line {
-    Point left;
-    Point right;
+    public Point left;
+    public Point right;
 
     public Line() {
     }

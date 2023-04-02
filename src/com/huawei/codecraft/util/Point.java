@@ -1,6 +1,7 @@
 package com.huawei.codecraft.util;
 
-import com.huawei.codecraft.Main;
+import com.huawei.codecraft.core.Robot;
+import com.huawei.codecraft.core.Station;
 
 import java.util.LinkedList;
 import java.util.Objects;
@@ -11,6 +12,9 @@ public class Point{
     public double x,y;
 
     public Point() { }
+
+    // 如果这个点上有工作站，记录一下
+
 
     @Override
     public boolean equals(Object o) {
@@ -27,10 +31,9 @@ public class Point{
 
     @Override
     public String toString() {
-        return "Point{" +
-                "x=" + x +
-                ", y=" + y +
-                '}';
+        return "(" + x +
+                ", " + y +
+                ')';
     }
 
     public Point(double x, double y) {
@@ -117,7 +120,7 @@ public class Point{
 
     public double distanceToSecond(boolean isEmpty, Point other){
         //两种情况， 加速，匀速，减速  or  加速 ，减速
-        double minDistance = isEmpty?Station.emptyMinDistance:Station.fullMinDistance;
+        double minDistance = isEmpty? Station.emptyMinDistance:Station.fullMinDistance;
         double a = isEmpty ? Robot.emptyA:Robot.fullA;
         double distance = calcDistance(other);
         double second ;
@@ -129,6 +132,7 @@ public class Point{
         return second;
     }
 
+    // 距离换算成时间, 0 -> v -> 0
     public int distanceToFps(boolean isEmpty, Point p){
         double second = distanceToSecond(isEmpty,p);
         int fps = (int) (second * 50);

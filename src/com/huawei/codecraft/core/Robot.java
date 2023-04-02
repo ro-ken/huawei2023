@@ -1,6 +1,11 @@
-package com.huawei.codecraft.util;
+package com.huawei.codecraft.core;
 
 import com.huawei.codecraft.Main;
+import com.huawei.codecraft.util.Line;
+import com.huawei.codecraft.util.Pair;
+import com.huawei.codecraft.util.Path;
+import com.huawei.codecraft.util.Point;
+import com.huawei.codecraft.way.Astar;
 
 import java.util.ArrayList;
 
@@ -35,7 +40,7 @@ public class Robot {
 
 
     int id;
-    public int zoneId = 1;  // 联通区域编号
+    public Zone zone;   //所属的区域
     public int StationId; // -1 无 ，从0 开始 表示第几个工作台
     public int carry;  // 携带物品 1-7
     public double timeValue;  // 时间价值系数 [0.8 - 1]
@@ -55,6 +60,7 @@ public class Robot {
 
     public Station lastStation; // 当前处于那个工作站，供决策使用，到达更新 todo
 
+    public Point start; // 出生的地点
     // 碰撞相关
     public boolean isTempPlace = false;   // 是否去往临时目的地，避免碰撞
     public Point tmpPos;
@@ -93,6 +99,7 @@ public class Robot {
         this.srcStation = null;
         this.destStation = null;
         pos = new Point(x,y);
+        start = new Point(x,y);
         id=robotId;
         topLine = new Line();
         belowLine = new Line();
@@ -102,15 +109,9 @@ public class Robot {
 
     @Override
     public String toString() {
-
         return "Robot{" +
                 "id=" + id +
-                ", carry=" + carry +
-                ", Vr=" + angV +
-//                ", Vx=" + lineVx +
-//                ", Vy=" + lineVy +
-                ", turn=" + turn +
-                route +
+                ", pos=" + pos +
                 '}';
     }
 
@@ -195,9 +196,20 @@ public class Robot {
 
     // 计算路线
     public void calcRoute() {
+
         if (nextStation != null){
-            route = new Route(nextStation.pos.x,nextStation.pos.y,this);
-//            route.calcParam();
+
+            ArrayList<Point> path = null;
+            if (lastStation == null){
+                path = nextStation.paths.getPath(true,start);   // 第一次，计算初始化的路径
+                path = Path.reversePath(path);
+            }else {
+                boolean isEmpty = nextStation == srcStation;
+                path = lastStation.paths.getPath(isEmpty,nextStation.pos);
+//                path = nextStation.paths.getPath(isEmpty,lastStation.pos);
+            }
+            Main.printLog(path);
+            route = new Route(nextStation.pos,this,path);
         }
     }
 
@@ -216,6 +228,7 @@ public class Robot {
     public void changeTarget() {
         if (nextStation == srcStation){
             nextStation = destStation;
+            lastStation = srcStation;
             calcRoute();
         }else {
             if (waterFlow != null) {
@@ -428,8 +441,9 @@ public class Robot {
     public void setSrcDest(Station src, Station dest) {
         nextStation = srcStation = src;
         destStation = dest;
-        Main.printLog("src"+srcStation);
-        Main.printLog("dest" + destStation);
+        Main.printLog(this);
+        Main.printLog("src, "+srcStation);
+        Main.printLog("dest, " + destStation);
         srcStation.bookPro = true;      // 预定位置
 
         if (destStation.type <= 7)  {   // 8,9 不需要预定

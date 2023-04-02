@@ -1,6 +1,7 @@
-package com.huawei.codecraft.util;
+package com.huawei.codecraft.core;
 
 import com.huawei.codecraft.Main;
+import com.huawei.codecraft.util.Pair;
 
 import java.util.*;
 
@@ -15,6 +16,7 @@ public class WaterFlow {
     public Station target;     // 流水线终极目标
     public Station target2;     // 流水线备用目标
     boolean isType7;    // 是否是7号工作站
+    Zone zone;  //属于哪个区域
     int sellMinFps;     // 卖掉 target货物的fps
     ArrayList<Robot> robots ;
     Map<Integer,ArrayList<Station>> curTasks ;  //  7号工作站的456号任务
@@ -22,8 +24,9 @@ public class WaterFlow {
     Map<Integer,Integer> halfComp; // 456 现有原料的数量，合成后completed +1,这个减2
 
     // 构造函数
-    public WaterFlow(Station target) {
+    public WaterFlow(Station target,Zone zone) {
         this.target = target;
+        this.zone = zone;
         isType7 = target.type == 7;
         curTasks = new HashMap<>();
         completed = new HashMap<>();
@@ -49,28 +52,17 @@ public class WaterFlow {
     }
 
     public void assignRobot(int robotNum) {
-
-        if (robotNum == 1){
-            for (int i = 0; i < robotNum; i++) {
-                Robot rob = selectClosestRobot();
-                if (rob != null){
-                    rob.waterFlow = this;
-                    robots.add(rob);
-                }
-            }
-        }else {
-            for (int i = 0; i < 4; i++) {
-                Robot rob = Main.robots[i];
-                if (rob.waterFlow == null){
-                    rob.waterFlow = this;
-                    robots.add(rob);
-                    if (robots.size() == robotNum) {
-                        break;
-                    }
+        // 按照远近关系，最多分配num 个
+        for (int i = 0; i < 4; i++) {
+            Robot rob = selectClosestRobot();
+            if (rob != null){
+                rob.waterFlow = this;
+                robots.add(rob);
+                if (robots.size() == robotNum) {
+                    break;
                 }
             }
         }
-
         // 预先分配一个任务
         for (Robot rob : robots){
             commonSched(rob);
@@ -121,17 +113,17 @@ public class WaterFlow {
         }
 
         // 4、买卖任何可买卖商品
-        dest = robot.selectTimeShortestStation();
-        if (dest != null){
-            robot.setSrcDest(dest,dest.availNextStation);
+        src = robot.selectTimeShortestStation();
+        if (src != null){
+            robot.setSrcDest(src,src.availNextStation);
         }
     }
 
     // 机器人在789号工作台时的调度
     private void sta789Sched(Robot robot) {
-        if (target.proStatus == 1 && !target.bookPro){
+        if (target.canSell()){
             // 七八九的情况，判断7是否有物品
-            robot.setSrcDest(target,target.canSellStations.peek().getKey());
+            robot.setSrcDest(target, Objects.requireNonNull(target.canSellStations.peek()).key);
         }else {
             commonSched(robot);
         }
@@ -160,7 +152,8 @@ public class WaterFlow {
         // 本产品最少 || 就缺这个产品 -> 合成该产品
         boolean isLeast = typeIsLeast(robot.lastStation.type);
         boolean targetNeed = target.canBuyNum() == 1 && target.canBuy(robot.lastStation.type);
-        Station[] srcDest = selectOtherStation(robot.lastStation);
+//        Station[] srcDest = selectOtherStation(robot.lastStation);
+        Station[] srcDest = null;//selectOtherStation(robot.lastStation);
         if (isLeast || targetNeed || srcDest == null){
             setTask(robot,robot.lastStation);
         }else {
@@ -226,15 +219,14 @@ public class WaterFlow {
         // 距离 =  robot -> src -> dest
         double minTime = 100000;
         Station st = null;
-        Main.printLog(dest);
         for (int ty : dest.getRaws()) {
             if (isType7){
                 // 时间小于等于0 ，表明未生产，将会一直阻塞
-                if (dest.bookRow[ty] || dest.positionIsFull(ty)) continue;
+                if (!dest.canBuy(ty)) continue;
             }
-            for (Station s:Main.map.get(ty)){
+            for (Station s:Main.stationsMap.get(ty)){
                 // 第一段空载，第二段满载
-                double t1 = s.pathToFps(true,robot.pos); // 若寻路算法高效，需换成robot的pos todo
+                double t1 = s.pathToFps(true,robot.pos); // 若寻路算法高效，需换成robot的pos todo 若时间慢，后面可以换成机器人所在工作台的pos
                 double t2 = s.pathToFps(false,dest.pos);
                 double t = t1 + t2;
                 if (t < minTime){
@@ -243,7 +235,6 @@ public class WaterFlow {
                 }
             }
         }
-        Main.printLog(st);
         return st;
     }
 
@@ -283,7 +274,8 @@ public class WaterFlow {
         // 分配最近的机器人
         for (int i = 0; i < 4; i++) {
             Robot rob = Main.robots[i];
-            if (rob.waterFlow == null){
+            if (rob.waterFlow == null && rob.zone == zone){
+                // 同一个区域才能分配
                 double dis = target.pos.calcDistance(rob.pos);
                 if (dis<minDis){
                     minDis = dis;

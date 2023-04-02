@@ -1,6 +1,7 @@
-package com.huawei.codecraft.util;
+package com.huawei.codecraft.core;
 
 import com.huawei.codecraft.Main;
+import com.huawei.codecraft.util.Point;
 
 import java.util.ArrayList;
 import java.util.Queue;
@@ -9,7 +10,8 @@ import java.util.Queue;
 public class Route{
     Robot robot;
     public Point target;    // 目标点
-    public Queue<Point> path;   // 要经过的一些列点
+    public ArrayList<Point> path;   // 要经过的一些列点
+    public int pathIndex;   // 指向next一个点
     public Point next;  // 下一个要到的点
 
     public Point vector;    //两点的向量
@@ -50,14 +52,23 @@ public class Route{
     ArrayList<Integer> unsafeRobotIds;
     public int unsafeLevel;     //当前不安全级别  (1-3)
 
-    public Route(double ox,double oy,Robot robot) {
-        target = new Point(ox,oy);
+    public Route(Point tarPos,Robot robot,ArrayList<Point> path) {
+        target = tarPos;
         vector = new Point();
         speed = new Point();
         this.robot = robot;
         unsafeRobotIds = new ArrayList<>();
-        path = robot.pos.getPath(target);
-        next = path.poll();     // 取出下一个点
+        this.path = path;
+        next = getNextPoint();    // 取出下一个点
+        next = getNextPoint();    // 第一个点是自己的位置，不要
+    }
+
+    private Point getNextPoint() {
+        if (pathIndex == path.size()){
+            return target;
+        }else {
+            return path.get(pathIndex++);
+        }
     }
 
     @Override
@@ -127,11 +138,6 @@ public class Route{
         calcTheoryTurn();//理论偏角
         calcClockwise();    // 转动方向
         calcMinDistance();
-//        if (robot.id == 0){
-//            for (int i = 0; i < 4; i++) {
-//                Main.robots[i].calcMoveEquation();  // 第一个机器人负责计算移动方程
-//            }
-//        }
     }
 
 
@@ -527,7 +533,6 @@ public class Route{
         if (path.size() == 0){
             Main.printLog("path error");
         }
-
-        next = path.poll();
+        next = getNextPoint();
     }
 }

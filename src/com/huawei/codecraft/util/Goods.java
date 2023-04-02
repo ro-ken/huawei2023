@@ -24,20 +24,3 @@ public class Goods {
     }
 }
 
-class Good {
-    int type;   // 物品类型 1-7
-    int[] call;     //生产配方
-    int buy;    // 购买价
-    int sell;   // 出售价
-    int earn;   // 赚钱
-
-    public Good(int type, int[] call, int buy, int sell,int earn) {
-        this.type = type;
-        this.call = call;
-        this.buy = buy;
-        this.sell = sell;
-        this.earn = earn;
-
-    }
-
-}

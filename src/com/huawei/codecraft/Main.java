@@ -4,7 +4,11 @@ import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.*;
-import com.huawei.codecraft.util.*;
+
+import com.huawei.codecraft.core.*;
+import com.huawei.codecraft.util.Point;
+import com.huawei.codecraft.way.Mapinfo;
+import com.huawei.codecraft.way.Pos;
 
 
 public class Main {
@@ -15,9 +19,16 @@ public class Main {
     public static int frameID=0;
 //    public static MyThread thread;
 
-    public static Robot[] robots = new Robot[4];
-    public static Station[] stations = new Station[50];
-    public static Map<Integer, ArrayList<Station>> map = new HashMap<>(); // 类型，以及对应的工作站
+    public static final Robot[] robots = new Robot[4];
+    public static final Station[] stations = new Station[50];
+    public static final Map<Integer, ArrayList<Station>> stationsMap = new HashMap<>(); // 类型，以及对应的工作站集合
+    public static final Map<Point, Station> pointStaMap = new HashMap<>(); // 坐标工作站map
+    public static final int[][] wallMap = new int[100][100];   // 存储墙的地图
+    public static final double unreachableCost = 1000000000;    // 不可达费用
+    public static final double unreachableJudgeCost = 1000000;    // 代价超过这个数就不能送了
+    public static Map<Integer, Pos> robotPos = new HashMap<>();  // 记录起始机器人的位置
+    public static Map<Integer,Zone> zoneMap = new HashMap<>();
+    public static Mapinfo mapinfo;
     public static int stationNum = 0;
     public static final int duration = 5 * 60 * 50;
     public static final int JudgeDuration = duration - 20 * 50;    //最后20s需判断买入的商品能否卖出
@@ -25,7 +36,6 @@ public class Main {
     public static final int fps = 50;
     public static final boolean test = true;    // 是否可写入
     public static final int robotNum = 4;
-    public static boolean have9;
     public static int mapSeq;   // 是第几号地图，做优化
     public static boolean specialMapMode = false;   // 是否针对地图做优化
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
@@ -44,6 +54,8 @@ public class Main {
 
     private static void schedule() {
         initMap();
+        mapinfo = new Mapinfo(wallMap);
+        initZone();
         initialization();
         outStream.println("OK");
         outStream.flush();
@@ -61,7 +73,17 @@ public class Main {
         }
     }
 
-      // 核心代码，分析如何运动
+    private static void initZone() {
+        mapinfo.setZone(zoneMap);
+        printLog(mapinfo);
+//        Zone zone = new Zone();
+//        zone.stationsMap = stationsMap;     // todo  暂时测试
+//        for (int i = 0; i <stationNum; i++) {
+//            stations[i].zone = zone;
+//        }
+    }
+
+    // 核心代码，分析如何运动
       private static void handleFrame() {
 
             // 先计算每个机器人的参数，后面好用
@@ -116,30 +138,27 @@ public class Main {
     }
 
     private static void initialization() {
-
         initMapSeq();
         initSpecialMapParam();    // 初始化地图参数
         for (int i = 0; i < stationNum; i++) {
-            stations[i].initialization();
+            stations[i].initialization();           // 第一次初始化，能卖给哪些节点
         }
         // 先初始化123，在456，在7
         for (int i = 1; i <= 7; i++) {
-            if (map.containsKey(i)){
-                ArrayList<Station> stations = map.get(i);
+            if (stationsMap.containsKey(i)){
+                ArrayList<Station> stations = stationsMap.get(i);
                 for (Station st : stations){
                     st.initialization2();
                 }
             }
         }
 
-
-//         station 初始化完毕
-//         选择最有价值的生产流水线投入生产，明确一条流水线有哪些节点
-//         分配四个机器人去负责不同的流水线
-        initWaterFlow();
+        for (Zone zone : zoneMap.values()) {
+            initWaterFlow(zone);
+        }
     }
 
-    private static boolean initMap() {
+    private static void initMap() {
         String line;
         int row = 101;
         int stationId = 0;
@@ -150,31 +169,41 @@ public class Main {
             line = inStream.nextLine();
             if ("OK".equals(line)) {
                 stationNum = stationId;
-                for (Integer key: map.keySet()){
-                    printLog("type = " + key + " , nums = " +map.get(key).size());
+                for (Integer key: stationsMap.keySet()){
+                    printLog("type = " + key + " , nums = " +stationsMap.get(key).size());
                 }
-                have9 = map.containsKey(9); // 是否有9号工作台
-                return true;
+                printLog("total = "+ stationNum);
+
+                return ;
             }
 
             for (int i=0;i<100;i++){
                 double x = i * 0.5 + 0.25;
                 char c = line.charAt(i);
-                if (c == '.') continue;
-                if (c == '#') continue;     // todo 初始化地图
+                if (c == '.') {
+                    wallMap[100-row][i] = -1;    // 给地图赋值
+                    continue;
+                }
+                if (c == '#') {
+                    wallMap[100-row][i] = -2;    // 给地图赋值
+                    continue;
+                }
                 if (c == 'A'){
+                    wallMap[100-row][i] = robotId + 100;    // 给地图赋值
                     robots[robotId] = new Robot(robotId,x,y,robotId);
+                    robotPos.put(robotId + 100, new Pos(100-row, i));
                     robotId++;
                 }else {
+                    wallMap[100-row][i] = stationId;    // 给地图赋值
                     int type = Character.getNumericValue(c);
                     Station station = new Station(stationId,type,x,y);
                     stations[stationId] = station;
-                    if (!map.containsKey(type)){
+                    if (!stationsMap.containsKey(type)){
                         ArrayList<Station> list = new ArrayList<>();
                         list.add(station);
-                        map.put(type,list);
+                        stationsMap.put(type,list);
                     }else {
-                        map.get(type).add(station);
+                        stationsMap.get(type).add(station);
 //                        stations[stationId];
                     }
                     stationId ++;
@@ -182,7 +211,7 @@ public class Main {
             }
             // do something;
         }
-        return false;
+        return ;
     }
 
     // 初始化地图顺序
@@ -202,34 +231,37 @@ public class Main {
     }
 
     public static void initSpecialMapParam() {
-        if (mapSeq == 1) {
-            Route.emergencyAngle = Robot.pi/10;
-        }
-        if (mapSeq == 2) {
-            Route.emergencyDistanceCoef = 0.6;
-        }
-        if (mapSeq == 3) {
-            Route.perceptionAngleRange = Robot.pi/10;
-        }
-        if (mapSeq == 4) {
-            Route.lineSpeedCoef = 1.5;
-        }
+//        if (mapSeq == 1) {
+//            Route.emergencyAngle = Robot.pi/10;
+//        }
+//        if (mapSeq == 2) {
+//            Route.emergencyDistanceCoef = 0.6;
+//        }
+//        if (mapSeq == 3) {
+//            Route.perceptionAngleRange = Robot.pi/10;
+//        }
+//        if (mapSeq == 4) {
+//            Route.lineSpeedCoef = 1.5;
+//        }
     }
-    
 
-    private static void initWaterFlow() {
-        if (map.containsKey(7)){
+
+
+    // 选择最有价值的生产流水线投入生产，明确一条流水线有哪些节点
+    private static void initWaterFlow(Zone zone) {
+
+        if (zone.stationsMap.containsKey(7)){
             // 最多开2条流水线
-            ArrayList<Station> sts = map.get(7);
+            ArrayList<Station> sts = zone.stationsMap.get(7);
             if(sts.size() == 1){
-                WaterFlow flow = new WaterFlow(sts.get(0));
+                WaterFlow flow = new WaterFlow(sts.get(0),zone);
                 flow.assignRobot(4);//分配4个
                 waterFlows.add(flow);
             }else {
                 Collections.sort(sts);
                 for (int i=0;i<2;i++){
-                    WaterFlow flow = new WaterFlow(sts.get(i));
-                    flow.assignRobot(2);    // 每条流水线两个机器人
+                    WaterFlow flow = new WaterFlow(sts.get(i),zone);
+                    flow.assignRobot(2);    // 每条流水线两个机器人   todo 可尝试更换策略
                     waterFlows.add(flow);
                 }
 
@@ -255,7 +287,7 @@ public class Main {
             }
 
             for (int i = 0; i < 4; i++) {
-                WaterFlow flow = new WaterFlow(clone[i]);
+                WaterFlow flow = new WaterFlow(clone[i],zone);
                 flow.assignRobot(1);    // 一个机器人负责一个
                 waterFlows.add(flow);
             }

@@ -1,6 +1,7 @@
-package com.huawei.codecraft.util;
+package com.huawei.codecraft.core;
 
 import com.huawei.codecraft.Main;
+import com.huawei.codecraft.util.*;
 
 import java.util.*;
 
@@ -15,15 +16,15 @@ public class Station implements Comparable{
     public static double emptyMinDistance; // 加速减速临界值 ,空载   ,速度 0 -> 6 ->0 全程距离
     public static double fullMinDistance; // 加速减速临界值 ，满载   ,速度 0 -> 6 ->0 全程距离
 
-    public PriorityQueue<Pair> canSellStations;
-    public Map<Integer,PriorityQueue<Pair>> canBuyStationsMap;  // Pair 存储的是
-//    public Map<Integer,PriorityQueue<Pair>> canBuyStationsMap;
+    public PriorityQueue<Pair> canSellStations = new PriorityQueue<>();;
+    public Map<Integer,PriorityQueue<Pair>> canBuyStationsMap = new HashMap<>();  // Pair 存储的是 到其他station的fps
+
     public Station availNextStation;
     public Station closest89;
     public int fastestComposeFps;
     public int fastestComposeMoney;
-    public int zoneId = 1;  // 联通区域编号
-
+    public Zone zone;   //所属的区域
+    public Path paths;   //存储路径信息
     public int id;
     public int type;   // 1-9
     public Point pos;
@@ -38,7 +39,6 @@ public class Station implements Comparable{
 
     // 流水线参数
     public double cycleAvgValue;    // 生产一个周期的平均价值  ,赚的钱数/ 花费的时间
-    public WaterFlow waterFlow; // 目前处于那一条流水线
 
     static {
         item = new StationItem[10];
@@ -62,19 +62,18 @@ public class Station implements Comparable{
         this.id = id;
         this.type = type;
         pos = new Point(x,y);
+        Main.pointStaMap.put(pos,this); // 键值对赋值
         bookPro = false;
         bookRow = new boolean[8];
+        paths = new Path(pos);
     }
     
     @Override
     public String toString() {
-        return "Station{" +
-                "Id=" + id +
-                ", type=" + type +
-                ", rowStatus=" + rowStatus +
-                ", proStatus=" + proStatus +
-                ", bookRow=" + Arrays.toString(bookRow) +
-                ", bookPro=" + bookPro +
+        return "[" +
+                "sId=" + id +
+                ", type =" + type +
+                ", pos =" + pos +
                 '}';
     }
 
@@ -93,16 +92,18 @@ public class Station implements Comparable{
 
     private double calc7CycleAvgValue(Point pos) {
         // 计算卖给89的钱和时间，算最佳
-
         double allMoney = calcEarnMoney(pos);
         double allFps = calcGoBackDistanceToFps(pos);        // 时间金钱三部分，123-456-7-89
         for (PriorityQueue<Pair> queue : canBuyStationsMap.values()){
-            Station st = queue.peek().key;  // 取价值最高的计算钱和fps
-            allMoney += st.calcEarnMoney(pos);      // 456 - 7
-            allFps += st.calcGoBackDistanceToFps(pos);
-
-            allMoney += st.fastestComposeMoney ;// 123-456
-            allFps += st.fastestComposeFps ;// 123-456
+            if (queue.size() > 0){
+                Station st = Objects.requireNonNull(queue.peek()).key;  // 取价值最高的计算钱和fps
+                allMoney += st.calcEarnMoney(pos);      // 456 - 7
+                allFps += st.calcGoBackDistanceToFps(pos);
+                allMoney += st.fastestComposeMoney ;// 123-456
+                allFps += st.fastestComposeFps ;// 123-456
+            }else {
+                return 0;
+            }
         }
 
         return allMoney/allFps;
@@ -119,10 +120,15 @@ public class Station implements Comparable{
         // 要求每种原材料赚的最多的钱，也要求出fps
         fastestComposeFps = 0;
         fastestComposeMoney = 0;
+        Main.printLog(this);
         for (PriorityQueue<Pair> queue : canBuyStationsMap.values()){
-            Station st = queue.peek().key;  // 取价值最高的计算钱和fps
-            fastestComposeFps += st.calcGoBackDistanceToFps(pos);
-            fastestComposeMoney += st.calcEarnMoney(pos);
+            if (queue.size()>0){
+                Station st = queue.peek().key;  // 取价值最高的计算钱和fps
+                fastestComposeFps += st.calcGoBackDistanceToFps(pos);
+                fastestComposeMoney += st.calcEarnMoney(pos);
+            }else {
+                fastestComposeFps +=Main.unreachableCost;
+            }
         }
     }
 
@@ -180,11 +186,10 @@ public class Station implements Comparable{
 
     private void calcCanBuyStations() {
         // 4-7节点
-        canBuyStationsMap = new HashMap<>();
         for(int tp:getRaws()){
             PriorityQueue<Pair> queue = new PriorityQueue<>();
             canBuyStationsMap.put(tp,queue);
-            ArrayList<Station> stations = Main.map.get(tp);
+            ArrayList<Station> stations = zone.stationsMap.get(tp);
             for (Station st : stations) {
                 double value = 0;
                 if (type < 7){
@@ -194,12 +199,18 @@ public class Station implements Comparable{
                     // type =  7节点为456，
                     // 分别计算 456map的时间，加上456 到本工作站的时间
                     for (PriorityQueue<Pair> p:st.canBuyStationsMap.values()){
-                        value += p.peek().value;    // 选取最前面一个也就是最近的一个
+                        if (p.size()>0){
+                            value += p.peek().value;    // 选取最前面一个也就是最近的一个
+                        }else {
+                            value += Main.unreachableCost;
+                        }
                     }
                     value += calcGoBackDistanceToFps(st.pos);   // 加上本身来回时间
                 }
-                Pair pair = new Pair(st, value);    // 以时间为标准
-                queue.add(pair);
+                if (value < Main.unreachableJudgeCost){
+                    Pair pair = new Pair(st, value);    // 以时间为标准
+                    queue.add(pair);
+                }
             }
         }
     }
@@ -229,15 +240,16 @@ public class Station implements Comparable{
     }
 
     private Station chooseClosestStation(int type) {
-        ArrayList<Station> stations = Main.map.get(type);
+        ArrayList<Station> stations = zone.stationsMap.get(type);
         if (stations.size() == 1) return stations.get(0);
          // 好几个选一个
-        double minDis = 10000;
+        double minFps = 1000000;
         Station minSta = null;
         for(Station st:stations){
-            double dis = pos.calcDistance(st.pos);
-            if (dis < minDis){
-                minDis = dis;
+            double fps = pathToFps(false,st.pos);
+            if (fps>Main.unreachableJudgeCost) continue;
+            if (fps < minFps){
+                minFps = fps;
                 minSta = st;
             }
         }
@@ -254,12 +266,8 @@ public class Station implements Comparable{
         rowStatus = rowStatus & (~(1<<type));
     }
 
-    // 距离换算成时间, 0 -> v -> 0
-
-    // 距离换算成帧数  todo 要改
-    public int pathToFps(boolean isEmpty, Point p){
-        int fps = pos.distanceToFps(isEmpty,p);
-        return fps;
+    public int pathToFps(boolean isEmpty, Point dest){
+        return paths.getPathFps(isEmpty,dest);
     }
 
     // 返回当前的空位，并且没有被预定的
@@ -294,48 +302,74 @@ public class Station implements Comparable{
     }
 
     public void initialization() {
+
+        // 周围没有机器人，取消初始化
+        if (zone == null){
+            return;
+        }
+
         // 初始化 1 ，给每个生产型节点设置售出节点的优先级队列
-        canSellStations = new PriorityQueue<>();
         if (type<=7){
             int[] canSell = item[type].canSell;
             for(int tp:canSell){
-                if(!Main.map.containsKey(tp)){
+                if(!zone.stationsMap.containsKey(tp)){
                     continue;
                 }
-                ArrayList<Station> stations = Main.map.get(tp);
-                for (Station st : stations) {
+//                ArrayList<Station> stations = Main.stationsMap.get(tp);
+                for (Station st : zone.stationsMap.get(tp)) {
+                    Main.printLog(this+" : "+st);
                     double value = pathToFps(false,st.pos);  //以时间排序
-                    Pair pair = new Pair(st, value);
-                    canSellStations.add(pair);
+                    if (value < Main.unreachableJudgeCost){
+                        Pair pair = new Pair(st, value);
+                        canSellStations.add(pair);
+                    }
                 }
             }
         }
     }
 
     public void initialization2() {
+
+        // 周围没有机器人，取消初始化
+        if (zone == null){
+            return;
+        }
+
         // 初始化 2 ，先456，在7
         // 计算任务456的原料供应station排序
         // 计算任务456的最近123的时间
         // 若有9，计算456的流水线价值
         // 若有7，计算7号任务原料供应station排序，以及流水线价值
-        if (type <= 3 && Main.have9){
+        if (type <= 3 && zone.stationsMap.containsKey(9)){
             closest89 = chooseClosestStation(9);
-            cycleAvgValue = calcSingleCycleAvgValue(closest89.pos);
+            if (closest89 != null){
+                cycleAvgValue = calcSingleCycleAvgValue(closest89.pos);
+            }else {
+                cycleAvgValue = 0;  // 没有价值
+            }
         }
 
         if (type>=4 && type <=6){
             //
             calcCanBuyStations();
             calcFastestComposeFpsAndMoney();
-            if (Main.have9){
+            if (zone.stationsMap.containsKey(9)){
                 closest89 = chooseClosestStation(9);
-                cycleAvgValue = calc456CycleAvgValue(closest89.pos);
+                if (closest89 != null){
+                    cycleAvgValue = calc456CycleAvgValue(closest89.pos);
+                }else {
+                    cycleAvgValue = 0;  // 没有价值
+                }
             }
         }
         if (type == 7){
             calcCanBuyStations();
-            closest89 = canSellStations.peek().getKey();
-            cycleAvgValue = calc7CycleAvgValue(closest89.pos);
+            closest89 = Objects.requireNonNull(canSellStations.peek()).key;
+            if (closest89 != null){
+                cycleAvgValue = calc7CycleAvgValue(closest89.pos);
+            }else {
+                cycleAvgValue = 0;  // 没有价值
+            }
         }
     }
 
@@ -374,16 +408,3 @@ public class Station implements Comparable{
     }
 }
 
-class StationItem{
-    int type;
-    int[] call;
-    int period;
-    int[] canSell;  // product can sell for who
-
-    public StationItem(int type, int[] call, int period,int[] canSell) {
-        this.type = type;
-        this.call = call;
-        this.period = period;
-        this.canSell = canSell;
-    }
-}
