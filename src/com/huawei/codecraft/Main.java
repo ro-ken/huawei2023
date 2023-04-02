@@ -34,7 +34,7 @@ public class Main {
     public static final int JudgeDuration = duration - 20 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int JudgeDuration2 = duration - 20 * 50;    //最后20s需判断选择是否最佳，是否还有商品没有卖
     public static final int fps = 50;
-    public static final boolean test = true;    // 是否可写入
+    public static final boolean test = false;    // 是否可写入
     public static final int robotNum = 4;
     public static int mapSeq;   // 是第几号地图，做优化
     public static boolean specialMapMode = false;   // 是否针对地图做优化
@@ -76,6 +76,7 @@ public class Main {
     private static void initZone() {
         mapinfo.setZone(zoneMap);
         printLog(mapinfo);
+        printLog(zoneMap);
 //        Zone zone = new Zone();
 //        zone.stationsMap = stationsMap;     // todo  暂时测试
 //        for (int i = 0; i <stationNum; i++) {
@@ -91,11 +92,13 @@ public class Main {
               if (robots[i].nextStation == null){
                   robots[i].selectBestStation();
               }
+              if (robots[i].route == null) continue;
               robots[i].route.calcParamEveryFrame();    // 通用参数
               robots[i].calcMoveEquation();     //  运动方程
           }
 
         for (int i = 0; i < robotNum; i++) {
+            if (robots[i].route == null) continue;
             if (robots[i].nextStation == null){
                 robots[i].selectBestStation();
                 robots[i].rush();
@@ -134,7 +137,6 @@ public class Main {
                 }
             }
         }
-
     }
 
     private static void initialization() {
@@ -154,8 +156,10 @@ public class Main {
         }
 
         for (Zone zone : zoneMap.values()) {
+
             initWaterFlow(zone);
         }
+
     }
 
     private static void initMap() {
@@ -280,16 +284,17 @@ public class Main {
 
         }else {
             // 最多选择4条流水线
-            Station[] clone = stations.clone();
-            Arrays.sort(clone);
-            for (int i = 0; i < clone.length; i++) {
-                Main.printLog(clone[i] +":"+ clone[i].cycleAvgValue);
+            ArrayList<Station> sts = zone.getStations();
+            Collections.sort(sts);
+            for (int i = 0; i < sts.size(); i++) {
+                printLog(sts.get(i)+ ":" + sts.get(i).cycleAvgValue);
             }
-
-            for (int i = 0; i < 4; i++) {
-                WaterFlow flow = new WaterFlow(clone[i],zone);
-                flow.assignRobot(1);    // 一个机器人负责一个
-                waterFlows.add(flow);
+            for (int i = 0; i < zone.robots.size(); i++) {
+                if (sts.size() > i && sts.get(i).cycleAvgValue>0){    // 没有那么多工作站，不分了
+                    WaterFlow flow = new WaterFlow(sts.get(i),zone);
+                    flow.assignRobot(1);    // 一个机器人负责一个
+                    waterFlows.add(flow);
+                }
             }
         }
         printLog(waterFlows);

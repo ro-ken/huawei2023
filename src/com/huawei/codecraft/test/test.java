@@ -1,25 +1,21 @@
-package com.huawei.codecraft.way;
+package com.huawei.codecraft.test;
 
-import com.huawei.codecraft.util.Point;
 import java.io.*;
 import java.util.*;
 
 public class test {
 	public static Map<Integer, Pos> robotPos = new HashMap<>();;  // 记录起始机器人的位置
 
-	public static void main(String[] args) {
-		int[][] maps = new int[100][100];
-		readMaps(maps);
-		//    int[][] maps = {	{0, 0, 0, 0, 0, 1, 0},
-		// 					{0, 0, 0, 0, 1, 0, 0},
-		// 					{0, 0, 0, 1, 0, 0, 0},
-		// 					{0, 0, 1, 0, 0, 0, 0},
-		// 					{0, 0, 0, 0, 0, 0, 0}};
-		Point startPosition = new Point(14.75, 25.75);
+    public static void main(String[] args) {
+        int[][] maps = new int[100][100];
+        readMaps(maps);
+
+//		Point startPosition = new Point(21.75, 30.25);
+		Point startPosition = new Point(32.75, 29.25);
 		Point endPosition = new Point(28.25, 23.25);
 		// Mapinfo mapInfo = new Mapinfo(maps);
 		// mapInfo.printMapFull();
-		// 获取当前时间
+        // 获取当前时间
 		long startTime = System.currentTimeMillis();
 
 		Mapinfo mapinfo = new Mapinfo(maps);
@@ -29,19 +25,18 @@ public class test {
 		aStar.search();
 
 
-		// 获取当前时间
+        // 获取当前时间
 		long endTime = System.currentTimeMillis();
-		// 计算代码运行时间并输出结果
+        // 计算代码运行时间并输出结果
 		long elapsedTime = endTime - startTime;
 		System.out.println("代码运行时间：" + elapsedTime + "ms");
 
-		mapinfo.getConnectedArea(robotPos);
+        mapinfo.getConnectedArea(robotPos);
 
 		Map<Integer, ArrayList<Integer>> robotId = mapinfo.getConnectedRobotsId();
 		Map<Integer, ArrayList<Integer>> stationId = mapinfo.getConnectedStationsId();
-		ArrayList<Pos> resultList = aStar.getResultList();
+        ArrayList<Pos> resultList = aStar.getResultList();
 		ArrayList<Point> result = aStar.getResult(true);
-
 		System.out.println(robotId);
 		System.out.println(stationId);
 		ArrayList<Integer> robot = robotId.get(0);
@@ -51,22 +46,22 @@ public class test {
 		System.out.println("stationId size " + stationId.size());
 		System.out.println("robot size " + robot.size());
 		System.out.println("station size " + station.size());
-		System.out.println("size: " + resultList.size());
+        System.out.println("size: " + resultList.size());
 		System.out.println("size: " + result.size());
-		printMap(maps, resultList);
+        printMap(maps, resultList);
 
-	}
+    }
 
-	/**
+    /**
 	 * 打印地图
 	 */
 	public static void printMap(int[][] maps, ArrayList<Pos> pos) {
 		for (Pos postion : pos) {
-			maps[postion.x][postion.y] = 2;
-		}
+            maps[postion.x][postion.y] = 2;
+        }
 		try {
-			File file = new File("result.txt"); // 文件路径
-			FileOutputStream fos = new FileOutputStream(file);
+            File file = new File("result.txt"); // 文件路径
+            FileOutputStream fos = new FileOutputStream(file);
 
 			for (int i = 0; i < maps.length; i++) {
 				for (int j = 0; j < maps[i].length; j++) {
@@ -79,32 +74,32 @@ public class test {
 						data = " ";
 					}
 					byte[] bytes = data.getBytes();
-					fos.write(bytes);
+                    fos.write(bytes);
 				}
 				String lineSeparator = System.lineSeparator();
-				byte[] bytes = lineSeparator.getBytes();
-				fos.write(bytes);
+                byte[] bytes = lineSeparator.getBytes();
+                fos.write(bytes);
 			}
-			fos.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 	}
 
-	/**
+    /**
 	 * 读取地图
 	 */
-	public static void readMaps(int[][] maps) {
-		try {
-			File file = new File("C:\\Users\\rq886\\Desktop\\fusai\\WindowsRelease\\maps\\3.txt"); // 文件路径
-			FileInputStream fis = new FileInputStream(file);
-			InputStreamReader isr = new InputStreamReader(fis);
-			BufferedReader br = new BufferedReader(isr);
-
-			String line;
+    public static void readMaps(int[][] maps) {
+        try {
+            File file = new File("C:\\Users\\rq886\\Desktop\\fusai\\WindowsRelease\\maps\\2.txt"); // 文件路径
+            FileInputStream fis = new FileInputStream(file);
+            InputStreamReader isr = new InputStreamReader(fis);
+            BufferedReader br = new BufferedReader(isr);
+            
+            String line;
 			int row = 0, stationId = 0, robotId = 100;
-			while ((line = br.readLine()) != null) {
-				for (int col = 0; col < line.length(); col++) {
+            while ((line = br.readLine()) != null) {
+                for (int col = 0; col < line.length(); col++) {
 					char c = line.charAt(col);
 					if (c == '.') {
 						maps[row][col] = -1;
@@ -121,13 +116,13 @@ public class test {
 					}
 				}
 				row++;
-			}
-
-			br.close();
-			isr.close();
-			fis.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+            }
+            
+            br.close();
+            isr.close();
+            fis.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

@@ -24,4 +24,21 @@ public class Zone {
                 ", robots=" + robots +
                 '}';
     }
+
+    public int getStationNum(){
+        int res = 0;
+        for (ArrayList<Station> value : stationsMap.values()) {
+            res += value.size();
+        }
+        return res;
+    }
+
+    public ArrayList<Station> getStations(){
+        ArrayList<Station> stas = new ArrayList<>();
+        for (ArrayList<Station> value : stationsMap.values()) {
+            stas.addAll(value);
+        }
+        return stas;
+    }
+
 }

@@ -21,6 +21,14 @@ public class Pair implements Comparable{
         return key;
     }
 
+    @Override
+    public String toString() {
+        return "Pair{" +
+                "key=" + key +
+                ", value=" + value +
+                '}';
+    }
+
     public double getValue() {
         return value;
     }

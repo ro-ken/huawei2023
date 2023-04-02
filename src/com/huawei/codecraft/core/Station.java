@@ -35,7 +35,7 @@ public class Station implements Comparable{
     public boolean[] bookRow;    // 原料空格是否预定
     public boolean bookPro;      // 产品空格是否预定
     public int bookNum = 0; // 已经有多少机器人在往这个点赶
-//    public int bookNum2 = 0; // 专用
+
 
     // 流水线参数
     public double cycleAvgValue;    // 生产一个周期的平均价值  ,赚的钱数/ 花费的时间
@@ -74,7 +74,7 @@ public class Station implements Comparable{
                 "sId=" + id +
                 ", type =" + type +
                 ", pos =" + pos +
-                '}';
+                ']';
     }
 
     //是否有某类型的货物
@@ -190,6 +190,7 @@ public class Station implements Comparable{
             PriorityQueue<Pair> queue = new PriorityQueue<>();
             canBuyStationsMap.put(tp,queue);
             ArrayList<Station> stations = zone.stationsMap.get(tp);
+
             for (Station st : stations) {
                 double value = 0;
                 if (type < 7){
@@ -317,7 +318,7 @@ public class Station implements Comparable{
                 }
 //                ArrayList<Station> stations = Main.stationsMap.get(tp);
                 for (Station st : zone.stationsMap.get(tp)) {
-                    Main.printLog(this+" : "+st);
+//                    Main.printLog(this+" : "+st);
                     double value = pathToFps(false,st.pos);  //以时间排序
                     if (value < Main.unreachableJudgeCost){
                         Pair pair = new Pair(st, value);
@@ -325,6 +326,9 @@ public class Station implements Comparable{
                     }
                 }
             }
+//            Main.printLog(this);
+//            Main.printLog(canSellStations);
+
         }
     }
 

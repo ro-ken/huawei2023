@@ -470,9 +470,10 @@ public class Route{
     public void rush() {
         calcSafePrintSpeed();   // 先计算安全速度
 
-        if (endWaitMode){
-            useEndWaitMode();
-        }else if (!isMoveSafe()) {
+
+
+
+        if (!isMoveSafe()) {
             calcUnsafePrintSpeed();     // 不安全重新计算速度
 //            calcUnsafePrintSpeed2();     // 不安全重新计算速度
         }

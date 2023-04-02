@@ -401,13 +401,7 @@ public class Robot {
     // 选一个最佳的工作站
     public void selectBestStation() {
         if (waterFlow == null){
-            Station station = selectTimeShortestStation();
-            if (station == null){
-                Main.printLog("no available station ! wait...");
-                return;
-            }
-            setSrcDest(station,srcStation.availNextStation);
-
+            return; // 机器人没有流水线，暂停生成
         }else {
             waterFlow.scheduler(this);
 //            taskIsOK();

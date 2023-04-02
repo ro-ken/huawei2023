@@ -337,6 +337,10 @@ public class WaterFlow {
             double max = 0;
             int maxId = 0;
             for (int tp : list) {
+
+                Main.printLog(tp);
+                Main.printLog(target.canBuyStationsMap);
+
                 double fps = Objects.requireNonNull(target.canBuyStationsMap.get(tp).peek()).value;
                 if (fps > max){
                     max = fps;
