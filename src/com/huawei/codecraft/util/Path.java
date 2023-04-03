@@ -92,9 +92,18 @@ public class Path {
         }
     }
 
-    private int calcPathFps(boolean isEmpty, ArrayList<Point> path) {
+    public static int calcPathFps(boolean isEmpty, ArrayList<Point> path) {
         int fps = 0;
         for (int i = 0; i < path.size()-1; i++) {
+            fps += path.get(i).distanceToFps(isEmpty,path.get(i+1));
+            fps += 20;  // 默认旋转时间20fps,尽量走直线
+        }
+        return fps;
+    }
+
+    public static int calcPathFps(boolean isEmpty, ArrayList<Point> path,int start) {
+        int fps = 0;
+        for (int i = start; i < path.size()-1; i++) {
             fps += path.get(i).distanceToFps(isEmpty,path.get(i+1));
             fps += 20;  // 默认旋转时间20fps,尽量走直线
         }

@@ -138,4 +138,29 @@ public class Point{
         int fps = (int) (second * 50);
         return fps;
     }
+
+    public int[] fixPoint2Map() {
+        // 将 坐标 修正为 map 的中心点的下标
+        int[] res = new int[2];
+        res[0] = (int) (x / 0.5);
+        res[1] = (int) ((50-y) / 0.5);
+
+        return res;
+    }
+
+    public Point fixPoint2Center() {
+        // 将 坐标 修正为 map 的中心点的坐标
+        double x1 = ((int) (x / 0.5)) * 0.5 + 0.25;
+        double y1 = ((int) (y / 0.5)) * 0.5 + 0.25;
+
+        return new Point(x1,y1);
+    }
+
+    public static Point fixPoint2Center(double x,double y) {
+        // 将 坐标 修正为 map 的中心点的坐标
+        double x1 = ((int) (x / 0.5)) * 0.5 + 0.25;
+        double y1 = ((int) (y / 0.5)) * 0.5 + 0.25;
+
+        return new Point(x1,y1);
+    }
 }

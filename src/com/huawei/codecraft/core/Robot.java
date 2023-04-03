@@ -66,6 +66,7 @@ public class Robot {
     public Point tmpPos;
     public Line topLine;   // 轨迹上面的线
     public Line belowLine;     // 轨迹下面的线
+    public Line midLine;     // 轨迹下面的线
 
     // 下面参数 无用
     public static double vectorNearOffset = 0.1; // 小于这个角度认为直线重合
@@ -176,14 +177,15 @@ public class Robot {
 
     //计算机器人的轨迹方程，也就两条平行线
     public void calcMoveEquation() {
-//        Main.printLog(route.vector.x);
+
         if (route.vector.x == 0) return;// 不能是垂直的情况，在调用此函数之前事先要做出判断
         double radius = getRadius();
         Point[] src = getPoints(pos.x,pos.y,radius);
-        Point[] dest = getPoints(route.target.x,route.target.y,radius);
+        Point[] dest = getPoints(route.next.x,route.next.y,radius);
         topLine.setValue(src[0],dest[0]);
         belowLine.setValue(src[1],dest[1]);
-
+//        if (route.next != null)
+//            midLine.setValue(pos,route.next);
     }
 
     private static double calcRotateAcce(double radius) {
@@ -459,8 +461,8 @@ public class Robot {
 
     //  设置临时目的地，默认设置中点向右偏移
     private boolean setTmpPlace(boolean right) {
-        double x = (route.target.x + pos.x)/2;
-        double y = (route.target.y + pos.y)/2;
+        double x = (route.next.x + pos.x)/2;
+        double y = (route.next.y + pos.y)/2;
         Point[] points = getPoints(x, y, getRadius() * tmpPlaceOffset);
         // 默认往右转
         if (route.vector.x>0){
@@ -472,7 +474,7 @@ public class Robot {
             return false;
         }
         // 重新设置轨迹
-        route.target.set(tmpPos);
+        route.next.set(tmpPos);
         isTempPlace = true;
 
         return true;

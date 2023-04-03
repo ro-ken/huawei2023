@@ -52,5 +52,12 @@ public class Line {
         this.left = left;
         this.right = right;
     }
+
+    public Point getFixPoint(double x) {
+        // 记录x对应点的中心坐标
+        double y = getY(x);
+        Point p = Point.fixPoint2Center(x,y);
+        return p;
+    }
 }
 
