@@ -478,8 +478,8 @@ public class Route{
 //            calcUnsafePrintSpeed2();     // 不安全重新计算速度
         }
 
-        Main.printForward(robot.id,printLineSpeed);
-        Main.printRotate(robot.id,printTurnSpeed);
+        Main.Forward(robot.id,printLineSpeed);
+        Main.Rotate(robot.id,printTurnSpeed);
 
     }
 
