@@ -6,7 +6,6 @@ import com.huawei.codecraft.util.Path;
 import com.huawei.codecraft.util.Point;
 
 import java.util.ArrayList;
-import java.util.concurrent.TransferQueue;
 
 // 运动过程描述
 public class Route{
@@ -552,7 +551,6 @@ public class Route{
             if (wall != null){
                 // 前方有墙，需要稍微绕一绕
 
-
             }
         }else {
 
@@ -574,13 +572,17 @@ public class Route{
         Point belowP = getNearBumpWall(robot.belowLine);
         Point miP = getNearBumpWall(robot.midLine);
         Point topP = getNearBumpWall(robot.topLine);
-        return selectClosestPoint(belowP,miP,topP);
+        Point tmp = selectClosestPoint(belowP,miP);
+        return selectClosestPoint(tmp,topP);
     }
 
-    private Point selectClosestPoint(Point p1, Point p2, Point p3) {
-        // 选择一个里机器人最近的点
-
-        return null;
+    // 选择距离pos最近的点
+    private Point selectClosestPoint(Point p1, Point p2) {
+        if (p1 == null) return p2;
+        if (p2 == null) return p1;
+        double d1 = robot.pos.calcDistance(p1);
+        double d2 = robot.pos.calcDistance(p2);
+        return d1 <= d2 ? p1:p2;
     }
 
     private Point getNearBumpWall(Line line) {
@@ -589,17 +591,32 @@ public class Route{
             return line.left.fixPoint2Center();
         }
         double step = line.left.x < line.right.x ? 0.5 : -0.5;
-        Point s0 = line.left.fixPoint2Center();
-        double x = s0.x + 0.24;
-        Point s1 = line.getFixPoint(x);
-        Point t = new Point(s0.x,s0.y);
-        while (t.y<=s1.y){      // todo
-            if (posIsWall(t)){
-                return t;
-            }
+        double x = line.left.x;
+        while (Math.abs(x - next.x) > 0.5){
+            Point wall = getWallByX(x,line);
+            if (wall != null) return wall;
         }
 
+//        Point s0 = line.left.fixPoint2Center();
+//        double x = s0.x + 0.24;
+//        Point s1 = line.getFixPoint(x);
+//        Point t = new Point(s0.x,s0.y);
+//        while (t.y<=s1.y){      // todo
+//            if (posIsWall(t)){
+//                return t;
+//            }
+//        }
 
+
+
+        return null;
+    }
+
+    // 找出直线在x方格内所有的最近的墙
+    private Point getWallByX(double x, Line line) {
+        double clock = line.left.x < line.right.x ? 1 : -1;
+        Point start = line.getFixPoint(x);
+        Point end = line.getFixPoint(start.x + 0.5);
 
         return null;
     }

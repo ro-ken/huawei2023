@@ -82,6 +82,7 @@ public class Main {
 
         for (int i = 0; i < robotNum; i++) {
             if (robots[i].route == null) continue;
+            if (robots[i].nextStation == null) continue;
             if (robots[i].isArrive()){
 //                    Main.printLog("arrive");
                 // 有物品就买，没有就等待,逐帧判断

@@ -9,7 +9,7 @@ import java.util.*;
 
 // 用于机器人空载和满载的地图
 public class Mapinfo {
-    static int[] bits = {16, 14, 12, 10};   // 用于判断斜边是否可以通过，按照上下左右是否有障碍物进行位运算
+    static int[] bits = {20, 18, 12, 10};   // 用于判断斜边是否可以通过，按照上下左右是否有障碍物进行位运算
     static boolean[] isVisit = {false, false, false, false};       // 判断机器人是否已经寻找过
     public static int[][] mapInfoEmpty;
     public static int[][] mapInfoFull;
