@@ -51,9 +51,10 @@ public class Route{
     // 下面是新加参数
 
     public Point avoidWallPoint;    // 避免与墙体碰撞的临时点
-    public static double avoidWallPointSpeed = 1.5;    // 判断与墙体会发生碰撞，去往临时点的最大速度
+    public static double avoidWallPointSpeed = Robot.maxSpeed/2.0;    // 判断与墙体会发生碰撞，去往临时点的最大速度
     public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行避让操作
 
+    public static int wideDis = 8;   //  *0.5
     ArrayList<Integer> unsafeRobotIds;
     public int unsafeLevel;     //当前不安全级别  (1-3)
 
@@ -475,7 +476,7 @@ public class Route{
                 boolean flag2 = oth.tmpSafeMode;    // 对方是安全模式， todo 是否要考虑多车堵住的情况
                 if (!flag1 && !flag2 && !roadIsWide(oth)){
                     // 未到终点，都不是临时模式，而且路很窄
-//                    setTmpSafeMode();
+                    setTmpSafeMode();
                 }
             }
         }
@@ -535,9 +536,6 @@ public class Route{
         Point topP = getNearBumpWall(robot.topLine);
         Point wall = selectClosestPoint(belowP,midP);
 
-        Main.printLog(belowP);
-        Main.printLog(midP);
-        Main.printLog(topP);
         wall = selectClosestPoint(wall,topP);
         if (wall == null ||robot.pos.calcDistance(wall) > robot.pos.calcDistance(next)){
             return null;
@@ -680,7 +678,7 @@ public class Route{
         int upWide = 0;
         int downWide = 0;
         Point res ;
-        for (int i = 1; i < 5; i++) {
+        for (int i = 1; i < wideDis; i++) {
             // 每一格式0.5
             if (posIsWall(bp.x,bp.y+i*0.5)){
                 break;
@@ -688,7 +686,7 @@ public class Route{
             upWide ++;
         }
 
-        for (int i = 1; i < 5; i++) {
+        for (int i = 1; i < wideDis; i++) {
             // 每一格式0.5
             if (posIsWall(bp.x,bp.y-i*0.5)){
                 break;
@@ -710,7 +708,7 @@ public class Route{
         int rightWide = 0;
         Point res ;
 
-        for (int i = 1; i < 5; i++) {
+        for (int i = 1; i < wideDis; i++) {
             // 每一格式0.5
             if (posIsWall(bp.x+i*0.5,bp.y)){
                 break;
@@ -718,7 +716,7 @@ public class Route{
             rightWide ++;
         }
 
-        for (int i = 1; i < 5; i++) {
+        for (int i = 1; i < wideDis; i++) {
             // 每一格式0.5
             if (posIsWall(bp.x-i*0.5,bp.y)){
                 break;
@@ -778,7 +776,8 @@ public class Route{
         // 先找出机器人所在点的位置，以及方向
         // 若有是载物的，判断是否小于5个点，其他情况判断是否小于4个点
         // 若绝对值小于45度，判断纵向的点是否
-        int minWide = calcMinWide(oth);
+//        int minWide = calcMinWide(oth);
+        int minWide = wideDis;
 
         int realWide = 0;
         double angle = vector.calcDeltaAngle(new Point(1, 0));
@@ -796,7 +795,8 @@ public class Route{
     // 范围是否够宽，能够错车
     private boolean rangeIsWide(Robot oth,Point point) {
 
-        int minWide = calcMinWide(oth);
+//        int minWide = calcMinWide(oth);
+        int minWide = wideDis;
         int verWide = calcVerticalWide(point);
         int horWide = calcHorizontalWide(point);
 
@@ -966,9 +966,10 @@ public class Route{
 
     // 是否到达下一个点
     public boolean arriveNext() {
+        if (pathIndex-2<0) return false;
         // 如果机器人到了目标点的前方，也算过了
-        Main.printLog("pathIndex" + pathIndex);
-        Main.printLog(path);
+//        Main.printLog("pathIndex" + pathIndex);
+//        Main.printLog(path);
         Point pre = path.get(pathIndex-2);
         return robot.isArrivePoint(pre,next);
     }
@@ -977,12 +978,9 @@ public class Route{
 
     // 更换下一个点
     public void updateNext() {
-        if (path.size() == 0){
-            Main.printLog("path error");
-        }
         next = getNextPoint();
-        Main.printLog("pos:next"+robot.pos + "," + next);
-        Main.printLog("path:"+path);
-        Main.printLog("index:"+pathIndex);
+//        Main.printLog("pos:next"+robot.pos + "," + next);
+//        Main.printLog("path:"+path);
+//        Main.printLog("index:"+pathIndex);
     }
 }

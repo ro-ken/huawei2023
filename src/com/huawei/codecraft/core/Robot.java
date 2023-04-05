@@ -6,8 +6,10 @@ import com.huawei.codecraft.util.Pair;
 import com.huawei.codecraft.util.Path;
 import com.huawei.codecraft.util.Point;
 import com.huawei.codecraft.way.Astar;
+import com.huawei.codecraft.way.Pos;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 
 /**
  * @Author: ro_kin
@@ -151,7 +153,7 @@ public class Robot {
     }
     
     // 计算最快到达需要多久
-    private int calcFpsToPlace(double dis) {
+    public int calcFpsToPlace(double dis) {
         double time = 0;
         double a = getAcceleration();
         double minDistance = getMinDistance();
@@ -197,9 +199,7 @@ public class Robot {
         topLine.setValue(src[0],dest[0]);
         belowLine.setValue(src[1],dest[1]);
         midLine.setValue(pos,route.next);
-        Main.printLog(topLine);
-        Main.printLog(belowLine);
-        Main.printLog(midLine);
+
     }
 
     private static double calcRotateAcce(double radius) {
@@ -431,29 +431,6 @@ public class Robot {
         }
 
     }
-
-    //选择取货时间最短的，取货时间 = max {走路时间，生成时间}
-    public Station selectTimeShortestStation() {
-        Station shortestStation = null;
-        double shortest = 10000;
-        for(int i=0;i<Main.stationNum;i++){
-
-            Station station = Main.stations[i];
-            if (station.leftTime == -1 || station.bookPro) continue;
-            double dis = station.pos.calcDistance(pos);
-            double time1 = calcFpsToPlace(dis);         // todo 时间要改
-            double time = Math.max(time1,station.leftTime);
-            if (time < shortest){
-                // 卖方有货，卖方有位置
-                Station oth = station.chooseAvailableNextStation();
-                if (oth != null){
-                    shortestStation = station;
-                    shortest = time;
-                }
-            }
-        }
-        return shortestStation;
-    }
     
     public void setSrcDest(Station src, Station dest) {
         nextStation = srcStation = src;
@@ -632,6 +609,20 @@ public class Robot {
         winner = winRobot;      // 设置是给谁避让，后期需要定期探测这个机器人是否到达目标点
 
         Main.printLog("set tmp route"+path);
+    }
+
+    public HashSet<Pos> getResultSet(){
+        if (nextStation == null) return null;
+        if (nextStation == srcStation){
+            if (lastStation == null){
+                return nextStation.paths.getResSet(carry==0,start);
+            }else {
+                return lastStation.paths.getResSet(carry==0,nextStation.pos);
+            }
+        }else {
+            // nextstation = dest
+            return srcStation.paths.getResSet(carry==0,nextStation.pos);
+        }
     }
 
 }

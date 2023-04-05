@@ -302,6 +302,15 @@ public class Station implements Comparable{
         return false;
     }
 
+    public boolean haveEmptyPositionLast() {
+        for (int tp : item[type].call) {
+            if (canBuy(tp)){
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void initialization() {
 
         // 周围没有机器人，取消初始化

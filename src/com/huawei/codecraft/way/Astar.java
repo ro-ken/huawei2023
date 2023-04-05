@@ -58,6 +58,26 @@ public class Astar {
         return ast.getResult(!isEmpty);
     }
 
+    public static ArrayList<Point> getPathAndResult(boolean isEmpty,Point src, Point dest,Set<Pos> posSet){
+        double dis = src.calcDistance(dest);
+        if (dis < 1.0){
+            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())){
+                ArrayList<Point> res = new ArrayList<>();
+                res.add(src);
+                res.add(dest);
+                return res;
+            }
+        }
+
+        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
+        Astar ast = new Astar(fixMap,src,dest);
+        ast.search();
+        posSet.addAll(ast.resultList);
+        return ast.getResult(!isEmpty);
+    }
+
+
+
 
     // 将得到的路径左边合并并返回结果坐标
     public  ArrayList<Point> getResult(boolean carry) {

@@ -16,6 +16,7 @@ public class Main {
     private static final Scanner inStream = new Scanner(System.in);
     private static final PrintStream outStream = new PrintStream(new BufferedOutputStream(System.out));
     private static PrintStream log = null;
+    private static PrintStream path = null;
     public static int frameID=0;
 //    public static MyThread thread;
 
@@ -35,6 +36,7 @@ public class Main {
     public static final int JudgeDuration2 = duration - 20 * 50;    //最后20s需判断选择是否最佳，是否还有商品没有卖
     public static final int fps = 50;
     public static final boolean test = true;    // 是否可写入
+    public static final boolean writePath = true;    // 是否可写入
     public static final int robotNum = 4;
     public static final HashSet<Integer> testRobot = new HashSet<>();
     public static int mapSeq;   // 是第几号地图，做优化
@@ -45,14 +47,20 @@ public class Main {
     public static void main(String[] args) throws FileNotFoundException {
 
         if (test){
+            if (writePath){
+                path = new PrintStream("./4.txt");
+            }
+
             log = new PrintStream("./log.txt");
             System.setOut(log);//把创建的打印输出流赋给系统。即系统下次向 ps输出
 //            printLog("这行语句将会被写到log.txt文件中");
         }
+
+        testRobot.add(0);
         testRobot.add(1);
-//        testRobot.add(2);
-//        testRobot.add(3);
-//        testRobot.add(4);
+        testRobot.add(2);
+        testRobot.add(3);
+
 
         schedule();
     }
@@ -145,6 +153,13 @@ public class Main {
         initSpecialMapParam();    // 初始化地图序列参数
         initStations();     // 初始化工作站
         initWaterFlow();    // 初始化流水线
+
+        if (writePath && test){
+            for (int i = 0; i < stationNum; i++) {
+                path.println("{station " + i + ":empty Path:" + stations[i].paths.emptyPathMap + "}");
+                path.println("{station " + i + ":full Path:" + stations[i].paths.fullPathMap + "}");
+            }
+        }
 
         long t2 = System.currentTimeMillis();
         printLog("init time = " + (t2 - t1) + "ms");
