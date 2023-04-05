@@ -71,34 +71,43 @@ public class Astar {
         Pos starPos = mergeList.get(0);
         // 起点加入结果
         result.add(Pos2Point(starPos));
-        // fixList.add(starPos);
+        // fixList.add(starPos);  
         for (int i = 1; i < size - 1; i++) {
-            // 两点相邻，直接优化掉后面的点，可能有些激进，但是目前就这样处理，
+            // 两点相邻，直接优化掉后面的点，可能有些激进，但是目前就这样处理， 
             Pos curPos = mergeList.get(i);
             if (Math.abs(curPos.x - starPos.x) + Math.abs(curPos.y - starPos.y) <= 2) {
                 continue;
             }
             // 空载情况下加入结果队列的点，让点尽可能在中间,如果偏移点的时候已经发生移到中心，空载计算路径无需再次偏移
             if (!carry) {
-                result.add(Pos2Point(curPos));
+                Point p = Pos2Point(curPos);
+                if (isCriticalPos(curPos)) {
+                    p.x -= 0.25;
+                    p.y += 0.25;
+                }
+                result.add(p);
             }
             else {
                 result.add(Pos2Point(curPos));
             }
+           
             // fixList.add(curPos);
             starPos = curPos;
-            // // 如果没有障碍，就一直判断到有障碍的点位置,后续在优化
-            // if (isNoObstacle(starPos, mergeList.get(i))) {
-            //     continue;
-            // }
         }
         // fixList.add(mergeList.get(size - 1)); // 终点加入fixList
         // 终点加入结果
         result.add(Pos2Point(mergeList.get(size - 1)));
     }
 
-    public boolean isAwayWall(int x, int y) {
-        if (x > 0 && x < Mapinfo.row - 1 && y > 0 && y < Mapinfo.col - 1) {
+    public boolean isCriticalPos(Pos curPos) {
+        int x = curPos.x;
+        int y = curPos.y;
+        // 判断右边是否是墙
+        if (y == Mapinfo.col - 1 || Mapinfo.mapInfoOriginal[x][y + 1] == -2 || Mapinfo.mapInfoOriginal[x - 1][y + 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y + 1] == -2) {
+            return true;
+        }
+        // 判断上边是否是墙
+        if (x == Mapinfo.row - 1 || Mapinfo.mapInfoOriginal[x + 1][y] == -2 || Mapinfo.mapInfoOriginal[x + 1][y - 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y + 1] == -2) {
             return true;
         }
         return false;
@@ -115,6 +124,7 @@ public class Astar {
         Pos nextPos = resultList.get(1);
         preDiffX = nextPos.x - prePos.x;
         preDiffY = nextPos.y - prePos.y;
+
         mergeList.add(prePos);    // 起点加入合并列表
         prePos = nextPos;
         for (int index = 2; index < resultList.size() - 1; index++) {
@@ -131,59 +141,7 @@ public class Astar {
             prePos = nextPos;
         }
         mergeList.add(resultList.get(resultList.size() - 1));    // 终点加入合并列表
-        // Pos endPos = mergeList.get(mergeList.size() - 1);
-        // if (!nextPos.equals(endPos)) {
-
-        // }
-
     }
-
-    // 空载的时候，节点只包住左边和下边，包住一半，修正路径时候，需要额外处理
-    public boolean offsetPos(Pos curPos) {
-        int x = curPos.x;
-        int y = curPos.y;
-
-        if (isAwayWall(x, y) && Mapinfo.mapInfoEmpty[x - 1][y] == 1 && Mapinfo.mapInfoEmpty[x + 1][y] == 0) {
-            // 将节点放置在中间，上面有墙,下面有空地，不用移动
-            return true;
-        }
-        else if (isAwayWall(x, y) && Mapinfo.mapInfoEmpty[x + 1][y] == 1 && Mapinfo.mapInfoEmpty[x - 1][y] == 0) {
-            // 下面有墙，往上偏移
-            curPos.setX(x - 1);
-            return true;
-        }
-        else if (isAwayWall(x, y) && Mapinfo.mapInfoEmpty[x][y - 1] == 1 && Mapinfo.mapInfoEmpty[x][y + 1] == 0) {
-            // 左边有墙，往右偏移
-            curPos.setY(y + 1);
-            return true;
-        }
-        else if (isAwayWall(x, y) && Mapinfo.mapInfoEmpty[x][y + 1] == 1 && Mapinfo.mapInfoEmpty[x][y - 1] == 0) {
-            // 右边有墙，不用偏移
-            return true;
-        }
-        return false;
-    }
-
-//     public void mergeResult(boolean carry) {
-//         // 没有结果，返回
-//         if (resultList.size() == 0){
-//             return;
-//         }
-
-//         result.add(Pos2Point(resultList.get(0), true));
-// //        System.out.println(resultList);
-//         int pre = Math.abs(resultList.get(1).x - resultList.get(0).x) + Math.abs(resultList.get(1).y - resultList.get(0).y);
-//         for (int i = 1; i < resultList.size(); i++) {
-//             int cur = Math.abs(resultList.get(i).x - resultList.get(i - 1).x) + Math.abs(resultList.get(i).y - resultList.get(i - 1).y);
-//             // 转折点，加入结果列表
-//             if (pre != cur) {
-//                 //    result.add( resultList.get(i));
-//                 result.add(Pos2Point(resultList.get(i), carry));
-//             }
-//             pre = cur;
-//         }
-//         result.add(Pos2Point(resultList.get(resultList.size() - 1), true));
-//     }
 
     // 将得到的坐标转为Point
     public static Point Pos2Point(Pos Pos) {
