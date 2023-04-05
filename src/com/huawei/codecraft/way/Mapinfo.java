@@ -45,7 +45,6 @@ public class Mapinfo {
 
     // 广度优先搜索最原始的地图,寻找连通区域 -3表示已探索 -2表示障碍物，-1 表示空地，0-50表示工作台
     public void Bfs(Pos startPostion,  Map<Integer, Pos> robotPos) {
-        Iterator<Map.Entry<Integer, Pos>> iter = robotPos.entrySet().iterator();
         ArrayList<Pos> openList = new ArrayList<Pos>();
         openList.add(startPostion);
 
@@ -109,7 +108,6 @@ public class Mapinfo {
             }
 
             // 往斜边寻找
-            // 开始寻找下一个最佳点，按照F值进行寻找,检查并记录G是否需要更新
             int index = 0;
             for (int i = 0; i < rangeX.length; i++) {
                 for (int j = 0; j < rangeY.length; j++) {
@@ -132,6 +130,7 @@ public class Mapinfo {
                             mapInfoOri[x][y] = -3;
                         }
                     }
+                    index++;
                 }
             }
 
