@@ -40,8 +40,8 @@ public class Route{
     boolean isEmergency;// 是否紧急
     Point emergencyPos;    // 紧急机器人位置;
 
-    public boolean tmpSafeMode = false;    // 是否去临时安全点
-    boolean cycleRoadMode = false;    // 此时是否正在会车，圆形绕过去     每次得赋值 false
+    public boolean tmpSafeMode = false;    // 是否去临时安全点     todo 记得置位false
+    public Point tmpSafePoint;    // 是否去临时安全点
 
     public static double wallCoef = 3.2;      // 靠墙判定系数，多大算靠墙
     public static double perceptionDistanceCoef = 2;  // 刹车距离 * 2 + emergencyDistance;这个距离以内要做出反应
@@ -53,8 +53,8 @@ public class Route{
     // 下面是新加参数
     public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
     public Point avoidWallPoint;    // 避免与墙体碰撞的临时点
-    public double avoidWallPointSpeed = 1.5;    // 判断与墙体会发生碰撞，去往临时点的最大速度
-
+    public static double avoidWallPointSpeed = 1.5;    // 判断与墙体会发生碰撞，去往临时点的最大速度
+    public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行避让操作
 
     ArrayList<Integer> unsafeRobotIds;
     public int unsafeLevel;     //当前不安全级别  (1-3)
@@ -72,6 +72,7 @@ public class Route{
 
     private Point getNextPoint() {
         if (pathIndex == path.size()){
+//            pathIndex
             return target;
         }else {
             return path.get(pathIndex++);
@@ -472,21 +473,14 @@ public class Route{
             if (canBump()){
                 unsafeLevel = 2;
                 // 如果会碰撞，判断对方是否是临时模式，若不是，在做判断，若是，正常行走就行
-                if (!Main.robots[unsafeRobotIds.get(0)].route.tmpSafeMode){
-
-                    // 若会碰撞，判断路的宽度
-                    if (roadIsWide()){
-                        // 路很宽，绕一下
-                        // 此时不考虑是否与墙发生碰撞，过了就行
-                        // 运动1
-                    }else {
-                        // 路不够宽，并且对方也不是临时模式
-                        setTmpSafeMode();
-                        // 运动2
-                    }
+                Robot oth = Main.robots[unsafeRobotIds.get(0)];
+                boolean flag1 = (next.equals(target) && robot.pos.calcDistance(next) < notAvoidRobotMinDis);    // 快靠近终点
+                boolean flag2 = oth.route.tmpSafeMode;    // 对方是安全模式， todo 是否要考虑多车堵住的情况
+                if (!flag1 && !flag2 && !roadIsWide(oth)){
+                    // 未到终点，都不是临时模式，而且路很窄
+                    setTmpSafeMode();
                 }
             }
-
         }
         if (unsafeLevel == 0){
             // 如果不是 正在错车，需要判断和墙的距离
@@ -609,25 +603,53 @@ public class Route{
 
     private void setTmpSafeMode() {
         // 判断两辆车，应该让谁避让
-        Robot weakRobot = selectWeakRobot(Main.robots[unsafeRobotIds.get(0)]);
-        weakRobot.route.selectTmpSafePoint();
-        weakRobot.route.tmpSafeMode = true;
+        Robot other = Main.robots[unsafeRobotIds.get(0)];
+
+        Robot weakRobot = selectWeakRobot(other);
+        // 避让车标志位赋值，安全点赋值
+        Robot winRobot = robot == weakRobot? other:robot;
+        Point sp = weakRobot.route.selectTmpSafePoint(winRobot);
+        if (sp!= null){
+            weakRobot.route.tmpSafeMode = true;
+            tmpSafePoint = sp;
+            // 计算去临时点的路径
+        }
     }
 
     // 选择安全点，到安全点去
-    private void selectTmpSafePoint() {
+    private Point selectTmpSafePoint(Robot winRobot) {
+        // 根据目标机器人的路线，选择一个能避开的点
+        Point sp = null;
+        ArrayList<Point> path = new ArrayList<>();
+        path.add(winRobot.pos);
+        for (int i = 0; i < winRobot.route.path.size(); i++) {
 
+        }
+
+        return sp;
     }
 
     private Robot selectWeakRobot(Robot oth) {
         // 判断自己和另一个机器人谁更弱小，谁让路
         // todo 后面可以修改
+
+        if (oth.route.next.equals(oth.route.target) && oth.pos.calcDistance(oth.route.next) < notAvoidRobotMinDis){
+            // 首先比较对方是否快到终点，自己避让
+            return robot;
+        }
+        if (oth.route.roadIsWide(robot)){
+            return oth; // 对方路很宽，对方避让
+        }
+
+        // 没货的避让
         if (robot.carry == 1 && oth.carry == 0){
             return oth;
         }
+
         if (robot.carry == 0 && oth.carry == 1){
             return robot;
         }
+
         // 比较两个节点剩余的路程，远的让路
         int fps1 = calcLeftFps();
         int fps2 = oth.route.calcLeftFps();
@@ -646,12 +668,12 @@ public class Route{
         return fps;
     }
 
-    private boolean roadIsWide() {
+    private boolean roadIsWide(Robot oth) {
         // 判断路的宽度是否够两个车过
         // 先找出机器人所在点的位置，以及方向
         // 若有是载物的，判断是否小于5个点，其他情况判断是否小于4个点
         // 若绝对值小于45度，判断纵向的点是否
-        int minWide = calcMinWide(Main.robots[unsafeRobotIds.get(0)]);
+        int minWide = calcMinWide(oth);
 
         int realWide = 0;
         double angle = vector.calcDeltaAngle(new Point(1, 0));
@@ -828,10 +850,11 @@ public class Route{
     public boolean arriveNext() {
         // 如果机器人到了目标点的前方，也算过了
         int preIndex = pathIndex-2;
-        if (preIndex <0 || preIndex >= path.size()){
-            return false;
-        }
-
+//        if (preIndex <0 || preIndex >= path.size()){
+//            return false;
+//        }
+        Main.printLog(pathIndex);
+        Main.printLog(path);
         Point pre = path.get(pathIndex-2);
         double dis1 = pre.calcDistance(next);
         double dis2 = pre.calcDistance(robot.pos);

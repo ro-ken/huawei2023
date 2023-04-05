@@ -42,10 +42,14 @@ public class Astar {
     }
 
     public static ArrayList<Point> getPath(boolean isEmpty,Point src, Point dest){
-        if (src.equals(dest)){
-            ArrayList<Point> res = new ArrayList<>();
-            res.add(dest);
-            return res;
+        double dis = src.calcDistance(dest);
+        if (dis < 1.0){
+            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())){
+                ArrayList<Point> res = new ArrayList<>();
+                res.add(src);
+                res.add(dest);
+                return res;
+            }
         }
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
