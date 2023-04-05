@@ -580,7 +580,7 @@ public class Robot {
         // 重新寻找新路径
         if (nextStation.paths == null) return;
 
-        ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);   // 第一次，计算初始化的路径
+        ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);
         path = Path.reversePath(path);
         route = new Route(nextStation.pos,this,path);
         Main.printLog("blocked renew path"+path);

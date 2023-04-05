@@ -37,6 +37,7 @@ public class Path {
             if (path == null){
                 // 如果还为空，在调用A*算法计算路径
                 path = Astar.getPath(isEmpty, src, dest);
+                Main.printLog("astar path" + path);
             }
             Map<Point,ArrayList<Point>> paths = getPathMap(isEmpty);
             paths.put(dest,path);     // 保存路径，下次备用
