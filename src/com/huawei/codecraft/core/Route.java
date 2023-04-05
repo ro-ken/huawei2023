@@ -8,6 +8,7 @@ import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Pos;
 
 import java.util.ArrayList;
+import java.util.Objects;
 
 // 运动过程描述
 public class Route{
@@ -40,9 +41,6 @@ public class Route{
     boolean isEmergency;// 是否紧急
     Point emergencyPos;    // 紧急机器人位置;
 
-    public boolean tmpSafeMode = false;    // 是否去临时安全点     todo 记得置位false
-    public Point tmpSafePoint;    // 是否去临时安全点
-
     public static double wallCoef = 3.2;      // 靠墙判定系数，多大算靠墙
     public static double perceptionDistanceCoef = 2;  // 刹车距离 * 2 + emergencyDistance;这个距离以内要做出反应
     public static double perceptionAngleRange = Robot.pi/4;   // 前方一半视野角度
@@ -51,7 +49,7 @@ public class Route{
     public static double cornerStopMinDistance = 0.3;   // 在墙角，提前多少减速
 
     // 下面是新加参数
-    public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
+
     public Point avoidWallPoint;    // 避免与墙体碰撞的临时点
     public static double avoidWallPointSpeed = 1.5;    // 判断与墙体会发生碰撞，去往临时点的最大速度
     public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行避让操作
@@ -72,7 +70,6 @@ public class Route{
 
     private Point getNextPoint() {
         if (pathIndex == path.size()){
-//            pathIndex
             return target;
         }else {
             return path.get(pathIndex++);
@@ -468,17 +465,17 @@ public class Route{
     // 计算当前的安全级别 0:安全，1：有墙，2有机器人
     private void calcSafeLevel() {
         unsafeLevel = 0;    // 先置位安全状态
-        if (!tmpSafeMode){
+        if (!robot.tmpSafeMode){
             // 如果不是这个模式，需要检测和其他机器人是否碰撞
             if (canBump()){
                 unsafeLevel = 2;
                 // 如果会碰撞，判断对方是否是临时模式，若不是，在做判断，若是，正常行走就行
                 Robot oth = Main.robots[unsafeRobotIds.get(0)];
                 boolean flag1 = (next.equals(target) && robot.pos.calcDistance(next) < notAvoidRobotMinDis);    // 快靠近终点
-                boolean flag2 = oth.route.tmpSafeMode;    // 对方是安全模式， todo 是否要考虑多车堵住的情况
+                boolean flag2 = oth.tmpSafeMode;    // 对方是安全模式， todo 是否要考虑多车堵住的情况
                 if (!flag1 && !flag2 && !roadIsWide(oth)){
                     // 未到终点，都不是临时模式，而且路很窄
-                    setTmpSafeMode();
+//                    setTmpSafeMode();
                 }
             }
         }
@@ -538,9 +535,9 @@ public class Route{
         Point topP = getNearBumpWall(robot.topLine);
         Point wall = selectClosestPoint(belowP,midP);
 
-//        Main.printLog(robot.belowLine);
-//        Main.printLog(robot.midLine);
-//        Main.printLog(robot.topLine);
+        Main.printLog(belowP);
+        Main.printLog(midP);
+        Main.printLog(topP);
         wall = selectClosestPoint(wall,topP);
         if (wall == null ||robot.pos.calcDistance(wall) > robot.pos.calcDistance(next)){
             return null;
@@ -608,25 +605,133 @@ public class Route{
         Robot weakRobot = selectWeakRobot(other);
         // 避让车标志位赋值，安全点赋值
         Robot winRobot = robot == weakRobot? other:robot;
-        Point sp = weakRobot.route.selectTmpSafePoint(winRobot);
+        Point sp = winRobot.route.selectTmpSafePoint();
         if (sp!= null){
-            weakRobot.route.tmpSafeMode = true;
-            tmpSafePoint = sp;
-            // 计算去临时点的路径
+            weakRobot.calcTmpRoute(sp,winRobot);   // 计算临时路由
         }
     }
 
     // 选择安全点，到安全点去
-    private Point selectTmpSafePoint(Robot winRobot) {
+    private Point selectTmpSafePoint() {
         // 根据目标机器人的路线，选择一个能避开的点
         Point sp = null;
-        ArrayList<Point> path = new ArrayList<>();
-        path.add(winRobot.pos);
-        for (int i = 0; i < winRobot.route.path.size(); i++) {
+        if (pathIndex < 2) return null;
+        ArrayList<Point> tmpPath = new ArrayList<>();
+        tmpPath.add(robot.pos);
+        for (int i = pathIndex -1; i < path.size(); i++) {
+            tmpPath.add(path.get(i));   // 把对面的点全入队
+        }
+        for (int i=0;i< tmpPath.size()-1;i++){
+            // 分别去判断两个点中间有没有安全位置
+            sp = detectSafePoint(tmpPath.get(i),tmpPath.get(i+1));
+            if (sp != null){
+                break;
+            }
+        }
+        if (sp == null){
+            // 如果中间都没有找到安全点，去目标点的前面
+            Line line = getLastPathLine();
+            sp = Objects.requireNonNull(line).getPointDis2dest(1.5);
+            robot.setBase(line,line.right);
 
         }
-
         return sp;
+    }
+
+
+    private Line getLastPathLine() {
+        Point src = path.get(path.size()-2);
+        Point dest = path.get(path.size()-1);
+        return new Line(src,dest);
+    }
+
+    private Point detectSafePoint(Point src, Point dest) {
+        Point sp = null;
+        // 每次向前探测1.0米
+        Line line = new Line(src,dest);
+        Point tp = null;
+        double dis = src.calcDistance(dest);
+        for (double i = 0.5; i < dis+1; i+=1) {
+            tp = line.getPointDis2src(i);
+            if (rangeIsWide(robot, tp)){
+                // 找到某个点很宽，求出安全点
+                sp = pickSafePoint(line,tp);
+                robot.setBase(line,tp);
+                break;
+            }
+        }
+        return sp;
+    }
+
+    // 选择一个远离line的点
+    private Point pickSafePoint(Line line, Point basePoint) {
+        Point sp;
+        double angle = line.vector().calcDeltaAngle(Point.vecX);
+        if (angle > Robot.pi/4 && angle < Robot.pi * 3 /4){
+            sp = pickHorPoint(basePoint);
+        }else {
+            sp = pickVerPoint(basePoint);
+        }
+        return sp;
+    }
+
+    private Point pickVerPoint(Point bp) {
+
+        int upWide = 0;
+        int downWide = 0;
+        Point res ;
+        for (int i = 1; i < 5; i++) {
+            // 每一格式0.5
+            if (posIsWall(bp.x,bp.y+i*0.5)){
+                break;
+            }
+            upWide ++;
+        }
+
+        for (int i = 1; i < 5; i++) {
+            // 每一格式0.5
+            if (posIsWall(bp.x,bp.y-i*0.5)){
+                break;
+            }
+            downWide ++;
+        }
+        if (upWide >= downWide){
+            res = new Point(bp.x,bp.y + upWide * 0.5);
+        }else {
+            res = new Point(bp.x,bp.y - downWide * 0.5);
+        }
+
+        return res;
+    }
+
+    private Point pickHorPoint(Point bp) {
+
+        int leftWide = 0;
+        int rightWide = 0;
+        Point res ;
+
+        for (int i = 1; i < 5; i++) {
+            // 每一格式0.5
+            if (posIsWall(bp.x+i*0.5,bp.y)){
+                break;
+            }
+            rightWide ++;
+        }
+
+        for (int i = 1; i < 5; i++) {
+            // 每一格式0.5
+            if (posIsWall(bp.x-i*0.5,bp.y)){
+                break;
+            }
+            leftWide ++;
+        }
+
+        if (rightWide >= leftWide){
+            res = new Point(bp.x + rightWide * 0.5,bp.y);
+        }else {
+            res = new Point(bp.x - leftWide * 0.5,bp.y);
+        }
+        return res;
     }
 
     private Robot selectWeakRobot(Robot oth) {
@@ -678,13 +783,26 @@ public class Route{
         int realWide = 0;
         double angle = vector.calcDeltaAngle(new Point(1, 0));
         if (angle > Robot.pi/4 && angle < Robot.pi * 3 /4){
-            realWide = calcVerticalWide(robot.pos);
-        }else {
+            // 方向垂直，计算水平宽度
             realWide = calcHorizontalWide(robot.pos);
+        }else {
+            // 方向水平，计算垂直宽度
+            realWide = calcVerticalWide(robot.pos);
         }
 
         return minWide <= realWide;
     }
+
+    // 范围是否够宽，能够错车
+    private boolean rangeIsWide(Robot oth,Point point) {
+
+        int minWide = calcMinWide(oth);
+        int verWide = calcVerticalWide(point);
+        int horWide = calcHorizontalWide(point);
+
+        return minWide <= Math.min(verWide,horWide);
+    }
+
 
     private int calcHorizontalWide(Point pos) {
         int wide = 1;   // 本身肯定不是墙
@@ -849,22 +967,13 @@ public class Route{
     // 是否到达下一个点
     public boolean arriveNext() {
         // 如果机器人到了目标点的前方，也算过了
-        int preIndex = pathIndex-2;
-//        if (preIndex <0 || preIndex >= path.size()){
-//            return false;
-//        }
-        Main.printLog(pathIndex);
+        Main.printLog("pathIndex" + pathIndex);
         Main.printLog(path);
         Point pre = path.get(pathIndex-2);
-        double dis1 = pre.calcDistance(next);
-        double dis2 = pre.calcDistance(robot.pos);
-        if (dis2>dis1){
-            return true;
-        }
-
-        double dis = robot.pos.calcDistance(next);
-        return dis <= robotInPointDis;
+        return robot.isArrivePoint(pre,next);
     }
+
+
 
     // 更换下一个点
     public void updateNext() {

@@ -11,6 +11,10 @@ import java.util.Queue;
 public class Point{
     public double x,y;
 
+    // 用的多的两个点设为静态变量
+    public static final Point vecX = new Point(1,0);
+    public static final Point vecY = new Point(0,1);
+
     public Point() { }
 
     public Point(Point point) {

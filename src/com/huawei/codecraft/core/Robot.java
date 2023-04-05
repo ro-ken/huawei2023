@@ -37,6 +37,8 @@ public class Robot {
     public static double emptyMinAngle; // 加速减速临界值 ,空载
     public static double fullMinAngle; // 加速减速临界值 ，满载
     public static Line rotateSpeedEquation; // 转向速度方程
+    public Point basePoint;     // 其他小车躲避的点
+    public Line baseLine;       // 其他小车躲避的线
 
 
     int id;
@@ -68,6 +70,9 @@ public class Robot {
     public Line belowLine;     // 轨迹下面的线
     public Line midLine;     // 轨迹下面的线
 
+    public boolean tmpSafeMode = false;    // 是否去临时安全点
+    public Point tmpSafePoint;    // 是否去临时安全点
+
     // 下面参数 无用
     public static double vectorNearOffset = 0.1; // 小于这个角度认为直线重合
     public static double tmpPlaceOffset = 1.2; // 半径乘子 偏移系数，单位 个，临时距离向右偏移多少
@@ -83,6 +88,7 @@ public class Robot {
     public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
     public static int blockJudgeFps = 20 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点
     public double blockFps = 0;    // 目前阻塞的帧数
+    public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
 
     public Route route;
 
@@ -96,6 +102,8 @@ public class Robot {
         emptyMinAngle = calcMinAngle(true);
         fullMinAngle = calcMinAngle(false);
     }
+
+    private Robot winner;
 
     public Robot(int stationId, double x, double y, int robotId) {
         StationId = stationId;
@@ -189,6 +197,9 @@ public class Robot {
         topLine.setValue(src[0],dest[0]);
         belowLine.setValue(src[1],dest[1]);
         midLine.setValue(pos,route.next);
+        Main.printLog(topLine);
+        Main.printLog(belowLine);
+        Main.printLog(midLine);
     }
 
     private static double calcRotateAcce(double radius) {
@@ -281,6 +292,11 @@ public class Robot {
         double v2 = Math.pow(lineVx,2) + Math.pow(lineVy,2);
         double x = v2/(2*a);
         return x;
+    }
+
+    public void setBase(Line line, Point point) {
+        baseLine = line;
+        basePoint = point;
     }
 
 
@@ -398,7 +414,10 @@ public class Robot {
             return;
         }
 
-//        route.rush();
+        if (tmpSafeMode && winner.basePoint == null){
+            setNewPath();   // 对方通过狭窄路段，重新寻路
+        }
+
         route.rush2();
     }
 
@@ -550,6 +569,22 @@ public class Robot {
         }
     }
 
+    public boolean arriveBasePoint() {
+        Point pre = baseLine.left;
+        return isArrivePoint(pre,basePoint);
+    }
+
+    public boolean isArrivePoint(Point pre, Point next) {
+        double dis1 = pre.calcDistance(next);
+        double dis2 = pre.calcDistance(pos);
+        if (dis2>dis1){
+            return true;
+        }
+
+        double dis = pos.calcDistance(next);
+        return dis <= robotInPointDis;
+    }
+
     private void useWaterFlowChangeMode() {
         // 流水线模式，加一些控制
         Main.printLog("nextStation"+ nextStation);
@@ -579,12 +614,26 @@ public class Robot {
     public void setNewPath() {
         // 重新寻找新路径
         if (nextStation.paths == null) return;
-
+        tmpSafeMode = false;
+        winner = null;
         ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);
         path = Path.reversePath(path);
         route = new Route(nextStation.pos,this,path);
+        route.calcParamEveryFrame();    // 通用参数
+        calcMoveEquation();     //  运动方程
         Main.printLog("blocked renew path"+path);
     }
+    public void calcTmpRoute(Point sp, Robot winRobot) {
+        tmpSafeMode = true;
+        ArrayList<Point> path = Astar.getPath(carry==0,pos,sp);
+        route = new Route(nextStation.pos,this,path);
+        route.calcParamEveryFrame();    // 通用参数
+        calcMoveEquation();     //  运动方程
+        winner = winRobot;      // 设置是给谁避让，后期需要定期探测这个机器人是否到达目标点
+
+        Main.printLog("set tmp route"+path);
+    }
+
 }
 
 

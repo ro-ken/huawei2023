@@ -36,6 +36,7 @@ public class Main {
     public static final int fps = 50;
     public static final boolean test = true;    // 是否可写入
     public static final int robotNum = 4;
+    public static final HashSet<Integer> testRobot = new HashSet<>();
     public static int mapSeq;   // 是第几号地图，做优化
     public static boolean specialMapMode = false;   // 是否针对地图做优化
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
@@ -48,6 +49,10 @@ public class Main {
             System.setOut(log);//把创建的打印输出流赋给系统。即系统下次向 ps输出
 //            printLog("这行语句将会被写到log.txt文件中");
         }
+        testRobot.add(1);
+//        testRobot.add(2);
+//        testRobot.add(3);
+//        testRobot.add(4);
 
         schedule();
     }
@@ -73,6 +78,7 @@ public class Main {
             // 先计算每个机器人的参数，后面好用
           for (int i = 0; i < robotNum; i++) {
 //              if (i!= 3) continue;
+              if (!testRobot.contains(i)) continue;
 
               if (robots[i].nextStation == null){
                   robots[i].selectBestStation();
@@ -87,12 +93,17 @@ public class Main {
                   robots[i].route.updateNext();
               }
 
+              if (robots[i].basePoint != null && robots[i].arriveBasePoint()){
+                  //
+                  robots[i].basePoint = null;
+              }
+
               robots[i].route.calcParamEveryFrame();    // 通用参数
               robots[i].calcMoveEquation();     //  运动方程
           }
 
         for (int i = 0; i < robotNum; i++) {
-//            if (i!= 3) continue;
+            if (!testRobot.contains(i)) continue;
             if (robots[i].nextStation == null) continue;
             if (robots[i].isArrive()){
 //                    Main.printLog("arrive");
