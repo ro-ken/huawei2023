@@ -54,7 +54,7 @@ public class Astar {
     }
 
     // 将得到的坐标转为Point
-    public Point Pos2Point(Pos Pos, boolean flag) {
+    public static Point Pos2Point(Pos Pos, boolean flag) {
         // 空载需要向右上便宜0.25
         double x = Pos.y * 0.5 + 0.25 + (flag == true ? 0 : 0.25);
         double y = 50 - (Pos.x * 0.5 + 0.25) + (flag == true ? 0 : 0.25);
@@ -62,7 +62,7 @@ public class Astar {
     }
 
     // 将Point转为Pos用于地图索引 0-50 对应 0-99
-    public Pos Point2Pos(Point point) {
+    public static Pos Point2Pos(Point point) {
         int x = 99 -  (int)(point.y / 0.5);
         int y = (int)(point.x / 0.5);
         return new Pos(x, y);

@@ -72,16 +72,27 @@ public class Main {
 
             // 先计算每个机器人的参数，后面好用
           for (int i = 0; i < robotNum; i++) {
+//              if (i!= 3) continue;
+
               if (robots[i].nextStation == null){
                   robots[i].selectBestStation();
               }
-              if (robots[i].route == null) continue;
+              if (robots[i].nextStation == null) continue;
+              Main.printLog("pos:next:"+robots[i].pos + "," + robots[i].route.next);
+              if (robots[i].blockDetect()){
+                  // 若发生阻塞，需要重新规划路线
+                  robots[i].setNewPath();
+              }
+              if (robots[i].route.arriveNext()){
+                  robots[i].route.updateNext();
+              }
+
               robots[i].route.calcParamEveryFrame();    // 通用参数
               robots[i].calcMoveEquation();     //  运动方程
           }
 
         for (int i = 0; i < robotNum; i++) {
-            if (robots[i].route == null) continue;
+//            if (i!= 3) continue;
             if (robots[i].nextStation == null) continue;
             if (robots[i].isArrive()){
 //                    Main.printLog("arrive");
@@ -134,6 +145,7 @@ public class Main {
         printLog(mapinfo);
         printLog(zoneMap);
     }
+
     private static void initStations() {
         for (int i = 0; i < stationNum; i++) {
             stations[i].initialization();           // 第一次初始化，能卖给哪些节点
@@ -346,3 +358,34 @@ public class Main {
     }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

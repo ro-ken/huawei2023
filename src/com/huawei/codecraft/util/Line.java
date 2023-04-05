@@ -53,6 +53,14 @@ public class Line {
         this.right = right;
     }
 
+    @Override
+    public String toString() {
+        return
+                "(left=" + left +
+                ", right=" + right +
+                ')';
+    }
+
     public Point getFixPoint(double x) {
         // 记录x对应点的中心坐标
         double y = getY(x);

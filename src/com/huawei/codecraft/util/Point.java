@@ -13,6 +13,11 @@ public class Point{
 
     public Point() { }
 
+    public Point(Point point) {
+        x = point.x;
+        y = point.y;
+    }
+
     // 如果这个点上有工作站，记录一下
 
 
@@ -150,17 +155,20 @@ public class Point{
 
     public Point fixPoint2Center() {
         // 将 坐标 修正为 map 的中心点的坐标
-        double x1 = ((int) (x / 0.5)) * 0.5 + 0.25;
-        double y1 = ((int) (y / 0.5)) * 0.5 + 0.25;
-
-        return new Point(x1,y1);
+        return fixPoint2Center(x,y);
     }
 
     public static Point fixPoint2Center(double x,double y) {
         // 将 坐标 修正为 map 的中心点的坐标
-        double x1 = ((int) (x / 0.5)) * 0.5 + 0.25;
-        double y1 = ((int) (y / 0.5)) * 0.5 + 0.25;
+        double x1 = fixAxis2Center(x);
+        double y1 = fixAxis2Center(y);
 
         return new Point(x1,y1);
     }
+
+    // 修正一个点到中点
+    public static double fixAxis2Center(double t){
+        return ((int) (t / 0.5)) * 0.5 + 0.25;
+    }
+
 }

@@ -70,7 +70,7 @@ public class Astar {
         // 从起点开始逐一校准路径
         Pos starPos = mergeList.get(0);
         // 起点加入结果
-        result.add(Pos2Point(starPos, true));
+        result.add(Pos2Point(starPos));
         // fixList.add(starPos);
         for (int i = 1; i < size - 1; i++) {
             // 两点相邻，直接优化掉后面的点，可能有些激进，但是目前就这样处理，
@@ -80,10 +80,10 @@ public class Astar {
             }
             // 空载情况下加入结果队列的点，让点尽可能在中间,如果偏移点的时候已经发生移到中心，空载计算路径无需再次偏移
             if (!carry) {
-                result.add(Pos2Point(curPos, offsetPos(curPos)));
+                result.add(Pos2Point(curPos));
             }
             else {
-                result.add(Pos2Point(curPos, carry));
+                result.add(Pos2Point(curPos));
             }
             // fixList.add(curPos);
             starPos = curPos;
@@ -94,7 +94,7 @@ public class Astar {
         }
         // fixList.add(mergeList.get(size - 1)); // 终点加入fixList
         // 终点加入结果
-        result.add(Pos2Point(mergeList.get(size - 1), true));
+        result.add(Pos2Point(mergeList.get(size - 1)));
     }
 
     public boolean isAwayWall(int x, int y) {
@@ -186,15 +186,15 @@ public class Astar {
 //     }
 
     // 将得到的坐标转为Point
-    public Point Pos2Point(Pos Pos, boolean flag) {
+    public static Point Pos2Point(Pos Pos) {
         // 空载需要向右上便宜0.25
-        double x = Pos.y * 0.5 + 0.25 + (flag ? 0 : 0.25);
-        double y = 50 - (Pos.x * 0.5 + 0.25) + (flag ? 0 : 0.25);
+        double x = Pos.y * 0.5 + 0.25 ;
+        double y = 50 - (Pos.x * 0.5 + 0.25) ;
         return new Point(x, y);
     }
 
     // 将Point转为Pos用于地图索引 0-50 对应 0-99
-    public  Pos Point2Pos(Point point) {
+    public static Pos Point2Pos(Point point) {
         int x = 99 -  (int)(point.y / 0.5);
         int y = (int)(point.x / 0.5);
         return new Pos(x, y);

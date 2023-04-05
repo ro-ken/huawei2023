@@ -80,6 +80,9 @@ public class Robot {
     public static double maxSpeedCoef = 1.5;
     public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
     public static int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
+    public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
+    public static int blockJudgeFps = 20 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点
+    public double blockFps = 0;    // 目前阻塞的帧数
 
     public Route route;
 
@@ -104,6 +107,7 @@ public class Robot {
         id=robotId;
         topLine = new Line();
         belowLine = new Line();
+        midLine = new Line();
         rotateSpeedEquation = new Line(new Point(maxForwardRad,maxSpeed/maxSpeedCoef),new Point(pi/2,0));
 
     }
@@ -184,8 +188,7 @@ public class Robot {
         Point[] dest = getPoints(route.next.x,route.next.y,radius);
         topLine.setValue(src[0],dest[0]);
         belowLine.setValue(src[1],dest[1]);
-//        if (route.next != null)
-//            midLine.setValue(pos,route.next);
+        midLine.setValue(pos,route.next);
     }
 
     private static double calcRotateAcce(double radius) {
@@ -240,6 +243,7 @@ public class Robot {
             nextStation = srcStation = destStation = null;
 
         }
+        blockFps = 0;     // 阻塞帧数重新计算
         Main.printLog("state change");
         Main.printLog("next station" + nextStation);
     }
@@ -393,11 +397,9 @@ public class Robot {
             Main.printLog("nextStation is null");
             return;
         }
-        if (route.arriveNext()){
-            route.updateNext();
-        }
 
-        route.rush();
+//        route.rush();
+        route.rush2();
     }
 
     // 选一个最佳的工作站
@@ -557,6 +559,31 @@ public class Robot {
             waterFlow.halfComp.put(nextStation.type,waterFlow.halfComp.get(nextStation.type) - 2);    // 原料数 -2
         }
         lastStation = nextStation;
+    }
+
+    public boolean blockDetect() {
+        // todo 后面判断是否周围有墙或者机器人
+        // 阻塞检测，在某个点阻塞了多少帧，重新设置路径
+        if (route.speed.norm() > blockJudgeSpeed){
+            blockFps = 0;
+        }else {
+            blockFps ++;
+        }
+        if (blockFps >= blockJudgeFps){
+            blockFps = 0;   //后面需要重新寻路
+            return true;
+        }
+        return false;
+    }
+
+    public void setNewPath() {
+        // 重新寻找新路径
+        if (nextStation.paths == null) return;
+
+        ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);   // 第一次，计算初始化的路径
+        path = Path.reversePath(path);
+        route = new Route(nextStation.pos,this,path);
+        Main.printLog("blocked renew path"+path);
     }
 }
 
