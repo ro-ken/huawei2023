@@ -32,6 +32,15 @@ public class Astar {
         result = new ArrayList<Point>();
     }
 
+    // 创建两点之间的直线方程
+    public Pair calLineExpression(Pos starPos, Pos endPos) {
+        Point startPoint = Pos2Point(starPos);
+        Point endPoint = Pos2Point(endPos);
+        double k = (endPoint.y - startPoint.y) / (endPoint.x - startPoint.x);
+        double b = startPoint.y - k * startPoint.x;
+        return new Pair(k, b);
+    }
+
     public static ArrayList<Point> getPath(boolean isEmpty,Point src, Point dest){
         if (src.equals(dest)){
             ArrayList<Point> res = new ArrayList<>();
@@ -63,21 +72,14 @@ public class Astar {
 
     public void fixRoute(boolean carry) {
         // 没有结果，返回
-        if (mergeList.size() < 2){
+        int size = mergeList.size();
+        if (size < 2){
             return;
         }
-        int size = mergeList.size();
-        // 从起点开始逐一校准路径
-        Pos starPos = mergeList.get(0);
-        // 起点加入结果
-        result.add(Pos2Point(starPos));
-        // fixList.add(starPos);  
-        for (int i = 1; i < size - 1; i++) {
+        
+        for (int i = 0; i < size; i++) {
             // 两点相邻，直接优化掉后面的点，可能有些激进，但是目前就这样处理， 
             Pos curPos = mergeList.get(i);
-            if (Math.abs(curPos.x - starPos.x) + Math.abs(curPos.y - starPos.y) <= 2) {
-                continue;
-            }
             // 空载情况下加入结果队列的点，让点尽可能在中间,如果偏移点的时候已经发生移到中心，空载计算路径无需再次偏移
             if (!carry) {
                 Point p = Pos2Point(curPos);
@@ -91,12 +93,7 @@ public class Astar {
                 result.add(Pos2Point(curPos));
             }
            
-            // fixList.add(curPos);
-            starPos = curPos;
         }
-        // fixList.add(mergeList.get(size - 1)); // 终点加入fixList
-        // 终点加入结果
-        result.add(Pos2Point(mergeList.get(size - 1)));
     }
 
     public boolean isCriticalPos(Pos curPos) {
@@ -113,45 +110,76 @@ public class Astar {
         return false;
     }
 
-    // 合并结果，将相同的坐标合并在一起
-    public void mergeResultList() {
-        // 没有结果，返回
-        if (resultList.size() < 2){
-            return;
-        }
-        int preDiffX, preDiffY, curDiffX, curDiffY;
-        Pos prePos = resultList.get(0);
-        Pos nextPos = resultList.get(1);
-        preDiffX = nextPos.x - prePos.x;
-        preDiffY = nextPos.y - prePos.y;
+      // TODO：边界问题暂时没有考虑，需要优化
+      public boolean isObstacle(Pair param, Pos startPos, Pos endPos) {
+        double step = 0.5;  // 下标 x 的增加对应世界地图值增加 0.5
+        double x1 = Pos2Point(startPos).x;
+        double y1 = Pos2Point(startPos).y;
+        double x2 = Pos2Point(endPos).x;
+        double y2 = Pos2Point(endPos).y;
 
-        mergeList.add(prePos);    // 起点加入合并列表
-        prePos = nextPos;
-        for (int index = 2; index < resultList.size() - 1; index++) {
-            nextPos = resultList.get(index);
-            curDiffX = nextPos.x - prePos.x;
-            curDiffY = nextPos.y - prePos.y;
-            // 节点存在变向,节点加入合并列表
-            if (curDiffX != preDiffX || curDiffY != preDiffY) {
-                // mergeList.add(prePos);
-                mergeList.add(nextPos);
+        // 斜率大于1 得以 y 为增量，看 x 轴方向是否出现障碍
+        if (Math.abs(param.k) > 1) {
+            int turn = y1 < y2 ? 1 : -1;     
+            for (double y = y1 + step * turn; (y - y2) * turn - 0.01 < 0 ; y += step * turn) {
+                double x = (y - param.b) / param.k;
+                Pos nexPos = Point2Pos(new Point(x, y));
+                // 连接线上的点，上下不能有障碍物
+                if (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y - 1] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y + 1] == -2) {
+                    return true;
+                }
             }
-            preDiffX = curDiffX;
-            preDiffY = curDiffY;
-            prePos = nextPos;
         }
-        mergeList.add(resultList.get(resultList.size() - 1));    // 终点加入合并列表
+        else {
+            int turn = x1 < x2 ? 1 : -1;
+            // 从起点和终点开始判断是否能够舍弃该点,相邻点直接舍弃
+            for (double x = x1 + step * turn; (x - x2) * turn - 0.01 < 0 ; x += step * turn) {       
+                double y =  param.k * x + param.b; 
+                Pos nexPos = Point2Pos(new Point(x, y));
+                // 连接线上的点，上下不能有障碍物
+                if (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x - 1][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x + 1][nexPos.y] == -2) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
+
+   // 合并结果，将相同的坐标合并在一起
+   public void mergeResultList() {
+    // 没有结果，返回
+    if (resultList.size() < 2){
+        return;
+    }
+    Pos startPos = resultList.get(0);
+    Pos prePos = resultList.get(1);
+    mergeList.add(startPos);    // 起点加入合并列表
+
+    for (int index = 2; index < resultList.size() - 1; index++) {
+        Pos curPos = resultList.get(index);
+        if (curPos.x == startPos.x || curPos.y == startPos.y) {
+            prePos = curPos;
+            continue;
+        }
+        Pair lineParam = calLineExpression(startPos, curPos); 
+        if (isObstacle(lineParam, startPos, curPos)) {   // 两点之间有障碍，这个点的前一个点就必须加入节点
+            mergeList.add(prePos);
+            startPos = prePos;
+        }
+        prePos = curPos;
+    }
+    mergeList.add(resultList.get(resultList.size() - 1));    // 终点加入合并列表  
+}
 
     // 将得到的坐标转为Point
     public static Point Pos2Point(Pos Pos) {
-        // 空载需要向右上便宜0.25
         double x = Pos.y * 0.5 + 0.25 ;
         double y = 50 - (Pos.x * 0.5 + 0.25) ;
         return new Point(x, y);
     }
 
-    // 将Point转为Pos用于地图索引 0-50 对应 0-99
+    // 将Point转为Pos用于地图索引 世界地图0-50 对应 数组下标0-99
     public static Pos Point2Pos(Point point) {
         int x = 99 -  (int)(point.y / 0.5);
         int y = (int)(point.x / 0.5);
@@ -193,7 +221,6 @@ public class Astar {
                         updateG(x, currentPosition.y, currentPosition, newG);
                     }
                 }
-                // System.out.println("flag "+flag);
             }
 
             // 左右
@@ -205,7 +232,6 @@ public class Astar {
                         updateG(currentPosition.x, y, currentPosition, newG);
                     }
                 }
-                // System.out.println("flag "+flag);
             }
 
             // 往斜边寻找
