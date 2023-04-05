@@ -81,7 +81,8 @@ public class Astar {
             return;
         }
         
-        for (int i = 0; i < size; i++) {
+        result.add(Pos2Point(mergeList.get(0)));
+        for (int i = 1; i < size - 1; i++) {
             // 两点相邻，直接优化掉后面的点，可能有些激进，但是目前就这样处理， 
             Pos curPos = mergeList.get(i);
             // 空载情况下加入结果队列的点，让点尽可能在中间,如果偏移点的时候已经发生移到中心，空载计算路径无需再次偏移
@@ -98,6 +99,7 @@ public class Astar {
             }
            
         }
+        result.add(Pos2Point(mergeList.get(size - 1)));
     }
 
     public boolean isCriticalPos(Pos curPos) {
@@ -129,7 +131,14 @@ public class Astar {
                 double x = (y - param.b) / param.k;
                 Pos nexPos = Point2Pos(new Point(x, y));
                 // 连接线上的点，上下不能有障碍物
-                if (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y - 1] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y + 1] == -2) {
+
+                if ( (nexPos.y < Mapinfo.col - 1 && nexPos.y > 0) &&  ( Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y - 1] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y + 1] == -2)) {
+                    return true;
+                }
+                else if (nexPos.y == Mapinfo.col - 1 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y - 1] == -2)) {
+                    return true;
+                }
+                else if (nexPos.y == 0 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y + 1] == -2)) {
                     return true;
                 }
             }
@@ -141,7 +150,13 @@ public class Astar {
                 double y =  param.k * x + param.b; 
                 Pos nexPos = Point2Pos(new Point(x, y));
                 // 连接线上的点，上下不能有障碍物
-                if (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x - 1][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x + 1][nexPos.y] == -2) {
+                if ((nexPos.x > 0 && nexPos.x < Mapinfo.row - 1) && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x - 1][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x + 1][nexPos.y] == -2)) {
+                    return true;
+                }
+                else if (nexPos.x == 0 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x + 1][nexPos.y] == -2)) {
+                    return true;
+                }
+                else if (nexPos.x == Mapinfo.row - 1 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x - 1][nexPos.y] == -2)) {
                     return true;
                 }
             }
