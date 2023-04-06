@@ -103,7 +103,7 @@ public class Astar {
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
         Astar ast = new Astar(fixMap,src,dest);
-        ast.search();
+//        ast.search();
         Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
         return sp;
     }
@@ -329,7 +329,7 @@ public class Astar {
 
         int[][] maps = new int[Mapinfo.row][Mapinfo.col];
         initAvoidMaps(maps);    // 用于找避让点的地图，0 未探索 1 已探索 2 障碍物
-       blockAvoidMaps(maps);       // 阻塞地图，减小计算量
+        blockAvoidMaps(maps);       // 阻塞地图，减小计算量
         //        targetPosition = Point2Pos(newTargePoint);
 
         return getPoint(maps, carry,pos1);

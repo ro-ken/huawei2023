@@ -6,6 +6,7 @@ import java.io.PrintStream;
 import java.util.*;
 
 import com.huawei.codecraft.core.*;
+import com.huawei.codecraft.menu.StationMenu;
 import com.huawei.codecraft.util.Point;
 import com.huawei.codecraft.way.Mapinfo;
 import com.huawei.codecraft.way.Pos;
@@ -37,6 +38,7 @@ public class Main {
     public static final int fps = 50;
     public static final boolean test = true;    // 是否可写入
     public static final boolean writePath = true;    // 是否可写入
+    public static final boolean menu = true;    // 是否从路径读取
     public static final int robotNum = 4;
     public static final HashSet<Integer> testRobot = new HashSet<>();
     public static int mapSeq;   // 是第几号地图，做优化
@@ -67,6 +69,11 @@ public class Main {
 
     private static void schedule() {
         initialization();
+
+        if (menu){
+            StationMenu.setStationPath();
+        }
+
         Ok();
         while (inStream.hasNextLine()) {
             String line = inStream.nextLine();
