@@ -8,6 +8,7 @@ import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Pos;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Objects;
 
 // 运动过程描述
@@ -15,6 +16,7 @@ public class Route{
     Robot robot;
     public Point target;    // 目标点
     public ArrayList<Point> path;   // 要经过的一些列点
+    public HashSet<Pos> posSet;     // 存储行进路径的，pos，创建route的时候需要赋值
     public int pathIndex;   // 指向next一个点
     public Point next;  // 下一个要到的点
 
@@ -58,7 +60,7 @@ public class Route{
     ArrayList<Integer> unsafeRobotIds;
     public int unsafeLevel;     //当前不安全级别  (1-3)
 
-    public Route(Point tarPos,Robot robot,ArrayList<Point> path) {
+    public Route(Point tarPos,Robot robot,ArrayList<Point> path,HashSet<Pos> posSet) {
         target = tarPos;
         vector = new Point();
         speed = new Point();
@@ -67,6 +69,7 @@ public class Route{
         this.path = path;
         next = getNextPoint();    // 取出下一个点
         next = getNextPoint();    // 第一个点是自己的位置，不要
+        this.posSet = posSet;
     }
 
     private Point getNextPoint() {
@@ -476,7 +479,9 @@ public class Route{
                 boolean flag2 = oth.tmpSafeMode;    // 对方是安全模式， todo 是否要考虑多车堵住的情况
                 if (!flag1 && !flag2 && !roadIsWide(oth)){
                     // 未到终点，都不是临时模式，而且路很窄
-                    setTmpSafeMode();
+//                    setTmpSafeMode();
+                    setTmpSafeMode2();
+                    unsafeLevel = 0;    //不进行碰撞检测
                 }
             }
         }
@@ -485,7 +490,7 @@ public class Route{
             Point wall = frontHasWall();
 
             if (wall != null && wall.calcDistance(robot.pos) <= 2){     // todo 参数可调
-                Main.printLog("wall" + wall);
+                Main.printLog(robot + "wall" + wall);
                 unsafeLevel = 1;
                 // 前方有墙，需要稍微绕一绕
                 // 给一个转弯的路口的点，先到转弯路口去
@@ -604,6 +609,20 @@ public class Route{
         // 避让车标志位赋值，安全点赋值
         Robot winRobot = robot == weakRobot? other:robot;
         Point sp = winRobot.route.selectTmpSafePoint();
+        if (sp!= null){
+            weakRobot.calcTmpRoute(sp,winRobot);   // 计算临时路由
+        }
+    }
+
+    private void setTmpSafeMode2() {
+        // 判断两辆车，应该让谁避让
+        Robot other = Main.robots[unsafeRobotIds.get(0)];
+
+        Robot weakRobot = selectWeakRobot(other);
+        // 避让车标志位赋值，安全点赋值
+        Robot winRobot = robot == weakRobot? other:robot;
+        Point sp = weakRobot.selectTmpSafePoint(winRobot.pos,winRobot.route.posSet);
+        // 选出一个临时点，避让机器人更改路线
         if (sp!= null){
             weakRobot.calcTmpRoute(sp,winRobot);   // 计算临时路由
         }
@@ -895,6 +914,14 @@ public class Route{
         double minDis = 1000000;
         for (int i = 0; i < 4; i++) {
             if (i == robot.id) continue;
+
+            if (Main.robots[i].winner == robot){
+                if (Main.robots[i].inSafePlace){
+                    continue;   // 如果避让 车到达了避让点，直接过去
+                }
+            }
+
+
             double dis = robot.pos.calcDistance(Main.robots[i].pos);
             if (dis<safeDis){
                 // 判断夹角和是否在内圈

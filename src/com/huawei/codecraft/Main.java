@@ -93,18 +93,22 @@ public class Main {
               }
               if (robots[i].nextStation == null) continue;
               Main.printLog("pos:next:"+robots[i].pos + "," + robots[i].route.next);
+
+
               if (robots[i].blockDetect()){
                   // 若发生阻塞，需要重新规划路线
                   robots[i].setNewPath();
               }
+
+
               if (robots[i].route.arriveNext()){
                   robots[i].route.updateNext();
               }
 
-              if (robots[i].basePoint != null && robots[i].arriveBasePoint()){
-                  //
-                  robots[i].basePoint = null;
-              }
+//              if (robots[i].basePoint != null && robots[i].arriveBasePoint()){
+//                  //
+//                  robots[i].basePoint = null;
+//              }
 
               robots[i].route.calcParamEveryFrame();    // 通用参数
               robots[i].calcMoveEquation();     //  运动方程
@@ -291,18 +295,18 @@ public class Main {
                         waterFlows.add(flow);
                     }
                 }
-                for (Station st : sts) {
-                    printLog("id" + st.id + " value fps" + st.cycleAvgValue);
-                }
-                printLog(sts);
+//                for (Station st : sts) {
+//                    printLog("id" + st.id + " value fps" + st.cycleAvgValue);
+//                }
+//                printLog(sts);
 
             }else {
                 // 最多选择4条流水线
                 ArrayList<Station> sts = zone.getStations();
                 Collections.sort(sts);
-                for (int i = 0; i < sts.size(); i++) {
-                    printLog(sts.get(i)+ ":" + sts.get(i).cycleAvgValue);
-                }
+//                for (int i = 0; i < sts.size(); i++) {
+//                    printLog(sts.get(i)+ ":" + sts.get(i).cycleAvgValue);
+//                }
                 for (int i = 0; i < zone.robots.size(); i++) {
                     if (sts.size() > i && sts.get(i).cycleAvgValue>0){    // 没有那么多工作站，不分了
                         WaterFlow flow = new WaterFlow(sts.get(i),zone);

@@ -65,13 +65,13 @@ public class Path {
                 }
             }
             if (path == null){
-                // 如果还为空，在调用A*算法计算路径
+                // 如果还为空，再调用A*算法计算路径
                 path = Astar.getPathAndResult(isEmpty, src, dest,set);
             }
             Map<Point,ArrayList<Point>> paths = getPathMap(isEmpty);
-            Map<Point,HashSet<Pos>> res = getResSetMap(isEmpty);
+            Map<Point,HashSet<Pos>> pos1 = getResSetMap(isEmpty);
             paths.put(dest,path);     // 保存路径，下次备用
-            res.put(dest,set);     // 保存路径，下次备用
+            pos1.put(dest,set);     // 保存路径，下次备用
             return path;
         }
     }
@@ -94,12 +94,25 @@ public class Path {
     }
 
     public HashSet<Pos> getResSet(boolean isEmpty, Point dest) {
-        Map<Point,HashSet<Pos>> path = getResSetMap(isEmpty);
-        if (!path.containsKey(dest)){
-            return null;    // 不包含此条路径，返回空
+        Map<Point,HashSet<Pos>> posMap = getResSetMap(isEmpty);
+        if (!posMap.containsKey(dest)){
+            Map<Point,ArrayList<Point>> paths = getPathMap(isEmpty);
+            HashSet<Pos> pos1 = new HashSet<>();
+            ArrayList<Point> path = Astar.getPathAndResult(isEmpty, src, dest,pos1);
+            paths.put(dest,path);     // 保存路径，下次备用
+            posMap.put(dest,pos1);     // 保存路径，下次备用
         }
-        return path.get(dest);
+        return posMap.get(dest);
     }
+
+//
+//    public HashSet<Pos> getResSet(boolean isEmpty, Point dest) {
+//        Map<Point,HashSet<Pos>> path = getResSetMap(isEmpty);
+//        if (!path.containsKey(dest)){
+//            return null;    // 不包含此条路径，返回空
+//        }
+//        return path.get(dest);
+//    }
 
     private HashSet<Pos> getInterSet(boolean isEmpty, Point dest) {
         Map<Point,HashSet<Pos>> path = getResSetMap(isEmpty);

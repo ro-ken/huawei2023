@@ -108,6 +108,7 @@ public class Mapinfo {
             }
 
             // 往斜边寻找
+            // 开始寻找下一个最佳点，按照F值进行寻找,检查并记录G是否需要更新
             int index = 0;
             for (int i = 0; i < rangeX.length; i++) {
                 for (int j = 0; j < rangeY.length; j++) {
@@ -261,7 +262,7 @@ public class Mapinfo {
         }
     }
 
-    public boolean isInMap(int x, int y) {
+    public static boolean isInMap(int x, int y) {
         if (x < 0 || y < 0 || x >= row || y >= col) {
             return false;
         }

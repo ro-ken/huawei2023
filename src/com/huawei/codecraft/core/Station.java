@@ -120,7 +120,6 @@ public class Station implements Comparable{
         // 要求每种原材料赚的最多的钱，也要求出fps
         fastestComposeFps = 0;
         fastestComposeMoney = 0;
-        Main.printLog(this);
         for (PriorityQueue<Pair> queue : canBuyStationsMap.values()){
             if (queue.size()>0){
                 Station st = queue.peek().key;  // 取价值最高的计算钱和fps

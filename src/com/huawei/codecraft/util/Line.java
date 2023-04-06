@@ -10,6 +10,10 @@ public class Line {
     public Point right;
     public Line() {
     }
+    public Line(Line line) {
+        left = line.left;
+        right = line.right;
+    }
 
     public Line(Point left, Point right) {
         this.left = left;

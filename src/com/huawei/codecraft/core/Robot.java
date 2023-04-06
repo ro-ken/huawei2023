@@ -10,6 +10,7 @@ import com.huawei.codecraft.way.Pos;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Map;
 
 /**
  * @Author: ro_kin
@@ -73,7 +74,12 @@ public class Robot {
     public Line midLine;     // 轨迹下面的线
 
     public boolean tmpSafeMode = false;    // 是否去临时安全点
-    public Point tmpSafePoint;    // 是否去临时安全点
+    public boolean inSafePlace = false;    // 是否到达临时点
+
+    public double lastDis = 100000; // 在临时点判断是否距离另外的机器人越来越远
+    public static double minDis = 0.2; // 判定离临时点多近算到达
+    public int lastDisFps = 0; // 越来越远 经过了几帧
+    public static int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
 
     // 下面参数 无用
     public static double vectorNearOffset = 0.1; // 小于这个角度认为直线重合
@@ -92,6 +98,7 @@ public class Robot {
     public double blockFps = 0;    // 目前阻塞的帧数
     public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
 
+
     public Route route;
 
     static {
@@ -105,7 +112,7 @@ public class Robot {
         fullMinAngle = calcMinAngle(false);
     }
 
-    private Robot winner;
+    public Robot winner;
 
     public Robot(int stationId, double x, double y, int robotId) {
         StationId = stationId;
@@ -216,18 +223,54 @@ public class Robot {
         if (nextStation != null){
 
             ArrayList<Point> path = null;
+            HashSet<Pos> pos1 = null;
             if (lastStation == null){
                 path = nextStation.paths.getPath(true,start);   // 第一次，计算初始化的路径
+                pos1 = nextStation.paths.getResSet(true,start);
                 path = Path.reversePath(path);
             }else {
                 boolean isEmpty = nextStation == srcStation;
                 path = lastStation.paths.getPath(isEmpty,nextStation.pos);
+                pos1 = lastStation.paths.getResSet(isEmpty,nextStation.pos);
 //                path = nextStation.paths.getPath(isEmpty,lastStation.pos);
             }
             Main.printLog(path);
-            route = new Route(nextStation.pos,this,path);
+            route = new Route(nextStation.pos,this,path,pos1);
         }
     }
+
+
+    public void recoveryPath() {
+        // 重新寻找新路径
+        if (nextStation.paths == null) return;
+        tmpSafeMode = false;
+        winner = null;
+        ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);
+        HashSet<Pos> pos1 = nextStation.paths.getResSet(carry==0,pos);
+        path = Path.reversePath(path);
+        route = new Route(nextStation.pos,this,path,pos1);
+        route.calcParamEveryFrame();    // 通用参数
+        calcMoveEquation();     //  运动方程
+        Main.printLog("recovery path"+path);
+    }
+    public void calcTmpRoute(Point sp, Robot winRobot) {
+        tmpSafeMode = true;
+        HashSet<Pos> pos1 = new HashSet<>();
+//        ArrayList<Point> path = Astar.getPath(carry==0,pos,sp);
+        ArrayList<Point> path = Astar.getPathAndResult(carry==0,pos,sp,pos1);
+        if (path.size() >0){
+            path.remove(path.size()-1);
+        }
+        path.add(sp);
+        route = new Route(sp,this,path,pos1);
+        route.calcParamEveryFrame();    // 通用参数
+        calcMoveEquation();     //  运动方程
+        winner = winRobot;      // 设置是给谁避让，后期需要定期探测这个机器人是否到达目标点
+        Main.printLog("sp" + sp);
+
+        Main.printLog("set tmp route"+path);
+    }
+
 
     public static double calcTimeValue(int fps) {
         return f(fps,9000,0.8);
@@ -295,8 +338,9 @@ public class Robot {
     }
 
     public void setBase(Line line, Point point) {
-        baseLine = line;
-        basePoint = point;
+        baseLine = new Line(new Point(line.left),new Point(line.right));
+        basePoint = new Point(point);
+        Main.printLog("this"+this + "line" +line+"bp" + point);
     }
 
 
@@ -400,25 +444,54 @@ public class Robot {
 
     public void rush() {
 
-        //        // 临时目的地判断是否到达
-        //        if (isTempPlace){
-        //            if (route.isArriveTarget()){
-        //                isTempPlace = false;
-        //                if (nextStation == null) return;
-        //                route.target.set(nextStation.pos);// 重新设置目的地
-        //            }
-        //        }
-
         if (nextStation == null) {
             Main.printLog("nextStation is null");
             return;
         }
+//
+//        if (tmpSafeMode && winner.basePoint == null){
+//            recoveryPath();   // 对方通过狭窄路段，重新寻路
+//        }
 
-        if (tmpSafeMode && winner.basePoint == null){
-            setNewPath();   // 对方通过狭窄路段，重新寻路
+        if (tmpSafeMode){
+
+            if (!inSafePlace){
+                // 如果未到安全点，要判断是否到达
+//                if (route.pathIndex<2) return;
+                double dis = pos.calcDistance(route.target);
+                if (dis < minDis) {
+                    inSafePlace = true;
+                }
+            }else {
+                // 到达了安全点，要判断是否能走
+
+                if (roadIsSafe()){
+                    recoveryPath();   // 对方通过狭窄路段，重新寻路
+                }
+            }
         }
 
+
         route.rush2();
+    }
+
+    private boolean roadIsSafe() {
+        // 判断winner已经走过去了
+        // 连续 一段时间两车越来越远，说明过了
+        double dis = winner.pos.calcDistance(pos);
+        if (lastDis < dis){
+            lastDisFps ++;
+        }else {
+            lastDisFps = 0;
+        }
+        lastDis = dis;
+
+        // 超过界限，能动了
+        if (lastDisFps > minLastDisFps){
+            return true;
+        }
+
+        return false;
     }
 
     // 选一个最佳的工作站
@@ -435,9 +508,8 @@ public class Robot {
     public void setSrcDest(Station src, Station dest) {
         nextStation = srcStation = src;
         destStation = dest;
-        Main.printLog(this);
-        Main.printLog("src, "+srcStation);
-        Main.printLog("dest, " + destStation);
+
+        Main.printLog(this + " src, "+srcStation + " dest, " + destStation);
         srcStation.bookPro = true;      // 预定位置
 
         if (destStation.type <= 7)  {   // 8,9 不需要预定
@@ -478,82 +550,20 @@ public class Robot {
         return true;
     }
 
-    // 判断当前任务是否具有可行性，若不可行选一个近的任务
-    private void taskIsOK() {
-        // 主要是看剩余时间是否够
-        if (Main.frameID < Main.JudgeDuration2) return;
-//        if ()
-        int left = Main.duration - Main.frameID;    // 剩余时间
-        boolean flag = false;
-
-        if (waterFlow.isType7) {
-            // 有产品但没有机器人去
-
-            if (srcStation != null && srcStation.type == 7) return;
-
-            int t1 = waterFlow.target.pathToFps(true,pos);   // 跑到target需要多久
-            boolean flag1 = (waterFlow.target.proStatus == 1 || waterFlow.target.leftTime>0);
-            if (!waterFlow.target.bookPro && flag1 && waterFlow.target.positionNoBook()){
-                // 如果有产品或在生产
-                if (waterFlow.target.proStatus == 0 ){
-                    t1 = Math.max(t1,waterFlow.target.leftTime);
-                }
-                int t = t1 + waterFlow.sellMinFps;  // 卖掉7总共的时间
-
-                if (t<left-50 && t>left-4*50){
-                    // 把产品取走
-//                    Main.printLog("choose 7" + waterFlow.target);
-                    setSrcDest(waterFlow.target,waterFlow.target.closest89);
-                    flag = true;
-                }
-            }
-        }
-        if (srcStation == null) return;
-        if (!flag){
-            // 判断其他情况,在剩余时间是否能完成当前任务
-            int t1 = srcStation.pathToFps(true,pos);
-            int t2 = srcStation.pathToFps(false,destStation.pos);
-            int t= t1 + t2 + 100;  // 加上1s的误差，有旋转时间
-            if (t<left){
-                // 当前任务可能完不成了，找找有没有其他能完成的任务，赚点小钱
-                double value = 0;
-                Station src = null;
-                Station dest = null;
-                for (int i = 0; i < Main.stationNum; i++) {
-                    Station st = Main.stations[i];
-                    if (st.canSell() && st.type<=6){
-                        t1 = st.pathToFps(true,pos);
-                        for (Pair p : st.canSellStations) {
-                            Station s = p.key;
-                            if (s.canBuy(st.type)){
-                                t2 = st.pathToFps(false,s.pos);
-                                t= t1 + t2 + 100;  // 加上2s的误差，有旋转时间
-                                double earn = st.calcEarnMoney(s.pos);
-                                if (t<left && earn > value){
-                                    value = earn;
-                                    src = st;
-                                    dest = s;
-                                }
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (value>0){
-                    setSrcDest(src,dest);
-                }
-            }
-        }
-    }
 
     public boolean arriveBasePoint() {
         Point pre = baseLine.left;
-        return isArrivePoint(pre,basePoint);
+        boolean arrive =  isArrivePoint(pre,basePoint);
+        Main.printLog("arrive:" + arrive);
+        return arrive;
     }
 
     public boolean isArrivePoint(Point pre, Point next) {
         double dis1 = pre.calcDistance(next);
         double dis2 = pre.calcDistance(pos);
+//        Main.printLog("bp dis"+dis1);
+//        Main.printLog("pre" + pre + "pos" + pos);
+//        Main.printLog("pos dis"+dis2);
         if (dis2>dis1){
             return true;
         }
@@ -576,39 +586,47 @@ public class Robot {
     public boolean blockDetect() {
         // todo 后面判断是否周围有墙或者机器人
         // 阻塞检测，在某个点阻塞了多少帧，重新设置路径
+
+        if (tmpSafeMode && inSafePlace){
+            return false;   // 如果是等待模式不判定阻塞
+        }
+
+
         if (route.speed.norm() > blockJudgeSpeed){
             blockFps = 0;
         }else {
             blockFps ++;
         }
         if (blockFps >= blockJudgeFps){
-            blockFps = 0;   //后面需要重新寻路
+            blockFps = 0;   //后面需要重新寻路  不属于临时安全模式
             return true;
         }
         return false;
     }
 
+
+//
+//    public void setNewPath() {
+//        // 重新寻找新路径
+//        if (nextStation.paths == null) return;
+//        tmpSafeMode = false;
+//        winner = null;
+//        ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);
+//        path = Path.reversePath(path);
+//        route = new Route(nextStation.pos,this,path);
+//        route.calcParamEveryFrame();    // 通用参数
+//        calcMoveEquation();     //  运动方程
+//        Main.printLog("blocked renew path"+path);
+//    }
+
+
     public void setNewPath() {
         // 重新寻找新路径
-        if (nextStation.paths == null) return;
-        tmpSafeMode = false;
-        winner = null;
-        ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);
-        path = Path.reversePath(path);
-        route = new Route(nextStation.pos,this,path);
-        route.calcParamEveryFrame();    // 通用参数
-        calcMoveEquation();     //  运动方程
-        Main.printLog("blocked renew path"+path);
-    }
-    public void calcTmpRoute(Point sp, Robot winRobot) {
-        tmpSafeMode = true;
-        ArrayList<Point> path = Astar.getPath(carry==0,pos,sp);
-        route = new Route(nextStation.pos,this,path);
-        route.calcParamEveryFrame();    // 通用参数
-        calcMoveEquation();     //  运动方程
-        winner = winRobot;      // 设置是给谁避让，后期需要定期探测这个机器人是否到达目标点
-
-        Main.printLog("set tmp route"+path);
+        if (tmpSafeMode){
+            calcTmpRoute(route.target,winner);
+        }else {
+            recoveryPath();
+        }
     }
 
     public HashSet<Pos> getResultSet(){
@@ -625,6 +643,17 @@ public class Robot {
         }
     }
 
+    public Point selectTmpSafePoint(Point dest,HashSet<Pos> posSet) {
+        // todo
+        Point sp = Astar.getSafePoint(carry == 0, pos, dest, posSet);
+        HashSet<Point> ps = new HashSet<>();
+        for (Pos pos1 : posSet) {
+            ps.add(Astar.Pos2Point(pos1));
+        }
+        Main.printLog(ps);
+
+        return sp;
+    }
 }
 
 
