@@ -33,7 +33,7 @@ public class Astar {
     }
 
     public void blockAvoidMaps(int[][] maps) {
-        int x = targetPosition.x, y = targetPosition.y;
+        int x = ( targetPosition.x +startPosition.x )/ 2,  y = (targetPosition.y + startPosition.y) / 2;
 //        // 使用曼哈顿距离按照远离目标点的地方进行搜索
 //        int dis = Math.abs(startPosition.x - targetPosition.x) + Math.abs(startPosition.y - targetPosition.y);
         // x 的变化小于 y的变化，按照 x 进行封路
@@ -85,8 +85,34 @@ public class Astar {
         return ast.getResult(!isEmpty);
     }
 
+    // 计算两点多长，返回点的个数
+    public static int calcDis(boolean isEmpty,Point src, Point dest){
+        double dis = src.calcDistance(dest);
+        if (dis < 1.0){
+            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())){
+                return 2;
+            }
+        }
+
+        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
+        Astar ast = new Astar(fixMap,src,dest);
+        ast.search();
+
+        return ast.resultList.size();
+    }
+
+
 
     public static Point getSafePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1){
+
+        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
+        Astar ast = new Astar(fixMap,src,dest);
+
+        Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
+        return sp;
+    }
+
+    public static Point getSafePointAndBasePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1){
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
         Astar ast = new Astar(fixMap,src,dest);
@@ -226,25 +252,27 @@ public class Astar {
             // 开始从上下左右依次加入节点
             int[] rangeX = {curPos.x - 1, curPos.x + 1};
             int[] rangeY = {curPos.y - 1, curPos.y + 1};
-
-            if (carry) {
-                if (getFullGrid(curPos, pos1)) {
-                    return Pos2Point(curPos);
-                }
+            if (getFullGrid(curPos, pos1)) {
+                return Pos2Point(curPos);
             }
-            else {
-                int flag = getEmptyGrid(curPos, pos1);
-                if (flag > 0) {
-                    Point p = Pos2Point(curPos);
-                    switch (flag) {
-                        case 1: p.x -= 0.25; p.y += 0.25; break;
-                        case 2: p.x += 0.25; p.y += 0.25; break;
-                        case 3: p.x -= 0.25; p.y -= 0.25; break;
-                        case 4: p.x += 0.25; p.y -= 0.25; break;
-                    }
-                    return p;
-                }
-            }
+//            if (carry) {
+//                if (getFullGrid(curPos, pos1)) {
+//                    return Pos2Point(curPos);
+//                }
+//            }
+//            else {
+//                int flag = getEmptyGrid(curPos, pos1);
+//                if (flag > 0) {
+//                    Point p = Pos2Point(curPos);
+//                    switch (flag) {
+//                        case 1: p.x -= 0.25; p.y += 0.25; break;
+//                        case 2: p.x += 0.25; p.y += 0.25; break;
+//                        case 3: p.x -= 0.25; p.y -= 0.25; break;
+//                        case 4: p.x += 0.25; p.y -= 0.25; break;
+//                    }
+//                    return p;
+//                }
+//            }
             // 上下探索
             int y = curPos.y;
             int flag = 0;

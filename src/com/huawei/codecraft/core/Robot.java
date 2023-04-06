@@ -480,7 +480,7 @@ public class Robot {
         // 判断winner已经走过去了
         // 连续 一段时间两车越来越远，说明过了
         double dis = winner.pos.calcDistance(pos);
-        if (lastDis < dis){
+        if (dis <= 2.5 && lastDis < dis && lineNoWall(pos,winner.pos)){
             lastDisFps ++;
         }else {
             lastDisFps = 0;
@@ -493,6 +493,13 @@ public class Robot {
         }
 
         return false;
+    }
+
+    private boolean lineNoWall(Point src, Point dest) {
+        // 判断两点连线没有墙体
+        Line line = new Line(src,dest);
+        Point wall = Route.getNearBumpWall(line);
+        return wall == null;
     }
 
     // 选一个最佳的工作站
@@ -645,7 +652,7 @@ public class Robot {
     }
 
     public Point selectTmpSafePoint(Point dest,HashSet<Pos> posSet) {
-        // todo
+        // todo 还要传baseP
         Point sp = Astar.getSafePoint(carry == 0, pos, dest, posSet);
         HashSet<Point> ps = new HashSet<>();
         for (Pos pos1 : posSet) {

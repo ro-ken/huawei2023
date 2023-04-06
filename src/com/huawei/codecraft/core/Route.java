@@ -56,7 +56,8 @@ public class Route{
     public Point avoidWallPoint;    // 避免与墙体碰撞的临时点
     public static double avoidWallPointSpeed = Robot.maxSpeed/2.0;    // 判断与墙体会发生碰撞，去往临时点的最大速度
     public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行避让操作
-    public static double predictWillBumpMinDis = 5.0;    // 预测是否会发生碰撞的距离
+    public static double predictWillBumpMinDis = 10;    // 预测是否会发生碰撞的距离
+    public static int minPosNum = 20;    // 预测是否会发生碰撞的点的个数，一个点0.5m左右
 
     public static int wideDis = 8;   //  *0.5
     ArrayList<Integer> unsafeRobotIds;
@@ -448,7 +449,9 @@ public class Route{
     }
 
     public void rush2() {
+
         calcSafeLevel();    // 先计算安全级别
+
         if (unsafeLevel == 0){
             calcSafePrintSpeed2();   // 计算安全速度
 
@@ -525,18 +528,23 @@ public class Route{
 
         // 判断两个机器人是否可能发生碰撞
         // 条件为，是否在对方的路线上，并且距离很近
+        if (roadIsWide()) return false;
         double minDis = 100000;
         willBumpRobot = null;
         for (Robot oth : robot.zone.robots) {
             if (oth == robot || oth.winner == robot) continue;  // 对方避让情况，不避让
+            if (oth.route.roadIsWide()) continue;  // 对方路很宽，不避让
             if (next.equals(target) && robot.pos.calcDistance(next) < notAvoidRobotMinDis) continue;    // 快靠近终点，不避让
             // 未来会发生碰撞
-            if (posSet.contains(Astar.Point2Pos(oth.pos))){
+            if (posSet.contains(Astar.Point2Pos(oth.pos)) && oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
                 double dis = robot.pos.calcDistance(oth.pos);
                 // 距离较近
                 if (dis < predictWillBumpMinDis && dis < minDis){
                     // 取最近的机器人进行避让
-                    willBumpRobot = oth;
+                    int posNum = Astar.calcDis(robot.carry == 0, robot.pos, oth.pos);
+                    if (posNum <= minPosNum){
+                        willBumpRobot = oth;
+                    }
                 }
             }
         }
@@ -600,7 +608,7 @@ public class Route{
         return d1 <= d2 ? p1:p2;
     }
 
-    private Point getNearBumpWall(Line line) {
+    public static Point getNearBumpWall(Line line) {
         // 查看此条线段最近的墙体
         if (posIsWall(line.left)){
 //            Main.printLog("left" + line.left);
@@ -618,7 +626,7 @@ public class Route{
     }
 
     // 找出直线在x方格内所有的最近的墙
-    private Point getWallByX(double x, Line line) {
+    public static Point getWallByX(double x, Line line) {
         double offset = line.left.x < line.right.x ? 0.24 : -0.24;
         Point start = line.getFixPoint(x);
         Point end = line.getFixPoint(start.x + offset);
@@ -626,7 +634,7 @@ public class Route{
         return wall;
     }
 
-    private Point getWallBy2Point(Point start, Point end) {
+    public static Point getWallBy2Point(Point start, Point end) {
         // 两个点的x都是相同的，判断夹住的point
         if (start.equals(end) && posIsWall(start)) return start;
 
@@ -808,7 +816,7 @@ public class Route{
             // 首先比较对方是否快到终点，自己避让
             return robot;
         }
-        if (oth.route.roadIsWide(robot)){
+        if (oth.route.roadIsWide()){
             return oth; // 对方路很宽，对方避让
         }
 
@@ -839,7 +847,7 @@ public class Route{
         return fps;
     }
 
-    private boolean roadIsWide(Robot oth) {
+    public boolean roadIsWide() {
         // 判断路的宽度是否够两个车过
         // 先找出机器人所在点的位置，以及方向
         // 若有是载物的，判断是否小于5个点，其他情况判断是否小于4个点
@@ -916,7 +924,7 @@ public class Route{
         return wide;
     }
 
-    private boolean posIsWall(double x, double y) {
+    public static boolean posIsWall(double x, double y) {
         if (notInMap(x,y)){
             return true;
         }
@@ -927,12 +935,12 @@ public class Route{
 //        Main.printLog(Main.wallMap[x1][y1] == -2);
         return Main.wallMap[pos.x][pos.y] == -2;
     }
-    private boolean posIsWall(Point point) {
+    public static boolean posIsWall(Point point) {
         return posIsWall(point.x,point.y);
     }
 
 
-    private boolean notInMap(double x, double y) {
+    public static boolean notInMap(double x, double y) {
         // 是否不在地图内
         boolean flag1 = x <= 0 || y <= 0;
         boolean flag2 = x >= 50 || y >= 50;
