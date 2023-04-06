@@ -1,7 +1,10 @@
 package com.huawei.codecraft.util;
 
+import com.huawei.codecraft.Main;
 import com.huawei.codecraft.core.Robot;
 import com.huawei.codecraft.core.Station;
+import com.huawei.codecraft.way.Astar;
+import com.huawei.codecraft.way.Pos;
 
 import java.util.LinkedList;
 import java.util.Objects;
@@ -70,8 +73,24 @@ public class Point{
     
     // 当前坐标是否靠近墙体
     public boolean nearWall() {
-        return x < 1 || x > 49 || y < 1 || y > 49;
+        Pos pos = Astar.Point2Pos(this);
+        // 周围2格有墙就算
+        int[] off = new int[]{0,1,-1,2,-2};
+        for (int i = 0; i < off.length; i++) {
+            for (int j = 0; j < off.length; j++) {
+                if (posIsWall(pos.x + off[i], pos.y + off[i])){
+                    return true;
+                }
+            }
+        }
+        return false;
     }
+
+    private boolean posIsWall(int x, int y) {
+        if (x <0 || y<0 || x>99 || y>99) return true;
+        return Main.wallMap[x][y] == -2;
+    }
+
 
     public void set(double x,double y){
         this.x = x;

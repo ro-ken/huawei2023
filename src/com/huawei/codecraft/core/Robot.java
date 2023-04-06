@@ -97,6 +97,7 @@ public class Robot {
     public static int blockJudgeFps = 20 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点
     public double blockFps = 0;    // 目前阻塞的帧数
     public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
+    public static double detectWallWideCoef = 0.8 ;    // 半径乘子，判断从圆心多远的地方
 
 
     public Route route;
@@ -200,7 +201,7 @@ public class Robot {
     public void calcMoveEquation() {
 
         if (route.vector.x == 0) return;// 不能是垂直的情况，在调用此函数之前事先要做出判断
-        double radius = getRadius();
+        double radius = getRadius() * detectWallWideCoef;
         Point[] src = getPoints(pos.x,pos.y,radius);
         Point[] dest = getPoints(route.next.x,route.next.y,radius);
         topLine.setValue(src[0],dest[0]);

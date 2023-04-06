@@ -19,6 +19,7 @@ public class Route{
     public HashSet<Pos> posSet;     // 存储行进路径的，pos，创建route的时候需要赋值
     public int pathIndex;   // 指向next一个点
     public Point next;  // 下一个要到的点
+    public double changeAngle = Robot.pi;  // 当前路线和下一条路线的夹角，若夹角较小，直接冲
 
     public Point vector;    //两点的向量
     public Point speed;     // 速度向量
@@ -55,9 +56,11 @@ public class Route{
     public Point avoidWallPoint;    // 避免与墙体碰撞的临时点
     public static double avoidWallPointSpeed = Robot.maxSpeed/2.0;    // 判断与墙体会发生碰撞，去往临时点的最大速度
     public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行避让操作
+    public static double predictWillBumpMinDis = 5.0;    // 预测是否会发生碰撞的距离
 
     public static int wideDis = 8;   //  *0.5
     ArrayList<Integer> unsafeRobotIds;
+    Robot willBumpRobot;
     public int unsafeLevel;     //当前不安全级别  (1-3)
 
     public Route(Point tarPos,Robot robot,ArrayList<Point> path,HashSet<Pos> posSet) {
@@ -74,9 +77,18 @@ public class Route{
 
     private Point getNextPoint() {
         if (pathIndex == path.size()){
+            changeAngle = Robot.pi; //最后一个点了，调到最大
             return target;
         }else {
-            return path.get(pathIndex++);
+            Point next = path.get(pathIndex++);
+//            Main.printLog(path);
+//            Main.printLog(pathIndex);
+//            if (pathIndex>1 && path.size()>2){
+//                Point vec1 = path.get(pathIndex - 2).calcVector(next);
+//                Point vec2 = next.calcVector(path.get(pathIndex));
+//                changeAngle = vec1.calcDeltaAngle(vec2);
+//            }
+            return next;
         }
     }
 
@@ -186,6 +198,11 @@ public class Route{
 
     public void calcSafePrintSpeed2() {
 
+
+        if (!robot.tmpSafeMode && next.equals(target) && next.nearWall()){
+            // 终点若有墙需要提前减速
+            stopMinDistance +=cornerStopMinDistance;
+        }
 
         //计算线速度
         if (realAngleDistance < Robot.canForwardRad && stopMinDistance < realDistance){
@@ -439,7 +456,7 @@ public class Route{
             // 与墙体会碰撞
             handleUnsafeLevel1();
 
-//            calcSafePrintSpeed();   // 计算安全速度
+//            calcSafePrintSpeed();
         }else if (unsafeLevel == 2){
             // 与其他机器人会发生碰撞
             handleUnsafeLevel2();
@@ -462,7 +479,9 @@ public class Route{
         next = avoidWallPoint;  // 零时更改点
         calcParamEveryFrame();     // 重新计算路线
         calcSafePrintSpeed2();   // 计算速度
-        printLineSpeed = Math.min(avoidWallPointSpeed,printLineSpeed);  // 不能太快
+        if (robot.carry == 1){
+            printLineSpeed = Math.min(avoidWallPointSpeed,printLineSpeed);  // 满载不能太快
+        }
         next = t ;//    改回来
     }
 
@@ -471,18 +490,20 @@ public class Route{
         unsafeLevel = 0;    // 先置位安全状态
         if (!robot.tmpSafeMode){
             // 如果不是这个模式，需要检测和其他机器人是否碰撞
-            if (canBump()){
+            if (willBump()){
+                setTmpSafeMode2();
+            }else if (canBump()){
                 unsafeLevel = 2;
-                // 如果会碰撞，判断对方是否是临时模式，若不是，在做判断，若是，正常行走就行
-                Robot oth = Main.robots[unsafeRobotIds.get(0)];
-                boolean flag1 = (next.equals(target) && robot.pos.calcDistance(next) < notAvoidRobotMinDis);    // 快靠近终点
-                boolean flag2 = oth.tmpSafeMode;    // 对方是安全模式， todo 是否要考虑多车堵住的情况
-                if (!flag1 && !flag2 && !roadIsWide(oth)){
-                    // 未到终点，都不是临时模式，而且路很窄
-//                    setTmpSafeMode();
-                    setTmpSafeMode2();
-                    unsafeLevel = 0;    //不进行碰撞检测
-                }
+//                // 如果会碰撞，判断对方是否是临时模式，若不是，在做判断，若是，正常行走就行
+//                Robot oth = Main.robots[unsafeRobotIds.get(0)];
+//                boolean flag1 = (next.equals(target) && robot.pos.calcDistance(next) < notAvoidRobotMinDis);    // 快靠近终点
+//                boolean flag2 = oth.tmpSafeMode;    // 对方是安全模式， todo 是否要考虑多车堵住的情况
+//                if (!flag1 && !flag2 && !roadIsWide(oth)){
+//                    // 未到终点，都不是临时模式，而且路很窄
+////                    setTmpSafeMode();
+//                    setTmpSafeMode2();
+//                    unsafeLevel = 0;    //不进行碰撞检测
+//                }
             }
         }
         if (unsafeLevel == 0){
@@ -498,6 +519,28 @@ public class Route{
                 // 运动3
             }
         }
+    }
+
+    private boolean willBump() {
+
+        // 判断两个机器人是否可能发生碰撞
+        // 条件为，是否在对方的路线上，并且距离很近
+        double minDis = 100000;
+        willBumpRobot = null;
+        for (Robot oth : robot.zone.robots) {
+            if (oth == robot || oth.winner == robot) continue;  // 对方避让情况，不避让
+            if (next.equals(target) && robot.pos.calcDistance(next) < notAvoidRobotMinDis) continue;    // 快靠近终点，不避让
+            // 未来会发生碰撞
+            if (posSet.contains(Astar.Point2Pos(oth.pos))){
+                double dis = robot.pos.calcDistance(oth.pos);
+                // 距离较近
+                if (dis < predictWillBumpMinDis && dis < minDis){
+                    // 取最近的机器人进行避让
+                    willBumpRobot = oth;
+                }
+            }
+        }
+        return willBumpRobot != null;
     }
 
     // 为了防止与墙体碰撞设立的临时点
@@ -566,11 +609,10 @@ public class Route{
         double offset = line.left.x < line.right.x ? 0.26 : -0.26;  // 刚好是下一个点
         double x = line.left.x;
 
-        while (Math.abs(x - next.x) > 0.5){
+        while (Math.abs(x - line.right.x) > 1.0){
             Point wall = getWallByX(x,line);
             if (wall != null) return wall;
             x =Point.fixAxis2Center(x)+offset;
-
         }
         return null;
     }
@@ -616,7 +658,7 @@ public class Route{
 
     private void setTmpSafeMode2() {
         // 判断两辆车，应该让谁避让
-        Robot other = Main.robots[unsafeRobotIds.get(0)];
+        Robot other = willBumpRobot;
 
         Robot weakRobot = selectWeakRobot(other);
         // 避让车标志位赋值，安全点赋值
@@ -755,6 +797,13 @@ public class Route{
         // 判断自己和另一个机器人谁更弱小，谁让路
         // todo 后面可以修改
 
+        if (oth.tmpSafeMode){
+            return robot;   // 对方已经是避让模式，自己避让
+        }
+
+        Main.printLog("this" + robot);
+        Main.printLog(oth.route);
+        Main.printLog(oth.route.next);
         if (oth.route.next.equals(oth.route.target) && oth.pos.calcDistance(oth.route.next) < notAvoidRobotMinDis){
             // 首先比较对方是否快到终点，自己避让
             return robot;
