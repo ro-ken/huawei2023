@@ -90,7 +90,11 @@ public class Astar {
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
         Astar ast = new Astar(fixMap,src,dest);
+<<<<<<< HEAD
         // ast.search();
+=======
+//        ast.search();
+>>>>>>> f0364948050011c28a6fea603929f021fc0947c7
         Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
         return sp;
     }
