@@ -1,4 +1,5 @@
 package com.huawei.codecraft.way;
+import java.util.*;;
 
 // 记录点的坐标
 public class Pos {
@@ -12,14 +13,15 @@ public class Pos {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (o == null || getClass() != o.getClass()) {
-            return false;
-        }
-        Pos pos = (Pos) o;
-        return x == pos.x && y == pos.y;
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Pos pos = (Pos) o;
+    return x == pos.x && y == pos.y;
+    }
+    
+    @Override
+    public int hashCode() {
+    return Objects.hash(x, y);
     }
 
     public void setX(int x) {
@@ -28,5 +30,12 @@ public class Pos {
 
     public void setY(int y) {
         this.y = y;
+    }
+
+    @Override
+    public String toString() {
+        return "(" + x +
+                ", " + y +
+                ')';
     }
 }

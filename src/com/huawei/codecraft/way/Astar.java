@@ -57,19 +57,6 @@ public class Astar {
                 y++;
             }
         }
-//        // 该点是否是远离目标点的位置
-//        if (Math.abs(x - targetPosition.x) + Math.abs(y - targetPosition.y) > dis) {
-//            return new Pos(x, y);
-//        }
-//        else {
-//            // 变化的是 y
-//            if (x == startPosition.x) {
-//                return new Pos(x, startPosition.y + 1);
-//            }
-//            else {
-//                return new Pos(startPosition.x + 1, y);
-//            }
-//        }
     }
 
     // 创建两点之间的直线方程
@@ -103,7 +90,7 @@ public class Astar {
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
         Astar ast = new Astar(fixMap,src,dest);
-        ast.search();
+        // ast.search();
         Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
         return sp;
     }
@@ -142,7 +129,7 @@ public class Astar {
     // 空载需要找 2 * 2 的网格，从该点进行寻找 -1 没找到，1 代表左上方 2 代表右上方 3 代表左下方 4 代表右下方
     public int getEmptyGrid(Pos curPos, HashSet<Pos> set) {
         if (set.contains(curPos)) {
-            return -1;
+            return 0;
         }
         // 15 = 1111(2) 代表上下左右
         int ret = 15;
@@ -155,7 +142,7 @@ public class Astar {
             ret &= 11;
         }
         if (ret  == 3) {
-            return -1;
+            return 0;
         }
         // 左
         if (!Mapinfo.isInMap(curPos.x, curPos.y - 1) || set.contains(new Pos(curPos.x, curPos.y - 1)) || Mapinfo.mapInfoOriginal[curPos.x][ curPos.y - 1] == -2) {
@@ -166,43 +153,43 @@ public class Astar {
             ret &= 14;
         }
         if ((ret & 3) == 0) {
-            return -1;
+            return 0;
         }
         // 斜左上
-        if ((ret & 10) != 0 && !set.contains(new Pos(curPos.x - 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y - 1] != -2) {
+        if ((ret & 10) != 0 && Mapinfo.isInMap(curPos.x - 1, curPos.y - 1)  && !set.contains(new Pos(curPos.x - 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y - 1] != -2) {
             return 1;
         }
         // 斜右上
-        if ((ret & 9) != 0 && !set.contains(new Pos(curPos.x - 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y + 1] != -2) {
+        if ((ret & 9) != 0 && Mapinfo.isInMap(curPos.x - 1, curPos.y + 1) && !set.contains(new Pos(curPos.x - 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y + 1] != -2) {
             return 2;
         }
         // 斜左下
-        if ((ret & 6) != 0 && !set.contains(new Pos(curPos.x + 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y - 1] != -2) {
+        if ((ret & 6) != 0 && Mapinfo.isInMap(curPos.x + 1, curPos.y - 1) && !set.contains(new Pos(curPos.x + 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y - 1] != -2) {
             return 3;
         }
         // 斜右下
-        if ((ret & 5) != 0 && !set.contains(new Pos(curPos.x + 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y + 1] != -2) {
+        if ((ret & 5) != 0 && Mapinfo.isInMap(curPos.x + 1, curPos.y + 1) && !set.contains(new Pos(curPos.x + 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y + 1] != -2) {
             return 4;
         }
-        return -1;
+        return 0;
     }
     // 0 代表找到，-1 没找到
-    public int getFullGrid(Pos curPos, HashSet<Pos> set) {
+    public boolean getFullGrid(Pos curPos, HashSet<Pos> set) {
         // 从当前点寻找 3 * 3 网格
         if (set.contains(curPos)) {
-            return -1;
+            return false;
         }
         // 判断周围 8个方向是否符合条件
         int[] rangeX = {curPos.x - 1, curPos.x + 1};
         int[] rangeY = {curPos.y - 1, curPos.y + 1};
         if (!Mapinfo.isInMap(curPos.x - 1, curPos.y - 1) || !Mapinfo.isInMap(curPos.x + 1, curPos.y + 1)) {
-            return -1;
+            return false;
         }
         // 左右
         int y = curPos.y;
         for (int x : rangeX) {
             if (set.contains(new Pos(x, y)) || Mapinfo.mapInfoOriginal[x][y] == -2) {
-                return -1;
+                return false;
             }
         }
         // 上下
@@ -210,7 +197,7 @@ public class Astar {
         for (int i = 0; i < rangeY.length; i++) {
             y = rangeY[i];
             if (set.contains(new Pos(x, y)) || Mapinfo.mapInfoOriginal[x][y] == -2) {
-                return -1;
+                return false;
             }
         }
         // 斜向
@@ -220,11 +207,11 @@ public class Astar {
                 y = rangeY[j];
             }
             if (set.contains(new Pos(x, y)) || Mapinfo.mapInfoOriginal[x][y] == -2) {
-                return -1;
+                return false;
             }
         }
 
-        return 0;
+        return true;
     }
 
     public Point getPoint(int[][] maps, boolean carry, HashSet<Pos> pos1) {
@@ -235,89 +222,67 @@ public class Astar {
         while (openList.size() != 0) {
             Pos curPos = openList.get(0);
             openList.remove(curPos);
-
             // 上下左右四个方向探索
             // 开始从上下左右依次加入节点
             int[] rangeX = {curPos.x - 1, curPos.x + 1};
             int[] rangeY = {curPos.y - 1, curPos.y + 1};
 
+            if (carry) {
+                if (getFullGrid(curPos, pos1)) {
+                    return Pos2Point(curPos);
+                }
+            }
+            else {
+                int flag = getEmptyGrid(curPos, pos1);
+                if (flag > 0) {
+                    Point p = Pos2Point(curPos);
+                    switch (flag) {
+                        case 1: p.x -= 0.25; p.y += 0.25; break;
+                        case 2: p.x += 0.25; p.y += 0.25; break;
+                        case 3: p.x -= 0.25; p.y -= 0.25; break;
+                        case 4: p.x += 0.25; p.y -= 0.25; break;
+                    }
+                    return p;
+                }
+            }
             // 上下探索
             int y = curPos.y;
+            int flag = 0;
             for (int x : rangeX) {
-                if (Mapinfo.isInMap(x, y) && maps[x][y] == 0) {
-                    maps[x][y] = 1; // 节点设置已探索
-                    Pos explorePos = new Pos(x, y);
-                    openList.add(explorePos);
-                    // 判断该节点是否能找到 2*2 的网格
-                    int flag = 0;
-                    if (carry) {
-                        flag = getFullGrid(explorePos, pos1);
-                    }
-                    else {
-                        flag = getEmptyGrid(explorePos, pos1);
-                    }
-                    if (flag >= 0) {
-                        Point ret = Pos2Point(explorePos);
-                        if (flag == 0) {
-                            return ret;
-                        }
-                        else if (flag == 1) {
-                            ret.x -= 0.25;
-                            ret.y += 0.25;
-                        }
-                        else if (flag == 2) {
-                            ret.x += 0.25;
-                            ret.y += 0.25;
-                        }
-                        else if (flag == 3) {
-                            ret.x -= 0.25;
-                            ret.y -= 0.25;
-                        }
-                        else {
-                            ret.x += 0.25;
-                            ret.y -= 0.25;
-                        }
-                        return ret;
+                if (Mapinfo.isInMap(x, y)) {
+                    flag = (flag | (maps[x][y] == 2 ? 1 : 0)) << 1;
+                    if (maps[x][y] == 0) {
+                        maps[x][y] = 1; // 节点设置已探索
+                        Pos explorePos = new Pos(x, y);
+                        openList.add(explorePos);
                     }
                 }
             }
+            // 左右
             int x = curPos.x;
             for (int i = 0; i < rangeY.length; i++) {
                 y = rangeY[i];
-                if (Mapinfo.isInMap(x, y) && maps[x][y] == 0) {
-                    maps[x][y] = 1; // 节点设置已探索
-                    Pos explorePos = new Pos(x, y);
-                    openList.add(explorePos);
-                    // 判断该节点是否能找到 2*2 的网格
-                    int flag = 0;
-                    if (carry) {
-                        flag = getFullGrid(explorePos, pos1);
+                if (Mapinfo.isInMap(x, y)) {
+                    flag = (flag | (maps[x][y] == 2 ? 1 : 0)) << 1;
+                    if (maps[x][y] == 0) {
+                        maps[x][y] = 1; // 节点设置已探索
+                        Pos explorePos = new Pos(x, y);
+                        openList.add(explorePos);
                     }
-                    else {
-                        flag = getEmptyGrid(explorePos, pos1);
-                    }
-                    if (flag >= 0) {
-                        Point ret = Pos2Point(explorePos);
-                        if (flag == 0) {
-                            return ret;
+                }
+            }
+            // 往斜边寻找
+            // 开始寻找下一个最佳点，按照F值进行寻找,检查并记录G是否需要更新
+            for (int i = 0; i < rangeX.length; i++) {
+                for (int j = 0; j < rangeY.length; j++) {
+                    x = rangeX[i];
+                    y = rangeY[j];
+                    if (Mapinfo.isInMap(x, y) ) {
+                        if (maps[x][y] == 0) {
+                            maps[x][y] = 1; // 节点设置已探索
+                            Pos explorePos = new Pos(x, y);
+                            openList.add(explorePos);
                         }
-                        else if (flag == 1) {
-                            ret.x -= 0.25;
-                            ret.y += 0.25;
-                        }
-                        else if (flag == 2) {
-                            ret.x += 0.25;
-                            ret.y += 0.25;
-                        }
-                        else if (flag == 3) {
-                            ret.x -= 0.25;
-                            ret.y -= 0.25;
-                        }
-                        else {
-                            ret.x += 0.25;
-                            ret.y -= 0.25;
-                        }
-                        return ret;
                     }
                 }
             }
@@ -329,9 +294,9 @@ public class Astar {
 
         int[][] maps = new int[Mapinfo.row][Mapinfo.col];
         initAvoidMaps(maps);    // 用于找避让点的地图，0 未探索 1 已探索 2 障碍物
-       blockAvoidMaps(maps);       // 阻塞地图，减小计算量
-        //        targetPosition = Point2Pos(newTargePoint);
-
+        blockAvoidMaps(maps);       // 阻塞地图，减小计算量
+        // Main.printLog(startPosition);
+        // Main.printLog(targetPosition);
         return getPoint(maps, carry,pos1);
     }
 
@@ -341,8 +306,6 @@ public class Astar {
         mergeResultList();
         fixRoute(carry);    // 修正得到的结果
         return result;
-        // mergeResult(carry);
-        // return result;
     }
 
     // 将得到的路径左边合并并返回结果
@@ -449,6 +412,9 @@ public class Astar {
             for (int j = 0; j < Mapinfo.col; j++) {
                 if (Mapinfo.mapInfoOriginal[i][j] == -2) {
                     maps[i][j] = 2;
+                }
+                else {
+                    maps[i][j] = 0;
                 }
             }
         }
