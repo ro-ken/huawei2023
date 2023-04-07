@@ -9,11 +9,11 @@ public class Astar {
     static int[] bits = {20, 18, 12, 10};   // 用于判断斜边是否可以通过，按照上下左右是否有障碍物进行位运算
     static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
     static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
-
+    static int findTimes = 100;
+    static int maxTimes = 10000;
     public Pos startPosition;
     public Pos targetPosition;
     public Board board;
-
     public ArrayList<Pos> openList ;     // 存储待扩展节点
     // ArrayList<Msg> closeList;         // 存储已探索节点，被优化
     // 后续使用优先队列进行优化
@@ -184,7 +184,8 @@ public class Astar {
         boolean flag = false;
         Pos minPos = new Pos();
         double mindis = 50;
-        while(!flag) {   // 检查是否检测到了
+        int times = 0;
+        while(!flag && times != findTimes) {   // 检查是否检测到了
               for (int i = 0; i < dirX.length; i++) {
                     int x = pos.x + dirX[i] * step;
                     int y = pos.y + dirY[i] * step;
@@ -199,6 +200,10 @@ public class Astar {
                     }
               }
               step++;
+              times++;
+        }
+        if (times == findTimes) {
+            return null;
         }
         return Pos2Point(minPos);
     }
@@ -221,12 +226,16 @@ public class Astar {
         return true;
     }
 
-    public Point getPoint(int[][] maps, boolean carry, HashSet<Pos> pos1) {
+    public Point getPoint(int[][] maps, HashSet<Pos> pos1) {
+        if (pos1.size() == 0) {
+            return null;
+        }
         ArrayList<Pos> openList = new ArrayList<Pos>();; // 存储带拓展节点
         openList.add(startPosition);
         maps[startPosition.x][startPosition.y] = 1; // 起点已探索
-
-        while (openList.size() != 0) {
+        int time = 0;
+        while (openList.size() != 0 && time != maxTimes) {
+            time++;
             Pos curPos = openList.get(0);
             openList.remove(curPos);
             // 上下左右四个方向探索
@@ -254,7 +263,7 @@ public class Astar {
         blockAvoidMaps(maps);       // 阻塞地图，减小计算量
         // Main.printLog(startPosition);
         // Main.printLog(targetPosition);
-        return getPoint(maps, carry,pos1);
+        return getPoint(maps, pos1);
     }
 
     // 将得到的路径左边合并并返回结果坐标
@@ -323,10 +332,12 @@ public class Astar {
         double x2 = Pos2Point(endPos).x;
         double y2 = Pos2Point(endPos).y;
 
+        int times = 0;
         // 斜率大于1 得以 y 为增量，看 x 轴方向是否出现障碍
         if (Math.abs(param.k) > 1) {
             int turn = y1 < y2 ? 1 : -1;
-            for (double y = y1 + step * turn; (y - y2) * turn - 0.01 < 0 ; y += step * turn) {
+            for (double y = y1 + step * turn; (y - y2) * turn - 0.01 < 0 && times != 100; y += step * turn) {
+                times++;
                 double x = (y - param.b) / param.k;
                 Pos nexPos = Point2Pos(new Point(x, y));
                 // 连接线上的点，上下不能有障碍物
@@ -345,7 +356,8 @@ public class Astar {
         else {
             int turn = x1 < x2 ? 1 : -1;
             // 从起点和终点开始判断是否能够舍弃该点,相邻点直接舍弃
-            for (double x = x1 + step * turn; (x - x2) * turn - 0.01 < 0 ; x += step * turn) {
+            for (double x = x1 + step * turn; (x - x2) * turn - 0.01 < 0 && times != 100; x += step * turn) {
+                times++;
                 double y =  param.k * x + param.b;
                 Pos nexPos = Point2Pos(new Point(x, y));
                 // 连接线上的点，上下不能有障碍物
@@ -422,16 +434,19 @@ public class Astar {
     public void search() {
         board.getMsg(startPosition).isOK = 1;    // 起点设为已探索
         openList.add(startPosition);                // 从起点开始探索
-        while (openList.size() != 0) {
+        int times = 0;
+        while (openList.size() != 0 && times != maxTimes) {
             // Pos currentPosition = openList.poll();  // 获取堆顶元素并移除
+            times++;
             Pos currentPosition = openList.get(0);
             openList.remove(currentPosition);
 
             // 找到了终点
             if (currentPosition.equals(targetPosition)) {
 //                System.out.println("成功找到路径解");
-
-                while (currentPosition != null) {
+                int times1 = 0;
+                while (currentPosition != null && times1 != maxTimes) {
+                    times1++;
                     resultList.add(currentPosition);
                     currentPosition = board.getMsg(currentPosition).parent; // 获取当前节点的父节点
                 }
