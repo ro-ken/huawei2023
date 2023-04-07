@@ -418,5 +418,16 @@ public class Station implements Comparable{
     public int[] getRaws() {
         return item[type].call;
     }
+
+    // 判断预定的数量
+    public int bookRawNum() {
+        int i=0;
+        for (int tp : item[type].call) {
+            if (bookRow[tp]){
+                i++;
+            }
+        }
+        return i;
+    }
 }
 

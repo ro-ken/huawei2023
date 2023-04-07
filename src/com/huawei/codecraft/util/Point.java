@@ -194,4 +194,28 @@ public class Point{
         return ((int) (t / 0.5)) * 0.5 + 0.25;
     }
 
+    public boolean nearStation() {
+        // 附近是否有工作台
+        Pos pos = Astar.Point2Pos(this);
+        // 周围2格有墙就算
+        int dis = 3;
+        for (int i = -dis; i <= dis; i++) {
+            for (int j = -dis; j <= dis; j++) {
+                if (posIsStation(pos.x + i, pos.y + j)){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean posIsStation(int x, int y) {
+        if (x <0 || y<0 || x>99 || y>99) return false;
+        return Main.wallMap[x][y] <=50 && Main.wallMap[x][y] >=0;
+    }
+
+    public void set(Pos pos) {
+        Point p= Astar.Pos2Point(pos);
+        set(p);
+    }
 }

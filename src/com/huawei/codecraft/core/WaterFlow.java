@@ -106,6 +106,16 @@ public class WaterFlow {
             return;
         }
 
+        // 4、买卖未来可买卖商品
+//        Station dest = selectSlowestStationLast();
+        dest = selectSlowestStationLast();
+        if (dest != null){
+            src = selectClosestSrcToDestLast(robot,dest);
+
+            robot.setSrcDest(src,dest);
+            return;
+        }
+
         // 3、是否有7号产品出售
         if (target.canSell()){
             robot.setSrcDest(target,target.closest89);
@@ -119,14 +129,6 @@ public class WaterFlow {
             return;
         }
 
-//        // 4、买卖未来可买卖商品
-//        dest = select456StationLast();
-//        if (dest != null){
-//            src = selectClosestSrcToDestLast(robot,dest);
-//
-//            robot.setSrcDest(src,dest);
-//            return;
-//        }
     }
 
     //选择取货时间最短的，取货时间 = max {走路时间，生成时间}
@@ -151,44 +153,6 @@ public class WaterFlow {
         }
         return shortestStation;
     }
-
-    // 未来能合成的也去合成
-    public Station select456StationLast() {
-        // 选择 可用的 456 号工作台进行生成
-        ArrayList<Integer> tasks = selectSlowestTask();
-        int taskId = -1;
-        HashSet<Integer> used = new HashSet<>();
-        if (tasks.size() == 1){
-            // 有一个进度最低的，直接选择该任务
-            taskId = tasks.get(0);
-        }else {
-            taskId = fairSelectTask(tasks);
-        }
-        used.add(taskId);
-        Station task = newTaskLast(taskId);
-        if (task == null && tasks.size() == 2){
-            // 未分配成功，分配另一个
-            if (tasks.get(0) == taskId){
-                taskId = tasks.get(1);
-            }else {
-                taskId = tasks.get(0);
-            }
-            used.add(taskId);
-            task = newTaskLast(taskId);
-        }
-        if (task == null){
-            for (int i = 4; i <=6 ; i++) {
-                if (!used.contains(i)){
-                    task = newTaskLast(i);
-                    if (task != null) {
-                        break;  // 找到一个可用的
-                    }
-                }
-            }
-        }
-        return task;
-    }
-
 
     // 机器人在789号工作台时的调度
     private void sta789Sched(Robot robot) {
@@ -307,14 +271,21 @@ public class WaterFlow {
         return st;
     }
 
+    // 456 专属算法
     public Station selectClosestSrcToDestLast(Robot robot,Station dest) {
         // 选择距离dest和自己最近的src
         // 距离 =  robot -> src -> dest
         double minTime = 100000;
         Station st = null;
+        int books = dest.bookRawNum();
         for (int ty : dest.getRaws()) {
-            // 只要不是被预定的就行
-            if (dest.bookRow[ty]) continue;
+            // 前面判断过了， books <2
+            if (books == 0){
+                if (!dest.canBuy(ty)) continue;
+            }else {
+                // 只要不是被预定的就行
+                if (dest.bookRow[ty]) continue;
+            }
 
             for (Station s:Main.stationsMap.get(ty)){
                 // 第一段空载，第二段满载
@@ -456,8 +427,9 @@ public class WaterFlow {
         for (Pair p :pairs){
             // 选择当前没有被占用,并且可以生产的station
             Station st = p.key;
-            // 后一项保证前面运算的货物能生产，原料格能够空出来
-            if (st.bookNum<2 && (st.proStatus==0 || st.leftTime == -1)){
+            // 后一项保证前面运算的货物能生产，原料格能够空出来,
+            // 为了防止堵死情况，可以再加个判断，pairs.size() == 1
+            if (st.bookRawNum()<2 && (st.proStatus==0 || st.leftTime == -1)){
                 return st;
             }
         }
@@ -491,6 +463,42 @@ public class WaterFlow {
             for (int i = 4; i <=6 ; i++) {
                 if (!used.contains(i)){
                     task = newTask(i);
+                    if (task != null) {
+                        break;  // 找到一个可用的
+                    }
+                }
+            }
+        }
+        return task;
+    }
+
+    // 进度最慢的工作站
+    private Station selectSlowestStationLast() {
+        ArrayList<Integer> tasks = selectSlowestTask();
+        int taskId = -1;
+        HashSet<Integer> used = new HashSet<>();
+        if (tasks.size() == 1){
+            // 有一个进度最低的，直接选择该任务
+            taskId = tasks.get(0);
+        }else {
+            taskId = fairSelectTask(tasks);
+        }
+        used.add(taskId);
+        Station task = newTaskLast(taskId);
+        if (task == null && tasks.size() == 2){
+            // 未分配成功，分配另一个
+            if (tasks.get(0) == taskId){
+                taskId = tasks.get(1);
+            }else {
+                taskId = tasks.get(0);
+            }
+            used.add(taskId);
+            task = newTaskLast(taskId);
+        }
+        if (task == null){
+            for (int i = 4; i <=6 ; i++) {
+                if (!used.contains(i)){
+                    task = newTaskLast(i);
                     if (task != null) {
                         break;  // 找到一个可用的
                     }

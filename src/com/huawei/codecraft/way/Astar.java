@@ -33,28 +33,15 @@ public class Astar {
     }
 
     public void blockAvoidMaps(int[][] maps) {
-        int x = ( targetPosition.x +startPosition.x )/ 2,  y = (targetPosition.y + startPosition.y) / 2;
-//        // 使用曼哈顿距离按照远离目标点的地方进行搜索
-//        int dis = Math.abs(startPosition.x - targetPosition.x) + Math.abs(startPosition.y - targetPosition.y);
-        // x 的变化小于 y的变化，按照 x 进行封路
-        if (Math.abs(startPosition.x - targetPosition.x) <= Math.abs(startPosition.y - targetPosition.y)) {
-            while (x > 0 && maps[x][y] != 2) {
-                maps[x][y] = 2;
-                x--;
-            }
-            while (x < Mapinfo.row && maps[x][y] != 2) {
-                maps[x][y] = 2;
-                x++;
-            }
-        }
-        else {  // x 的变化大于 y的变化，按照 y 进行封路
-            while (y > 0 && maps[x][y] != 2) {
-                maps[x][y] = 2;
-                y--;
-            }
-            while (y < Mapinfo.col && maps[x][y] != 2) {
-                maps[x][y] = 2;
-                y++;
+        int x = targetPosition.x, y = targetPosition.y;
+        int startI = Math.max(x - 2, 0);
+        int startJ = Math.max(y - 2, 0);
+        int endI = x + 2 < Mapinfo.row ? x + 2 : Mapinfo.row - 1;
+        int endJ = y + 2 < Mapinfo.col ? y + 2 : Mapinfo.col - 1;
+
+        for (; startI <= endI; startI++) {
+            for (; startJ <= endJ; startJ++) {
+                maps[startI][startJ] = 2;
             }
         }
     }
@@ -101,12 +88,40 @@ public class Astar {
         return ast.resultList.size();
     }
 
+    // 计算两点多长，返回点的个数
+    public static int calcDisAndMidPoint(boolean isEmpty,Point src, Point dest,Point mid){
+        double dis = src.calcDistance(dest);
+        if (dis < 1.0){
+            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())){
+                mid.set(dest);
+                return 2;
+            }
+        }
+
+        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
+        Astar ast = new Astar(fixMap,src,dest);
+        ast.search();
+        mid.set(ast.resultList.get(ast.resultList.size()/2));
+        return ast.resultList.size();
+    }
+
+
 
 
     public static Point getSafePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1){
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
         Astar ast = new Astar(fixMap,src,dest);
+
+        Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
+        return sp;
+    }
+
+    public static Point getSafePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1,Point midPoint,Point basePoint){
+
+        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
+        Main.printLog("midPoint" + midPoint);
+        Astar ast = new Astar(fixMap,src,midPoint);
 
         Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
         return sp;
@@ -149,7 +164,6 @@ public class Astar {
             posSet.add(new Pos(pos.x, pos.y-1));
             posSet.add(new Pos(pos.x, pos.y+1));
         }
-
     }
 
     // 空载需要找 2 * 2 的网格，从该点进行寻找 -1 没找到，1 代表左上方 2 代表右上方 3 代表左下方 4 代表右下方

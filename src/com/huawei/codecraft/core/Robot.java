@@ -2,7 +2,6 @@ package com.huawei.codecraft.core;
 
 import com.huawei.codecraft.Main;
 import com.huawei.codecraft.util.Line;
-import com.huawei.codecraft.util.Pair;
 import com.huawei.codecraft.util.Path;
 import com.huawei.codecraft.util.Point;
 import com.huawei.codecraft.way.Astar;
@@ -10,7 +9,6 @@ import com.huawei.codecraft.way.Pos;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Map;
 
 /**
  * @Author: ro_kin
@@ -66,6 +64,7 @@ public class Robot {
     public Station lastStation; // 当前处于那个工作站，供决策使用，到达更新 todo
 
     public Point start; // 出生的地点
+    public Point midPoint = new Point(); // 记录相撞坐标的中点
     // 碰撞相关
     public boolean isTempPlace = false;   // 是否去往临时目的地，避免碰撞
     public Point tmpPos;
@@ -651,16 +650,55 @@ public class Robot {
         }
     }
 
-    public Point selectTmpSafePoint(Point dest,HashSet<Pos> posSet) {
+    public Point selectTmpSafePoint(Point dest, HashSet<Pos> posSet, Point midPoint) {
         // todo 还要传baseP
-        Point sp = Astar.getSafePoint(carry == 0, pos, dest, posSet);
+        Point sp = Astar.getSafePoint(carry == 0, pos, dest, posSet,midPoint,basePoint);
         HashSet<Point> ps = new HashSet<>();
         for (Pos pos1 : posSet) {
             ps.add(Astar.Pos2Point(pos1));
         }
+        Main.printLog(this);
         Main.printLog(ps);
 
         return sp;
+    }
+
+    public void goToEmptyPlace() {
+        // 如果机器人没事干，不要待在工作台边上
+        Pos p = Astar.Point2Pos(pos);
+        int status = Main.wallMap[p.x][p.y];
+        int printSpeed = 0;
+        int printRotate = 0;
+        if (pos.nearStation()){
+            printSpeed = 1;
+        }
+
+        if (route != null){
+            // 判断是否与其他人靠近，若是要远离
+            for (Robot oth : zone.robots) {
+                if (oth == this) continue;
+                double dis = pos.calcDistance(oth.pos);
+                if (dis<2){
+                    // 太靠近，要远离
+                    // 先算线速度，夹角小于pi/2 刹车，大于pi/2 全速
+                    Point vec = oth.pos.calcVector(pos);
+                    Point v = new Point(lineVx,lineVy);
+                    if (v.norm() == 0){
+                        printSpeed = 1;
+                    }else {
+                        double angle = vec.calcDeltaAngle(v);
+                        if (angle < Robot.pi){
+                            printSpeed = 1;
+                        }else {
+                            printSpeed = -1;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        Main.Forward(id,printSpeed);
+        Main.Rotate(id,printRotate);
     }
 }
 

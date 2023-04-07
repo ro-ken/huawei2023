@@ -81,14 +81,19 @@ public class Route{
             changeAngle = Robot.pi; //最后一个点了，调到最大
             return target;
         }else {
-            Point next = path.get(pathIndex++);
+            Point next = path.get(pathIndex);
 //            Main.printLog(path);
 //            Main.printLog(pathIndex);
-//            if (pathIndex>1 && path.size()>2){
-//                Point vec1 = path.get(pathIndex - 2).calcVector(next);
-//                Point vec2 = next.calcVector(path.get(pathIndex));
-//                changeAngle = vec1.calcDeltaAngle(vec2);
-//            }
+            if (pathIndex>=1 && path.size()>2){
+                if (pathIndex == path.size()-1){
+                    changeAngle = Robot.pi; //最后一个点了，调到最大
+                }else {
+                    Point vec1 = path.get(pathIndex - 1).calcVector(next);
+                    Point vec2 = next.calcVector(path.get(pathIndex+1));
+                    changeAngle = vec1.calcDeltaAngle(vec2);
+                }
+            }
+            pathIndex ++;
             return next;
         }
     }
@@ -205,6 +210,31 @@ public class Route{
             stopMinDistance +=cornerStopMinDistance;
         }
 
+
+//        if (realAngleDistance > Robot.pi/2){
+//            // 偏角太大 一定要减速
+//            printLineSpeed = 0;
+//        }else {
+//            // 偏角小的情况在分类讨论
+//            if (stopMinDistance > realDistance){
+//                // 快到终点，夹角较小，且周围无墙，冲
+//                if (changeAngle < Robot.pi/2 && next.nearWall()){
+//                    printLineSpeed = Robot.maxSpeed * Math.cos(changeAngle);
+//                }else {
+//                    printLineSpeed = 0;
+//                }
+//            }else {
+//                //判断周围有没有墙
+//                if (realAngleDistance < Robot.canForwardRad){
+//                    printLineSpeed = Robot.maxSpeed;
+//                }else if (robot.pos.nearWall()){
+//                    printLineSpeed = Robot.maxSpeed * Math.cos(changeAngle);
+//                }else {
+//                    printLineSpeed = 0;
+//                }
+//            }
+//        }
+
         //计算线速度
         if (realAngleDistance < Robot.canForwardRad && stopMinDistance < realDistance){
             // 速度太小，加速
@@ -219,6 +249,7 @@ public class Route{
             // 减速
             printLineSpeed = 0;
         }
+
 
         //计算角速度
         if (stopMinAngleDistance < realAngleDistance){
@@ -541,7 +572,8 @@ public class Route{
                 // 距离较近
                 if (dis < predictWillBumpMinDis && dis < minDis){
                     // 取最近的机器人进行避让
-                    int posNum = Astar.calcDis(robot.carry == 0, robot.pos, oth.pos);
+//                    int posNum = Astar.calcDis(robot.carry == 0, robot.pos, oth.pos);
+                    int posNum = Astar.calcDisAndMidPoint(robot.carry == 0, robot.pos, oth.pos,robot.midPoint);
                     if (posNum <= minPosNum){
                         willBumpRobot = oth;
                     }
@@ -671,7 +703,8 @@ public class Route{
         Robot weakRobot = selectWeakRobot(other);
         // 避让车标志位赋值，安全点赋值
         Robot winRobot = robot == weakRobot? other:robot;
-        Point sp = weakRobot.selectTmpSafePoint(winRobot.pos,winRobot.route.posSet);
+        Main.printLog("winner" + winRobot);
+        Point sp = weakRobot.selectTmpSafePoint(winRobot.pos,winRobot.route.posSet,robot.midPoint);
         // 选出一个临时点，避让机器人更改路线
         if (sp!= null){
             weakRobot.calcTmpRoute(sp,winRobot);   // 计算临时路由

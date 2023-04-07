@@ -98,7 +98,10 @@ public class Main {
               if (robots[i].nextStation == null){
                   robots[i].selectBestStation();
               }
-              if (robots[i].nextStation == null) continue;
+              if (robots[i].nextStation == null){
+                  robots[i].goToEmptyPlace();
+                  continue;
+              }
               Main.printLog("pos:next:"+robots[i].pos + "," + robots[i].route.next);
 
 

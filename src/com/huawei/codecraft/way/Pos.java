@@ -1,4 +1,6 @@
 package com.huawei.codecraft.way;
+import com.huawei.codecraft.util.Point;
+
 import java.util.*;;
 
 // 记录点的坐标
@@ -37,5 +39,16 @@ public class Pos {
         return "(" + x +
                 ", " + y +
                 ')';
+    }
+
+    public void set(Point p) {
+        Pos pos = Astar.Point2Pos(p);
+        x = pos.x;
+        y = pos.y;
+    }
+
+    public void set(Pos pos) {
+        x = pos.x;
+        y = pos.y;
     }
 }
