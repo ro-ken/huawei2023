@@ -305,11 +305,11 @@ public class Astar {
         int x = curPos.x;
         int y = curPos.y;
         // 判断右边是否是墙
-        if (y == Mapinfo.col - 1 || Mapinfo.mapInfoOriginal[x][y + 1] == -2 || Mapinfo.mapInfoOriginal[x - 1][y + 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y + 1] == -2) {
+        if ((Mapinfo.isInMap(x - 1, y + 1) && Mapinfo.isInMap(x + 1, y + 1)) &&  (Mapinfo.mapInfoOriginal[x][y + 1] == -2 || Mapinfo.mapInfoOriginal[x - 1][y + 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y + 1] == -2)) {
             return 1;
         }
         // 判断上边是否是墙
-        if (x == Mapinfo.row - 1 || Mapinfo.mapInfoOriginal[x + 1][y] == -2 || Mapinfo.mapInfoOriginal[x + 1][y - 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y + 1] == -2) {
+        if ((Mapinfo.isInMap(x - 1, y + 1) && Mapinfo.isInMap(x + 1, y + 1)) && (Mapinfo.mapInfoOriginal[x][y + 1] == -2 || Mapinfo.mapInfoOriginal[x - 1][y + 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y + 1] == -2)) {
             return 2;
         }
         return 0;

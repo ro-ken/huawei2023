@@ -49,7 +49,7 @@ public class Mapinfo {
         openList.add(startPostion);
 
         // 第一个机器人已经加入了，无需重复加入
-        mapInfoOri[startPostion.x][startPostion.y] = -1;
+        mapInfoOri[startPostion.x][startPostion.y] = -3;
 
         while (openList.size() != 0) {
             Pos currentPosition = openList.get(0);
