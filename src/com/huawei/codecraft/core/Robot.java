@@ -94,11 +94,13 @@ public class Robot {
     public static int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
     public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
     public static int blockJudgeFps = 20 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点
+    public static int maxWaitBlockFps = 50 * 3 ;    // 等待超过多长时间目标机器人没有来，就自行解封
     public double blockFps = 0;    // 目前阻塞的帧数
     public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
     public static double detectWallWideCoef = 0.8 ;    // 半径乘子，判断从圆心多远的地方
 
-
+    public Robot winner;
+    public HashSet<Robot> losers = new HashSet<>(); // 要避让我的点
     public Route route;
 
     static {
@@ -112,7 +114,7 @@ public class Robot {
         fullMinAngle = calcMinAngle(false);
     }
 
-    public Robot winner;
+
 
     public Robot(int stationId, double x, double y, int robotId) {
         StationId = stationId;
@@ -241,10 +243,10 @@ public class Robot {
 
 
     public void recoveryPath() {
+
+        clearWinner();
         // 重新寻找新路径
         if (nextStation.paths == null) return;
-        tmpSafeMode = false;
-        winner = null;
         ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);
         HashSet<Pos> pos1 = nextStation.paths.getResSet(carry==0,pos);
         path = Path.reversePath(path);
@@ -253,8 +255,13 @@ public class Robot {
         calcMoveEquation();     //  运动方程
         Main.printLog("recovery path"+path);
     }
+
+
+
     public void calcTmpRoute(Point sp, Robot winRobot) {
+
         tmpSafeMode = true;
+        winner = winRobot;      // 设置是给谁避让，后期需要定期探测这个机器人是否到达目标点
         HashSet<Pos> pos1 = new HashSet<>();
 //        ArrayList<Point> path = Astar.getPath(carry==0,pos,sp);
         ArrayList<Point> path = Astar.getPathAndResult(carry==0,pos,sp,pos1);
@@ -265,7 +272,7 @@ public class Robot {
         route = new Route(sp,this,path,pos1);
         route.calcParamEveryFrame();    // 通用参数
         calcMoveEquation();     //  运动方程
-        winner = winRobot;      // 设置是给谁避让，后期需要定期探测这个机器人是否到达目标点
+
         Main.printLog("sp" + sp);
 
         Main.printLog("set tmp route"+path);
@@ -461,6 +468,7 @@ public class Robot {
                 double dis = pos.calcDistance(route.target);
                 if (dis < minDis) {
                     inSafePlace = true;
+                    blockFps = 0;   // 重新计数
                 }
             }else {
                 // 到达了安全点，要判断是否能走
@@ -478,8 +486,12 @@ public class Robot {
     private boolean roadIsSafe() {
         // 判断winner已经走过去了
         // 连续 一段时间两车越来越远，说明过了
-        double dis = winner.pos.calcDistance(pos);
-        if (dis <= 2.5 && lastDis < dis && lineNoWall(pos,winner.pos)){
+        Main.printLog(winner);
+        Main.printLog(this);
+        Main.printLog(basePoint);
+        double dis = winner.pos.calcDistance(basePoint);
+
+        if (dis <= 1.5 && lastDis < dis && lineNoWall(pos,winner.pos)){
             lastDisFps ++;
         }else {
             lastDisFps = 0;
@@ -595,6 +607,11 @@ public class Robot {
         // 阻塞检测，在某个点阻塞了多少帧，重新设置路径
 
         if (tmpSafeMode && inSafePlace){
+            blockFps ++;
+            if (blockFps > maxWaitBlockFps){
+                recoveryPath();
+                blockFps = 0;
+            }
             return false;   // 如果是等待模式不判定阻塞
         }
 
@@ -634,6 +651,7 @@ public class Robot {
         }else {
             recoveryPath();
         }
+//        recoveryPath();
     }
 
     public HashSet<Pos> getResultSet(){
@@ -651,8 +669,8 @@ public class Robot {
     }
 
     public Point selectTmpSafePoint(Point dest, HashSet<Pos> posSet, Point midPoint) {
-        // todo 还要传baseP
-        Point sp = Astar.getSafePoint(carry == 0, pos, dest, posSet,midPoint,basePoint);
+        Point sp = Astar.getSafePoint(carry == 0, pos, dest, posSet,midPoint);
+
         HashSet<Point> ps = new HashSet<>();
         for (Pos pos1 : posSet) {
             ps.add(Astar.Pos2Point(pos1));
@@ -700,6 +718,54 @@ public class Robot {
         Main.Forward(id,printSpeed);
         Main.Rotate(id,printRotate);
     }
+
+    public void setWeakRobot(Robot weakRobot) {
+        // 设置对方为我的loser机器人
+        if (tmpSafeMode){
+            // 若我是loser，先解除封印
+            recoveryPath();
+        }
+        weakRobot.resetStatus();
+        losers.add(weakRobot);
+//        weakRobot.winner = this;
+//        weakRobot.tmpSafeMode = true;
+    }
+
+    // 自己是loser 恢复自由
+    private void resetStatus() {
+        if (tmpSafeMode){
+            clearWinner();
+        }
+
+        if (!losers.isEmpty()){
+            HashSet<Robot> tmp = new HashSet<>(losers);
+            for (Robot loser : tmp) {
+                loser.recoveryPath();
+            }
+            losers.clear();
+        }
+    }
+
+    // 自己是loser 恢复自由
+    private void clearWinner() {
+        if (winner != null){
+            winner.losers.remove(this);
+            winner = null;
+            // 解除主从关系
+        }
+        tmpSafeMode = false;
+    }
+
+    // 恢复所有loser的自由
+    private void resetLoser() {
+
+
+        for (Robot loser : losers) {
+            loser.recoveryPath();
+        }
+        losers.clear();
+    }
+
 }
 
 

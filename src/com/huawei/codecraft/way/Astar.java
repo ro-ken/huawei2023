@@ -39,9 +39,9 @@ public class Astar {
         int endI = x + 2 < Mapinfo.row ? x + 2 : Mapinfo.row - 1;
         int endJ = y + 2 < Mapinfo.col ? y + 2 : Mapinfo.col - 1;
 
-        for (; startI <= endI; startI++) {
-            for (; startJ <= endJ; startJ++) {
-                maps[startI][startJ] = 2;
+        for (int i = startI; i <= endI; i++) {
+            for (int j = startJ; j <= endJ; j++) {
+                maps[i][j] = 2;
             }
         }
     }
@@ -117,7 +117,7 @@ public class Astar {
         return sp;
     }
 
-    public static Point getSafePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1,Point midPoint,Point basePoint){
+    public static Point getSafePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1,Point midPoint){
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
         Main.printLog("midPoint" + midPoint);
@@ -166,6 +166,41 @@ public class Astar {
         }
     }
 
+    public static double getPosDistance(Pos pos1, Pos pos2) {
+            Point point1 = Pos2Point(pos1);
+            Point point2 = Pos2Point(pos2);
+            return Math.sqrt(Math.pow((point1.x - point2.x), 2) + Math.pow((point1.y - point2.y), 2));
+    }
+    public static Point getClosestPoint(Point sp, HashSet<Pos> pos1) {
+        Pos pos = Point2Pos(sp);
+        // 按照上下左右 斜上左 斜上右 斜下左 斜下右 循环
+        int[] dirX = new int[]{-1, 1,   0, 0, -1, -1,   1, 1};
+        int[] dirY = new int[]{ 0, 0, -1, 1, -1,   1, -1, 1};
+        int step = 1;
+        boolean flag = false;
+        Pos minPos = new Pos();
+        double mindis = 50;
+        while(!flag) {   // 检查是否检测到了
+              for (int i = 0; i < dirX.length; i++) {
+                    int x = pos.x + dirX[i] * step;
+                    int y = pos.y + dirY[i] * step;
+                    Pos curPos = new Pos(x, y);
+                    if (Mapinfo.isInMap(x, y) && pos1.contains(curPos)) {
+                          flag = true;
+                          double curDis = getPosDistance(pos, curPos);
+                          if (mindis > curDis) {
+                                mindis = curDis;
+                                minPos.set(curPos);;
+                          }
+                    }
+              }
+              step++;
+        }
+        return Pos2Point(minPos);
+    }
+    
+    
+    
     // 空载需要找 2 * 2 的网格，从该点进行寻找 -1 没找到，1 代表左上方 2 代表右上方 3 代表左下方 4 代表右下方
     public int getEmptyGrid(Pos curPos, HashSet<Pos> set) {
         if (set.contains(curPos)) {
@@ -329,7 +364,7 @@ public class Astar {
                 }
             }
         }
-        return Pos2Point(startPosition);
+        return null;
     }
 
     public Point getTmpAvoidPoint(boolean carry,HashSet<Pos> pos1) {

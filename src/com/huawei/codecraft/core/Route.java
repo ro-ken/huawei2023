@@ -522,7 +522,7 @@ public class Route{
     // 计算当前的安全级别 0:安全，1：有墙，2有机器人
     private void calcSafeLevel() {
         unsafeLevel = 0;    // 先置位安全状态
-        if (!robot.tmpSafeMode){
+        if (!robot.tmpSafeMode){        // 暂时不考虑两个loser相遇的情况
             // 如果不是这个模式，需要检测和其他机器人是否碰撞
             if (willBump()){
                 setTmpSafeMode2();
@@ -567,7 +567,7 @@ public class Route{
             if (oth.route.roadIsWide()) continue;  // 对方路很宽，不避让
             if (next.equals(target) && robot.pos.calcDistance(next) < notAvoidRobotMinDis) continue;    // 快靠近终点，不避让
             // 未来会发生碰撞
-            if (posSet.contains(Astar.Point2Pos(oth.pos)) && oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
+            if (posSet.contains(Astar.Point2Pos(oth.pos)) || oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
                 double dis = robot.pos.calcDistance(oth.pos);
                 // 距离较近
                 if (dis < predictWillBumpMinDis && dis < minDis){
@@ -683,18 +683,18 @@ public class Route{
         return null;
     }
 
-    private void setTmpSafeMode() {
-        // 判断两辆车，应该让谁避让
-        Robot other = Main.robots[unsafeRobotIds.get(0)];
-
-        Robot weakRobot = selectWeakRobot(other);
-        // 避让车标志位赋值，安全点赋值
-        Robot winRobot = robot == weakRobot? other:robot;
-        Point sp = winRobot.route.selectTmpSafePoint();
-        if (sp!= null){
-            weakRobot.calcTmpRoute(sp,winRobot);   // 计算临时路由
-        }
-    }
+//    private void setTmpSafeMode() {
+//        // 判断两辆车，应该让谁避让
+//        Robot other = Main.robots[unsafeRobotIds.get(0)];
+//
+//        Robot weakRobot = selectWeakRobot(other);
+//        // 避让车标志位赋值，安全点赋值
+//        Robot winRobot = robot == weakRobot? other:robot;
+//        Point sp = winRobot.route.selectTmpSafePoint();
+//        if (sp!= null){
+//            weakRobot.calcTmpRoute(sp,winRobot);   // 计算临时路由
+//        }
+//    }
 
     private void setTmpSafeMode2() {
         // 判断两辆车，应该让谁避让
@@ -703,12 +703,55 @@ public class Route{
         Robot weakRobot = selectWeakRobot(other);
         // 避让车标志位赋值，安全点赋值
         Robot winRobot = robot == weakRobot? other:robot;
+
+        HashSet<Pos> pos1 = new HashSet<>();
+        Robot newWinner = winRobot;
+        if (winRobot.tmpSafeMode){
+            // 胜利者是一个loser，避让节点是避让胜利者的胜利者 加上临时避障点
+             addSafePointToSet(pos1,winRobot.route.target);
+             pos1.addAll(winRobot.route.posSet);
+             newWinner = winRobot.winner;
+        }else if (!winRobot.losers.isEmpty()){
+            // 如果胜利者本身就是胜利者，那么也要加上所有loser的pos
+            for (Robot loser : winRobot.losers) {
+                addSafePointToSet(pos1, loser.route.target);
+                pos1.addAll(loser.route.posSet);
+            }
+        }
+        pos1.addAll(newWinner.route.posSet);
+        newWinner.setWeakRobot(weakRobot);
         Main.printLog("winner" + winRobot);
-        Point sp = weakRobot.selectTmpSafePoint(winRobot.pos,winRobot.route.posSet,robot.midPoint);
+        Main.printLog("real winner" + newWinner);
+        Point sp = weakRobot.selectTmpSafePoint(winRobot.pos,pos1,robot.midPoint);
         // 选出一个临时点，避让机器人更改路线
         if (sp!= null){
-            weakRobot.calcTmpRoute(sp,winRobot);   // 计算临时路由
+            weakRobot.calcTmpRoute(sp,newWinner);   // 计算临时路由
+            Main.printLog("wk" + weakRobot);
+            weakRobot.basePoint = Astar.getClosestPoint(sp, pos1);
+            Main.printLog("bpp" + robot.basePoint);
+        }else {
+            Main.printLog("did not find safe point");
         }
+    }
+
+    private void addSafePointToSet(HashSet<Pos> pos1, Point sp) {
+        // 把sp周围九格加入set
+        Pos pos = Astar.Point2Pos(sp);
+
+        int range = 3;
+        for (int i = -range; i < range; i++) {
+            for (int j = -range; j < range; j++) {
+                pos1.add(new Pos(pos.x+i,pos.y+j));
+            }
+        }
+
+    }
+
+    private HashSet<Pos> selectTrueWinRobot(Robot weakRobot, Robot winRobot) {
+        // 给当前节点避让，
+
+
+        return null;
     }
 
     // 选择安全点，到安全点去
@@ -838,6 +881,16 @@ public class Route{
         // 判断自己和另一个机器人谁更弱小，谁让路
         // todo 后面可以修改
 
+        if (posSet.contains(Astar.Point2Pos(oth.pos)) && !oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
+            // 对方在我的路线上，我不在对方的路线上,我避让
+          return robot;
+        }
+
+        if (!posSet.contains(Astar.Point2Pos(oth.pos)) && oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
+            // 情况相反
+            return oth;
+        }
+
         if (oth.tmpSafeMode){
             return robot;   // 对方已经是避让模式，自己避让
         }
@@ -849,6 +902,16 @@ public class Route{
             // 首先比较对方是否快到终点，自己避让
             return robot;
         }
+
+        if (!robot.losers.isEmpty() && oth.losers.isEmpty()){
+            // 自己是winner,对方不是，自己优先级高
+                return oth;
+        }
+        if (robot.losers.isEmpty() && !oth.losers.isEmpty()){
+            // 对方是winner,对方优先级高
+            return robot;
+        }
+
         if (oth.route.roadIsWide()){
             return oth; // 对方路很宽，对方避让
         }
@@ -862,7 +925,7 @@ public class Route{
             return robot;
         }
 
-        // 比较两个节点剩余的路程，远的让路
+        // 比较两个节点剩余的路程，远的让路，todo 可比较里安全点近的避让
         int fps1 = calcLeftFps();
         int fps2 = oth.route.calcLeftFps();
 
