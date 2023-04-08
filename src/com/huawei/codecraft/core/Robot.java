@@ -463,20 +463,24 @@ public class Robot {
         }
 
         if (avoidBumpMode){
-            boolean far = true;
+            Point fp = null ;
+            double minDis = 10000;
             for (Robot oth : zone.robots) {
                 if (oth == this) continue;
                 double dis = pos.calcDistance(oth.pos);
-                if (dis < 3){
-                    far = false;
+                if (dis < 3 && dis<minDis){
+                    minDis = dis;
+                    fp = oth.pos;   //选择距离自己最近的机器人
                 }
             }
-            if (!far){
-                goToEmptyPlace();
+
+            if (fp != null){
+                randomBack(fp);
+
             }else {
                 avoidBumpMode = false;
-                Main.printLog(11111);
                 recoveryPath();     // 恢复路径
+                avoidBumpModeFps = 0;   // 恢复时间
             }
         }
 
@@ -504,6 +508,49 @@ public class Robot {
         route.rush2();
 
         route.deletePos();  // 以走过的点要删除，防止发生误判
+    }
+
+    // 随机后退
+    private void randomBack(Point fp) {
+        // 要远离目标位置
+        // 随机选择后退
+        // 如果机器人没事干，不要待在工作台边上
+        Pos p = Astar.Point2Pos(pos);
+        int status = Main.wallMap[p.x][p.y];
+        int printSpeed = 0;
+        int printRotate = 0;
+        if (pos.nearStation()){
+            printSpeed = 1;
+        }
+
+        if (route != null){
+            // 判断是否与其他人靠近，若是要远离
+            for (Robot oth : zone.robots) {
+                if (oth == this) continue;
+                double dis = pos.calcDistance(oth.pos);
+                if (dis<2){
+                    // 太靠近，要远离
+                    // 先算线速度，夹角小于pi/2 刹车，大于pi/2 全速
+                    Point vec = oth.pos.calcVector(pos);
+                    Point v = new Point(lineVx,lineVy);
+                    if (v.norm() == 0){
+                        printSpeed = 1;
+                    }else {
+                        double angle = vec.calcDeltaAngle(v);
+                        if (angle < Robot.pi){
+                            printSpeed = 1;
+                        }else {
+                            printSpeed = -1;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        Main.Forward(id,printSpeed);
+        Main.Rotate(id,printRotate);
+
     }
 
     private boolean roadIsSafe() {
@@ -656,14 +703,15 @@ public class Robot {
 
         avoidBumpMode = false;
 
-        for (Robot oth : zone.robots) {
-            if (oth == this) continue;
-            double dis = pos.calcDistance(oth.pos);
-            if (dis < 1.5){
-                avoidBumpMode = true;
-                avoidBumpModeFps = 0;
-            }
-        }
+//        // 判断阻塞是否是和机器人堵住了
+//        for (Robot oth : zone.robots) {
+//            if (oth == this) continue;
+//            double dis = pos.calcDistance(oth.pos);
+//            if (dis < 1.5){
+//                // 若是和机器人堵住了，要远离
+//                avoidBumpMode = true;
+//            }
+//        }
 
         if (!avoidBumpMode){
             if (tmpSafeMode){

@@ -71,7 +71,9 @@ public class Path {
             Map<Point,ArrayList<Point>> paths = getPathMap(isEmpty);
             Map<Point,HashSet<Pos>> pos1 = getResSetMap(isEmpty);
             paths.put(dest,path);     // 保存路径，下次备用
-            pos1.put(dest,set);     // 保存路径，下次备用
+            if (set != null){
+                pos1.put(dest,set);     // 保存路径，下次备用
+            }
             return path;
         }
     }
@@ -103,7 +105,8 @@ public class Path {
                 return set;
             }
         }
-        if (!posMap.containsKey(dest) || posMap.get(dest).size()<3){
+        if (!posMap.containsKey(dest) ||posMap.get(dest) == null ||posMap.get(dest).size()<3){
+
             Map<Point,ArrayList<Point>> paths = getPathMap(isEmpty);
             HashSet<Pos> pos1 = new HashSet<>();
             ArrayList<Point> path = Astar.getPathAndResult(isEmpty, src, dest,pos1);
