@@ -526,20 +526,15 @@ public class Route{
             // 如果不是这个模式，需要检测和其他机器人是否碰撞
             if (willBump()){
                 setTmpSafeMode2();
-            }else if (canBump()){
+            } else if (canBump()){
                 unsafeLevel = 2;
-//                // 如果会碰撞，判断对方是否是临时模式，若不是，在做判断，若是，正常行走就行
-//                Robot oth = Main.robots[unsafeRobotIds.get(0)];
-//                boolean flag1 = (next.equals(target) && robot.pos.calcDistance(next) < notAvoidRobotMinDis);    // 快靠近终点
-//                boolean flag2 = oth.tmpSafeMode;    // 对方是安全模式， todo 是否要考虑多车堵住的情况
-//                if (!flag1 && !flag2 && !roadIsWide(oth)){
-//                    // 未到终点，都不是临时模式，而且路很窄
-////                    setTmpSafeMode();
-//                    setTmpSafeMode2();
-//                    unsafeLevel = 0;    //不进行碰撞检测
-//                }
+
             }
         }
+//        if (canBump()){
+//            unsafeLevel = 2;
+//
+//        }
         if (unsafeLevel == 0){
             // 如果不是 正在错车，需要判断和墙的距离
             Point wall = frontHasWall();
@@ -560,12 +555,12 @@ public class Route{
         // 判断两个机器人是否可能发生碰撞
         // 条件为，是否在对方的路线上，并且距离很近
         if (roadIsWide()) return false;
+        if (next.equals(target) && robot.pos.calcDistance(next) < notAvoidRobotMinDis) return false;    // 快靠近终点，不避让
         double minDis = 100000;
         willBumpRobot = null;
+
         for (Robot oth : robot.zone.robots) {
             if (oth == robot || oth.winner == robot) continue;  // 对方避让情况，不避让
-            if (oth.route.roadIsWide()) continue;  // 对方路很宽，不避让
-            if (next.equals(target) && robot.pos.calcDistance(next) < notAvoidRobotMinDis) continue;    // 快靠近终点，不避让
             // 未来会发生碰撞
             if (posSet.contains(Astar.Point2Pos(oth.pos)) || oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
                 double dis = robot.pos.calcDistance(oth.pos);
@@ -582,6 +577,7 @@ public class Route{
         }
         return willBumpRobot != null;
     }
+
 
     // 为了防止与墙体碰撞设立的临时点
     private Point calcAvoidWallPoint(Point wall) {
@@ -648,11 +644,19 @@ public class Route{
         }
         double offset = line.left.x < line.right.x ? 0.26 : -0.26;  // 刚好是下一个点
         double x = line.left.x;
+//        Main.printLog("x - line.right.x=" + x +"-"+line.right.x);
+        int times = 0;
+        while (Math.abs(x - line.right.x) > 0.7){
+            if (times > 10){
+                return null;
+            }else {
+                times ++;
+            }
 
-        while (Math.abs(x - line.right.x) > 1.0){
             Point wall = getWallByX(x,line);
             if (wall != null) return wall;
             x =Point.fixAxis2Center(x)+offset;
+
         }
         return null;
     }
@@ -672,10 +676,19 @@ public class Route{
 
         double offset = start.y < end.y ? 0.5 : -0.5;
         Point tmp = new Point(start);
-        while (Math.abs(tmp.y - end.y)>=0.5){
+//        Main.printLog("tmp.y - end.y=" + tmp.y +"-"+end.y);
+        int times = 0;
+        while (Math.abs(tmp.y - end.y)>=0.7){
             if (posIsWall(tmp)){
                 return tmp;
             }
+
+            if (times > 10){
+                return null;
+            }else {
+                times ++;
+            }
+
             tmp.y +=offset;
         }
         // 前面没判断结尾

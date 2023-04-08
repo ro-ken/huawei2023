@@ -33,8 +33,7 @@ public class Main {
     public static Mapinfo mapinfo;
     public static int stationNum = 0;
     public static final int duration = 5 * 60 * 50;
-    public static final int JudgeDuration = duration - 20 * 50;    //最后20s需判断买入的商品能否卖出
-    public static final int JudgeDuration2 = duration - 20 * 50;    //最后20s需判断选择是否最佳，是否还有商品没有卖
+    public static final int JudgeDuration = duration - 30 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int fps = 50;
     public static final boolean test = true;    // 是否可写入
     public static final boolean writePath = true;    // 是否可写入
@@ -114,11 +113,6 @@ public class Main {
               if (robots[i].route.arriveNext()){
                   robots[i].route.updateNext();
               }
-
-//              if (robots[i].basePoint != null && robots[i].arriveBasePoint()){
-//                  //
-//                  robots[i].basePoint = null;
-//              }
 
               robots[i].route.calcParamEveryFrame();    // 通用参数
               robots[i].calcMoveEquation();     //  运动方程

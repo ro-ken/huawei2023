@@ -73,6 +73,8 @@ public class Robot {
     public Line midLine;     // 轨迹下面的线
 
     public boolean tmpSafeMode = false;    // 是否去临时安全点
+    public boolean avoidBumpMode = false;   // 与其他机器人阻塞，临时避障模式
+    public int avoidBumpModeFps;
     public boolean inSafePlace = false;    // 是否到达临时点
 
     public double lastDis = 100000; // 在临时点判断是否距离另外的机器人越来越远
@@ -455,10 +457,23 @@ public class Robot {
             Main.printLog("nextStation is null");
             return;
         }
-//
-//        if (tmpSafeMode && winner.basePoint == null){
-//            recoveryPath();   // 对方通过狭窄路段，重新寻路
-//        }
+
+        if (avoidBumpMode){
+            boolean far = true;
+            for (Robot oth : zone.robots) {
+                if (oth == this) continue;
+                double dis = pos.calcDistance(oth.pos);
+                if (dis < 3){
+                    far = false;
+                }
+            }
+            if (!far){
+                goToEmptyPlace();
+            }else {
+                avoidBumpMode = false;
+                recoveryPath();     // 恢复路径
+            }
+        }
 
         if (tmpSafeMode){
 
@@ -489,13 +504,26 @@ public class Robot {
         Main.printLog(winner);
         Main.printLog(this);
         Main.printLog(basePoint);
-        double dis = winner.pos.calcDistance(basePoint);
+        double dis = 0;
+        if (basePoint !=null){
+            dis = winner.pos.calcDistance(basePoint);
 
-        if (dis <= 1.5 && lastDis < dis && lineNoWall(pos,winner.pos)){
-            lastDisFps ++;
+            if (dis <= 1.5 && lastDis < dis){
+                lastDisFps ++;
+            }else {
+                lastDisFps = 0;
+            }
         }else {
-            lastDisFps = 0;
+            // baseP ==0 ，换一种判断策略
+            dis = winner.pos.calcDistance(pos);
+
+            if (dis <= 2.5 && lastDis < dis && lineNoWall(pos,winner.pos)){
+                lastDisFps ++;
+            }else {
+                lastDisFps = 0;
+            }
         }
+
         lastDis = dis;
 
         // 超过界限，能动了
@@ -645,13 +673,26 @@ public class Robot {
 
 
     public void setNewPath() {
-        // 重新寻找新路径
-        if (tmpSafeMode){
-            calcTmpRoute(route.target,winner);
-        }else {
-            recoveryPath();
+
+        avoidBumpMode = false;
+
+        for (Robot oth : zone.robots) {
+            if (oth == this) continue;
+            double dis = pos.calcDistance(oth.pos);
+            if (dis < 1.5){
+                avoidBumpMode = true;
+                avoidBumpModeFps = 0;
+            }
         }
+
+        if (!avoidBumpMode){
+            if (tmpSafeMode){
+                calcTmpRoute(route.target,winner);
+            }else {
+                recoveryPath();
+            }
 //        recoveryPath();
+        }
     }
 
     public HashSet<Pos> getResultSet(){
@@ -715,6 +756,7 @@ public class Robot {
                 }
             }
         }
+
         Main.Forward(id,printSpeed);
         Main.Rotate(id,printRotate);
     }
@@ -727,8 +769,7 @@ public class Robot {
         }
         weakRobot.resetStatus();
         losers.add(weakRobot);
-//        weakRobot.winner = this;
-//        weakRobot.tmpSafeMode = true;
+
     }
 
     // 自己是loser 恢复自由
@@ -754,16 +795,6 @@ public class Robot {
             // 解除主从关系
         }
         tmpSafeMode = false;
-    }
-
-    // 恢复所有loser的自由
-    private void resetLoser() {
-
-
-        for (Robot loser : losers) {
-            loser.recoveryPath();
-        }
-        losers.clear();
     }
 
 }
