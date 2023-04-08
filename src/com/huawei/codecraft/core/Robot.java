@@ -9,6 +9,7 @@ import com.huawei.codecraft.way.Pos;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Random;
 
 /**
  * @Author: ro_kin
@@ -476,11 +477,10 @@ public class Robot {
 
             if (fp != null){
                 randomBack(fp);
-
+                return;
             }else {
                 avoidBumpMode = false;
                 recoveryPath();     // 恢复路径
-                avoidBumpModeFps = 0;   // 恢复时间
             }
         }
 
@@ -514,43 +514,40 @@ public class Robot {
     private void randomBack(Point fp) {
         // 要远离目标位置
         // 随机选择后退
-        // 如果机器人没事干，不要待在工作台边上
-        Pos p = Astar.Point2Pos(pos);
-        int status = Main.wallMap[p.x][p.y];
-        int printSpeed = 0;
-        int printRotate = 0;
-        if (pos.nearStation()){
-            printSpeed = 1;
+        // 在与目标角度为 pi/4 ,- pi/4，前进
+        Point vec=pos.calcVector(fp);
+        // 面朝目标，然后后退
+        double theoryTurn = Math.atan2(vec.y, vec.x);
+        boolean right = false;  // 方向是否对，在一定的夹角内
+        if (theoryTurn*turn>0){
+            // 在同一个方向，
+            if (Math.abs(theoryTurn-turn) < pi/4){
+                right = true;
+            }
+        }else {
+            double abs1 = Math.abs(theoryTurn);
+            double abs2 = Math.abs(turn);
+            if (Math.max(abs1,abs2)<pi/8 || Math.min(abs1,abs2)>pi*7/8){
+                right = true;
+            }
         }
-
-        if (route != null){
-            // 判断是否与其他人靠近，若是要远离
-            for (Robot oth : zone.robots) {
-                if (oth == this) continue;
-                double dis = pos.calcDistance(oth.pos);
-                if (dis<2){
-                    // 太靠近，要远离
-                    // 先算线速度，夹角小于pi/2 刹车，大于pi/2 全速
-                    Point vec = oth.pos.calcVector(pos);
-                    Point v = new Point(lineVx,lineVy);
-                    if (v.norm() == 0){
-                        printSpeed = 1;
-                    }else {
-                        double angle = vec.calcDeltaAngle(v);
-                        if (angle < Robot.pi){
-                            printSpeed = 1;
-                        }else {
-                            printSpeed = -1;
-                        }
-                    }
-                    break;
-                }
+        int clockwise = 1;
+        if (right){
+            // 方向对了，加一个随机参数，晃出去
+            Random random = new Random();
+            if (random.nextInt(2) == 0){
+                clockwise = -1;
+            }
+        }else {
+            if (theoryTurn>turn && theoryTurn - turn < Robot.pi || theoryTurn<turn && turn - theoryTurn > Robot.pi){
+                clockwise = 1;
+            }else {
+                clockwise = -1;
             }
         }
 
-        Main.Forward(id,printSpeed);
-        Main.Rotate(id,printRotate);
-
+        Main.Forward(id,-2);
+        Main.Rotate(id,maxRotate * clockwise);
     }
 
     private boolean roadIsSafe() {
@@ -703,15 +700,15 @@ public class Robot {
 
         avoidBumpMode = false;
 
-//        // 判断阻塞是否是和机器人堵住了
-//        for (Robot oth : zone.robots) {
-//            if (oth == this) continue;
-//            double dis = pos.calcDistance(oth.pos);
-//            if (dis < 1.5){
-//                // 若是和机器人堵住了，要远离
-//                avoidBumpMode = true;
-//            }
-//        }
+        // 判断阻塞是否是和机器人堵住了
+        for (Robot oth : zone.robots) {
+            if (oth == this) continue;
+            double dis = pos.calcDistance(oth.pos);
+            if (dis < 1.2){
+                // 若是和机器人堵住了，要远离
+                avoidBumpMode = true;
+            }
+        }
 
         if (!avoidBumpMode){
             if (tmpSafeMode){
