@@ -250,7 +250,7 @@ public class Robot {
         route = new Route(nextStation.pos,this,path,pos1);
         route.calcParamEveryFrame();    // 通用参数
         calcMoveEquation();     //  运动方程
-        Main.printLog("recovery path"+path);
+        Main.printLog(pos + ":recovery path"+path);
     }
 
 
@@ -271,8 +271,7 @@ public class Robot {
         route.calcParamEveryFrame();    // 通用参数
         calcMoveEquation();     //  运动方程
 
-        Main.printLog("sp" + sp);
-
+        Main.printLog(pos + ":sp" + sp);
         Main.printLog("set tmp route"+path);
     }
 
@@ -303,6 +302,9 @@ public class Robot {
 
         }
         blockFps = 0;     // 阻塞帧数重新计算
+
+        // 到达目的地，接除所有关系
+        resetStatus();
         Main.printLog("state change");
         Main.printLog("next station" + nextStation);
     }

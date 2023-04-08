@@ -511,7 +511,7 @@ public class Route{
         next = avoidWallPoint;  // 零时更改点
         calcParamEveryFrame();     // 重新计算路线
         calcSafePrintSpeed2();   // 计算速度
-        if (robot.carry == 1){
+        if (robot.carry > 0){
             printLineSpeed = Math.min(avoidWallPointSpeed,printLineSpeed);  // 满载不能太快
         }
         next = t ;//    改回来
@@ -645,7 +645,7 @@ public class Route{
         double x = line.left.x;
 //        Main.printLog("x - line.right.x=" + x +"-"+line.right.x);
         int times = 0;
-        while (Math.abs(x - line.right.x) > 0.7){
+        while (Math.abs(x - line.right.x) >= 0.5){
             if (times > 10){
                 return null;
             }else {
@@ -677,7 +677,7 @@ public class Route{
         Point tmp = new Point(start);
 //        Main.printLog("tmp.y - end.y=" + tmp.y +"-"+end.y);
         int times = 0;
-        while (Math.abs(tmp.y - end.y)>=0.7){
+        while (Math.abs(tmp.y - end.y)>=0.5){
             if (posIsWall(tmp)){
                 return tmp;
             }
@@ -738,9 +738,8 @@ public class Route{
         // 选出一个临时点，避让机器人更改路线
         if (sp!= null){
             weakRobot.calcTmpRoute(sp,newWinner);   // 计算临时路由
-            Main.printLog("wk" + weakRobot);
             weakRobot.basePoint = Astar.getClosestPoint(sp, pos1);
-            Main.printLog("bpp" + robot.basePoint);
+            Main.printLog(weakRobot.pos + ":bp" + weakRobot.basePoint);
         }else {
             Main.printLog("did not find safe point");
         }
@@ -900,53 +899,59 @@ public class Route{
 
         if (robotIsInRoute(posSet,oth.pos) && !robotIsInRoute(oth.route.posSet,robot.pos)){
             // 对方在我的路线上，我不在对方的路线上,我避让
+            Main.printLog("aaa");
             return robot;
         }
 
         if (!robotIsInRoute(posSet,oth.pos) && robotIsInRoute(oth.route.posSet,robot.pos)){
             // 情况相反
+            Main.printLog("bbb");
             return oth;
         }
 
         if (oth.tmpSafeMode){
+            Main.printLog("ccc");
             return robot;   // 对方已经是避让模式，自己避让
         }
 
-        Main.printLog("this" + robot);
-        Main.printLog(oth.route);
-        Main.printLog(oth.route.next);
         if (oth.route.next.equals(oth.route.target) && oth.pos.calcDistance(oth.route.next) < notAvoidRobotMinDis){
             // 首先比较对方是否快到终点，自己避让
+            Main.printLog("ddd");
             return robot;
         }
 
         if (!robot.losers.isEmpty() && oth.losers.isEmpty()){
             // 自己是winner,对方不是，自己优先级高
-                return oth;
+            Main.printLog("eee");
+            return oth;
         }
+
         if (robot.losers.isEmpty() && !oth.losers.isEmpty()){
             // 对方是winner,对方优先级高
+            Main.printLog("fff");
             return robot;
         }
 
         // 没货的避让
-        if (robot.carry == 1 && oth.carry == 0){
+        if (robot.carry > 0 && oth.carry == 0){
+            Main.printLog("ggg");
             return oth;
         }
 
-        if (robot.carry == 0 && oth.carry == 1){
+        if (robot.carry == 0 && oth.carry > 0){
+            Main.printLog("hhh");
             return robot;
         }
 
         if (oth.route.roadIsWide()){
-
+            Main.printLog("sss");
             return oth; // 对方路很宽，对方避让
         }
 
         // 比较两个节点剩余的路程，远的让路，todo 可比较里安全点近的避让
         int fps1 = calcLeftFps();
         int fps2 = oth.route.calcLeftFps();
-
+        Main.printLog("zzz");
         if (fps1 < fps2){
             return oth;
         }else {
