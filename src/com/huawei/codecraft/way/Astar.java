@@ -9,8 +9,8 @@ public class Astar {
     static int[] bits = {20, 18, 12, 10};   // 用于判断斜边是否可以通过，按照上下左右是否有障碍物进行位运算
     static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
     static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
-    static int findTimes = 100;
-    static int maxTimes = 10000;
+    static int findTimes = 101;
+    static int maxTimes = 10001;
     public Pos startPosition;
     public Pos targetPosition;
     public Board board;
@@ -261,8 +261,6 @@ public class Astar {
         int[][] maps = new int[Mapinfo.row][Mapinfo.col];
         initAvoidMaps(maps);    // 用于找避让点的地图，0 未探索 1 已探索 2 障碍物
         blockAvoidMaps(maps);       // 阻塞地图，减小计算量
-        // Main.printLog(startPosition);
-        // Main.printLog(targetPosition);
         return getPoint(maps, pos1);
     }
 
@@ -270,7 +268,7 @@ public class Astar {
     public  ArrayList<Point> getResult(boolean carry) {
         // 将结果返回，空载需要右移坐标，满载无需移动
         mergeResultList();
-        fixRoute(carry);    // 修正得到的结果
+        fixRoute();    // 修正得到的结果
         return result;
     }
 
@@ -279,46 +277,29 @@ public class Astar {
         return resultList;
     }
 
-    public void fixRoute(boolean carry) {
+    public void fixRoute() {
         // 没有结果，返回
         int size = mergeList.size();
         if (size < 2){
             return;
         }
 
-        result.add(Pos2Point(mergeList.get(0)));
-        for (int i = 1; i < size - 1; i++) {
+        for (int i = 0; i < size; i++) {
             // 两点相邻，直接优化掉后面的点，可能有些激进，但是目前就这样处理，
             Pos curPos = mergeList.get(i);
-            // 空载情况下加入结果队列的点，让点尽可能在中间,如果偏移点的时候已经发生移到中心，空载计算路径无需再次偏移
-            if (!carry) {
-                Point p = Pos2Point(curPos);
-                // 左偏
-                if (isCriticalPos(curPos) == 1) {
-                    p.x -= 0.25;
-                }
-                else if (isCriticalPos(curPos) == 2) { // 上偏
-                    p.y += 0.25;
-                }
-                result.add(p);
-            }
-            else {
-                result.add(Pos2Point(curPos));
-            }
-
+            result.add(Pos2Point(curPos));
         }
-        result.add(Pos2Point(mergeList.get(size - 1)));
     }
 
     public int isCriticalPos(Pos curPos) {
         int x = curPos.x;
         int y = curPos.y;
-        // 判断右边是否是墙
-        if ((Mapinfo.isInMap(x - 1, y + 1) && Mapinfo.isInMap(x + 1, y + 1)) &&  (Mapinfo.mapInfoOriginal[x][y + 1] == -2 || Mapinfo.mapInfoOriginal[x - 1][y + 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y + 1] == -2)) {
+        // 判断左边是否是墙
+        if ((Mapinfo.isInMap(x, y - 1) && Mapinfo.isInMap(x - 1, y - 1) && Mapinfo.isInMap(x - 1, y + 1)) &&  (Mapinfo.mapInfoOriginal[x][y - 1] == -2 || Mapinfo.mapInfoOriginal[x - 1][y - 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y - 1] == -2)) {
             return 1;
         }
         // 判断上边是否是墙
-        if ((Mapinfo.isInMap(x - 1, y + 1) && Mapinfo.isInMap(x + 1, y + 1)) && (Mapinfo.mapInfoOriginal[x][y + 1] == -2 || Mapinfo.mapInfoOriginal[x - 1][y + 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y + 1] == -2)) {
+        if ((Mapinfo.isInMap(x - 1, y) && Mapinfo.isInMap(x - 1, y - 1) && Mapinfo.isInMap(x - 1, y + 1)) && (Mapinfo.mapInfoOriginal[x - 1][y] == -2 || Mapinfo.mapInfoOriginal[x - 1][y - 1] == -2 || Mapinfo.mapInfoOriginal[x - 1][y + 1] == -2)) {
             return 2;
         }
         return 0;
@@ -443,7 +424,6 @@ public class Astar {
 
             // 找到了终点
             if (currentPosition.equals(targetPosition)) {
-//                System.out.println("成功找到路径解");
                 int times1 = 0;
                 while (currentPosition != null && times1 != maxTimes) {
                     times1++;
@@ -454,36 +434,25 @@ public class Astar {
                 return;
             }
 
-            int[] rangeX = {currentPosition.x - 1, currentPosition.x + 1};
-            int[] rangeY = {currentPosition.y - 1, currentPosition.y + 1};
-            // 待优化，按照上下左右得bit位判断是否存在障碍物
+
+            // 待优化，按照 上下左右的 bit位判断是否存在障碍物
             int flag = 0;
-            // 上下
-            for (int x : rangeX) {
-                if (board.isInboard(x, currentPosition.y)) {
-                    flag = (flag | (board.getMsg(new Pos(x, currentPosition.y)).isOK == 2 ? 1 : 0)) << 1;
-                    if (board.getMsg(new Pos(x, currentPosition.y)).isOK != 2) {
+            for (int i = 0; i < dirX.length / 2; i++) {
+                int x = currentPosition.x + dirX[i];
+                int y = currentPosition.y + dirY[i];
+                if (board.isInboard(x, y)) {
+                    flag = (flag | (board.getMsg(new Pos(x, y)).isOK == 2 ? 1 : 0)) << 1;
+                    if (board.getMsg(new Pos(x, y)).isOK != 2) {
                         int newG = board.getMsg(currentPosition).G + Board.StraightCost;
-                        updateG(x, currentPosition.y, currentPosition, newG);
+                        updateG(x, y, currentPosition, newG);
                     }
                 }
             }
-
-            // 左右
-            for (int y : rangeY) {
-                if (board.isInboard(currentPosition.x, y)) {
-                    flag = (flag | (board.getMsg(new Pos(currentPosition.x, y)).isOK == 2 ? 1 : 0)) << 1;
-                    if (board.getMsg(new Pos(currentPosition.x, y)).isOK != 2) {
-                        int newG = board.getMsg(currentPosition).G + Board.StraightCost;
-                        updateG(currentPosition.x, y, currentPosition, newG);
-                    }
-                }
-            }
-
             // 往斜边寻找
             // 开始寻找下一个最佳点，按照F值进行寻找,检查并记录G是否需要更新
             int index = 0;
-
+            int[] rangeX = {currentPosition.x - 1, currentPosition.x + 1};
+            int[] rangeY = {currentPosition.y - 1, currentPosition.y + 1};
             for (int x : rangeX) {
                 for (int y : rangeY) {
                     if (board.isInboard(x, y) && ((flag & bits[index]) == 0)) {
