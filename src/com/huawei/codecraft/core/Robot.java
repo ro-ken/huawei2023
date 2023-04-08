@@ -87,6 +87,7 @@ public class Robot {
     public Line midLine;     // 轨迹下面的线
 
     public boolean tmpSafeMode = false;    // 是否去临时安全点
+    public boolean waitStationMode = false;    // 是否去临时安全点
     public boolean avoidBumpMode = false;   // 与其他机器人阻塞，临时避障模式
     public int avoidBumpModeFps;
     public boolean inSafePlace = false;    // 是否到达临时点
@@ -704,7 +705,7 @@ public class Robot {
         for (Robot oth : zone.robots) {
             if (oth == this) continue;
             double dis = pos.calcDistance(oth.pos);
-            if (dis < 1.2){
+            if (dis < 1.8){
                 // 若是和机器人堵住了，要远离
                 avoidBumpMode = true;
             }
@@ -812,6 +813,54 @@ public class Robot {
         basePoint = null;
     }
 
+    public void goToNearStation() {
+        // 工作台有满了，到旁边等待
+        Pos p = Astar.Point2Pos(pos);
+
+        boolean flag1 = nextStation == srcStation && nextStation.proStatus == 1;
+        boolean flag2 = nextStation == destStation && !nextStation.positionIsFull(carry);
+        if (flag1 || flag2){
+            waitStationMode = false;
+            return;
+        }
+
+        double printSpeed = 0;
+        double printRotate = 0;
+        if (pos.nearStation()){
+            printSpeed = -2;
+            Random random = new Random();
+            int clockwise = random.nextInt(2) == 1? 1:-1;
+            printRotate = maxRotate/8 * clockwise;
+        }
+
+        if (route != null){
+            // 判断是否与其他人靠近，若是要远离
+            for (Robot oth : zone.robots) {
+                if (oth == this) continue;
+                double dis = pos.calcDistance(oth.pos);
+                if (dis<2){
+                    // 太靠近，要远离
+                    // 先算线速度，夹角小于pi/2 刹车，大于pi/2 全速
+                    Point vec = oth.pos.calcVector(pos);
+                    Point v = new Point(lineVx,lineVy);
+                    if (v.norm() == 0){
+                        printSpeed = 1;
+                    }else {
+                        double angle = vec.calcDeltaAngle(v);
+                        if (angle < Robot.pi){
+                            printSpeed = 1;
+                        }else {
+                            printSpeed = -1;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        Main.Forward(id,printSpeed);
+        Main.Rotate(id,printRotate);
+    }
 }
 
 

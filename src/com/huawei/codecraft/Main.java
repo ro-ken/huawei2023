@@ -77,11 +77,12 @@ public class Main {
             readUtilOK();
             Frame(frameID);
 
-            if (mapSeq == -1){
-                destoryType1();
-            }else {
-                handleFrame();
-            }
+//            if (mapSeq == -1){
+//                destoryType1();
+//            }else {
+//                handleFrame();
+//            }
+            handleFrame();
             Ok();
         }
     }
@@ -103,6 +104,10 @@ public class Main {
               }
               Main.printLog("pos:next:"+robots[i].pos + "," + robots[i].route.next);
 
+              if (robots[i].waitStationMode){
+                  robots[i].goToNearStation();
+                  continue;
+              }
 
               if (robots[i].blockDetect()){
                   // 若发生阻塞，需要重新规划路线
@@ -145,6 +150,8 @@ public class Main {
                     robots[i].destStation.bookNum--;       //解除预定
                     printLog("sell");
                     robots[i].changeTarget();
+                }else {
+                    robots[i].waitStationMode = true;
                 }
             }
             // 如果到中间点要换下一个点
