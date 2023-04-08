@@ -1,11 +1,11 @@
 package com.huawei.codecraft.way;
 
-// 棋盘信息类
+// 记录寻路路径的地图信息，每个点保存该点的F值和探索情况
 public class Board {
     public static int row = 0;
     public static int col = 0;
-    public Msg[][] maps;
-    public Pos targetPostion;
+    public Msg[][] maps;                    // 记录此次寻路的地图，使用空间换取时间策略
+    public Pos targetPostion;               // 终点位置的坐标，开始将 point 转为 pos传入
     public static int StraightCost = 10;    // 直边代价
     public static int HypotenuseCost = 14;  // 斜边代价
 
@@ -30,14 +30,6 @@ public class Board {
                 
             }
         } 
-    }
-
-    // 判断寻找的点是否处于地图之中
-    public  boolean isInboard(int x, int y) {
-        if (x < 0 || y < 0 || x >= row || y >= col) {
-            return false;
-        }
-        return true;
     }
 
     // 获取每个点的信息

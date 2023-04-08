@@ -5,6 +5,7 @@ import com.huawei.codecraft.util.Point;
 
 import java.util.*;
 
+// 寻路算法主要实现
 public class Astar {
     static int[] bits = {20, 18, 12, 10};   // 用于判断斜边是否可以通过，按照上下左右是否有障碍物进行位运算
     static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
@@ -15,7 +16,6 @@ public class Astar {
     public Pos targetPosition;
     public Board board;
     public ArrayList<Pos> openList ;     // 存储待扩展节点
-    // ArrayList<Msg> closeList;         // 存储已探索节点，被优化
     // 后续使用优先队列进行优化
     // PriorityQueue<Pos> openList;
     public ArrayList<Pos> resultList;    // 存储结果节点
@@ -440,7 +440,7 @@ public class Astar {
             for (int i = 0; i < dirX.length / 2; i++) {
                 int x = currentPosition.x + dirX[i];
                 int y = currentPosition.y + dirY[i];
-                if (board.isInboard(x, y)) {
+                if (Mapinfo.isInMap(x, y)) {
                     flag = (flag | (board.getMsg(new Pos(x, y)).isOK == 2 ? 1 : 0)) << 1;
                     if (board.getMsg(new Pos(x, y)).isOK != 2) {
                         int newG = board.getMsg(currentPosition).G + Board.StraightCost;
@@ -455,7 +455,7 @@ public class Astar {
             int[] rangeY = {currentPosition.y - 1, currentPosition.y + 1};
             for (int x : rangeX) {
                 for (int y : rangeY) {
-                    if (board.isInboard(x, y) && ((flag & bits[index]) == 0)) {
+                    if (Mapinfo.isInMap(x, y) && ((flag & bits[index]) == 0)) {
                         // 计算当前点的G
                         int newG = board.getMsg(currentPosition).G + Board.HypotenuseCost;
                         updateG(x, y, currentPosition, newG);
