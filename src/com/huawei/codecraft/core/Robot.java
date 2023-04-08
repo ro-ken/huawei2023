@@ -95,6 +95,7 @@ public class Robot {
 
     public static final double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
     public static final double detectWallWideCoef = 1.0 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
+    public static final double arriveBPDis = 1.0;     // 其他小车躲避的点
 
     public Robot winner;
     public HashSet<Robot> losers = new HashSet<>(); // 要避让我的点
@@ -234,6 +235,7 @@ public class Robot {
 //                path = nextStation.paths.getPath(isEmpty,lastStation.pos);
             }
             Main.printLog(path);
+            Main.printLog(pos1);
             route = new Route(nextStation.pos,this,path,pos1);
         }
     }
@@ -447,6 +449,18 @@ public class Robot {
             return;
         }
 
+        if (losers.size()>0){
+            // 自己是winner，需要判断是否到达了basePoint 若是，则释放相应的节点
+            for (Robot loser : losers) {
+                if (basePoint != null){
+                    double dis = pos.calcDistance(loser.basePoint);
+                    if (dis < 1.0){
+                        loser.inSafePlace = true;   // 到达了目标点，让机器人做时间判断
+                    }
+                }
+            }
+        }
+
         if (avoidBumpMode){
             boolean far = true;
             for (Robot oth : zone.robots) {
@@ -494,9 +508,7 @@ public class Robot {
     private boolean roadIsSafe() {
         // 判断winner已经走过去了
         // 连续 一段时间两车越来越远，说明过了
-        Main.printLog(winner);
-        Main.printLog(this);
-        Main.printLog(basePoint);
+
         double dis = 0;
         if (basePoint !=null){
             dis = winner.pos.calcDistance(basePoint);
@@ -751,6 +763,7 @@ public class Robot {
             // 解除主从关系
         }
         tmpSafeMode = false;
+        basePoint = null;
     }
 
 }

@@ -561,6 +561,7 @@ public class Route{
             if (oth == robot || oth.winner == robot) continue;  // 对方避让情况，不避让
             // 未来会发生碰撞
             if (oth.route == null) continue;
+            if (oth.nextStation == null)continue;
             if (posSet.contains(Astar.Point2Pos(oth.pos)) || oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
                 double dis = robot.pos.calcDistance(oth.pos);
                 // 距离较近
@@ -897,6 +898,11 @@ public class Route{
 //          return robot;
 //        }
 
+        if (oth.tmpSafeMode){
+            Main.printLog("ccc");
+            return robot;   // 对方已经是避让模式，自己避让
+        }
+
         if (robotIsInRoute(posSet,oth.pos) && !robotIsInRoute(oth.route.posSet,robot.pos)){
             // 对方在我的路线上，我不在对方的路线上,我避让
             Main.printLog("aaa");
@@ -907,11 +913,6 @@ public class Route{
             // 情况相反
             Main.printLog("bbb");
             return oth;
-        }
-
-        if (oth.tmpSafeMode){
-            Main.printLog("ccc");
-            return robot;   // 对方已经是避让模式，自己避让
         }
 
         if (oth.route.next.equals(oth.route.target) && oth.pos.calcDistance(oth.route.next) < notAvoidRobotMinDis){

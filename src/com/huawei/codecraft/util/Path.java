@@ -97,13 +97,13 @@ public class Path {
         Map<Point,HashSet<Pos>> posMap = getResSetMap(isEmpty);
         if (Main.pointStaMap.containsKey(dest)){
             HashSet<Pos> set = Main.pointStaMap.get(dest).paths.getInterSet(isEmpty, src);
-            if (set != null){
+            if (set != null && set.size()>1){
                 set = Main.pointStaMap.get(dest).paths.getInterSet(isEmpty,src);
                 posMap.put(dest,set);     // 保存路径，下次备用
                 return set;
             }
         }
-        if (!posMap.containsKey(dest)){
+        if (!posMap.containsKey(dest) || posMap.get(dest).size()<3){
             Map<Point,ArrayList<Point>> paths = getPathMap(isEmpty);
             HashSet<Pos> pos1 = new HashSet<>();
             ArrayList<Point> path = Astar.getPathAndResult(isEmpty, src, dest,pos1);

@@ -62,7 +62,6 @@ public class Main {
         testRobot.add(2);
         testRobot.add(3);
 
-
         schedule();
     }
 
