@@ -95,6 +95,14 @@ public class Path {
 
     public HashSet<Pos> getResSet(boolean isEmpty, Point dest) {
         Map<Point,HashSet<Pos>> posMap = getResSetMap(isEmpty);
+        if (Main.pointStaMap.containsKey(dest)){
+            HashSet<Pos> set = Main.pointStaMap.get(dest).paths.getInterSet(isEmpty, src);
+            if (set != null){
+                set = Main.pointStaMap.get(dest).paths.getInterSet(isEmpty,src);
+                posMap.put(dest,set);     // 保存路径，下次备用
+                return set;
+            }
+        }
         if (!posMap.containsKey(dest)){
             Map<Point,ArrayList<Point>> paths = getPathMap(isEmpty);
             HashSet<Pos> pos1 = new HashSet<>();
@@ -120,14 +128,6 @@ public class Path {
             return null;    // 不包含此条路径，返回空
         }
         return path.get(dest);
-    }
-
-    private HashSet<Pos> getInterResSet(boolean isEmpty, Point dest) {
-        Map<Point,HashSet<Pos>> set = getResSetMap(isEmpty);
-        if (!set.containsKey(dest)){
-            return null;    // 不包含此条路径，返回空
-        }
-        return set.get(dest);
     }
 
 

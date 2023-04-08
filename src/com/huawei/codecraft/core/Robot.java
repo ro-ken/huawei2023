@@ -61,7 +61,7 @@ public class Robot {
 
     public WaterFlow waterFlow; // 处于哪条流水线
 
-    public Station lastStation; // 当前处于那个工作站，供决策使用，到达更新 todo
+    public Station lastStation; // 当前处于那个工作站，供决策使用，到达更新
 
     public Point start; // 出生的地点
     public Point midPoint = new Point(); // 记录相撞坐标的中点
@@ -78,28 +78,23 @@ public class Robot {
     public boolean inSafePlace = false;    // 是否到达临时点
 
     public double lastDis = 100000; // 在临时点判断是否距离另外的机器人越来越远
-    public static double minDis = 0.2; // 判定离临时点多近算到达
+
     public int lastDisFps = 0; // 越来越远 经过了几帧
-    public static int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
 
-    // 下面参数 无用
-    public static double vectorNearOffset = 0.1; // 小于这个角度认为直线重合
-    public static double tmpPlaceOffset = 1.2; // 半径乘子 偏移系数，单位 个，临时距离向右偏移多少
-    public static double minDistanceForWall = 4; // 半径乘子，偏移系数，单位 个，
-    public static double arriveMinDistance = 2;//半径乘子，和目的地的最小判定距离
-    public static final boolean judgeWidth = true;
-    //
 
-    //下面参数可调
-    public static double maxSpeedCoef = 1.5;
-    public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
-    public static int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
-    public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
-    public static int blockJudgeFps = 20 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点
-    public static int maxWaitBlockFps = 50 * 3 ;    // 等待超过多长时间目标机器人没有来，就自行解封
     public double blockFps = 0;    // 目前阻塞的帧数
-    public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
-    public static double detectWallWideCoef = 0.8 ;    // 半径乘子，判断从圆心多远的地方
+    //下面参数可调
+    public static final double minDis = 0.2; // 判定离临时点多近算到达
+    public static final int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
+    public static final double maxSpeedCoef = 1.5;
+    public static final double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
+    public static final int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
+    public static final double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
+    public static final int blockJudgeFps = 20 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点
+    public static final int maxWaitBlockFps = 50 * 3 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
+
+    public static final double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
+    public static final double detectWallWideCoef = 1.0 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
 
     public Robot winner;
     public HashSet<Robot> losers = new HashSet<>(); // 要避让我的点
@@ -264,6 +259,7 @@ public class Robot {
 
         tmpSafeMode = true;
         winner = winRobot;      // 设置是给谁避让，后期需要定期探测这个机器人是否到达目标点
+        inSafePlace = false;
         HashSet<Pos> pos1 = new HashSet<>();
 //        ArrayList<Point> path = Astar.getPath(carry==0,pos,sp);
         ArrayList<Point> path = Astar.getPathAndResult(carry==0,pos,sp,pos1);
@@ -419,14 +415,6 @@ public class Robot {
         return true;
     }
 
-    private boolean posIsAllow(Point tmpPos) {
-        // 距离边界太近，则不合法
-        double dis = minDistanceForWall * getRadius();
-        if (tmpPos.x <= dis || tmpPos.x >= 50 - dis){
-            return false;
-        }
-        return !(tmpPos.y <= dis) && !(tmpPos.y >= 50 - dis);
-    }
 
     // 检测路线是否有重叠区域
     public boolean routeBumpDetect(Robot other) {
@@ -447,7 +435,6 @@ public class Robot {
         if (m_l_min > o_l_max && m_r_min > o_r_max || o_l_min > m_l_max && o_r_min > m_r_max){
             return false;
         }
-
         return true;
     }
 
@@ -471,6 +458,7 @@ public class Robot {
                 goToEmptyPlace();
             }else {
                 avoidBumpMode = false;
+                Main.printLog(11111);
                 recoveryPath();     // 恢复路径
             }
         }
@@ -489,6 +477,7 @@ public class Robot {
                 // 到达了安全点，要判断是否能走
 
                 if (roadIsSafe()){
+                    Main.printLog(22222);
                     recoveryPath();   // 对方通过狭窄路段，重新寻路
                 }
             }
@@ -496,6 +485,8 @@ public class Robot {
 
 
         route.rush2();
+
+        route.deletePos();  // 以走过的点要删除，防止发生误判
     }
 
     private boolean roadIsSafe() {
@@ -571,33 +562,6 @@ public class Robot {
         calcRoute();
     }
 
-
-    private boolean setTmpPlace() {
-        return setTmpPlace(true);
-    }
-
-    //  设置临时目的地，默认设置中点向右偏移
-    private boolean setTmpPlace(boolean right) {
-        double x = (route.next.x + pos.x)/2;
-        double y = (route.next.y + pos.y)/2;
-        Point[] points = getPoints(x, y, getRadius() * tmpPlaceOffset);
-        // 默认往右转
-        if (route.vector.x>0){
-            tmpPos = right?points[1]:points[0];
-        }else {
-            tmpPos =  right?points[0]:points[1];
-        }
-        if (!posIsAllow(tmpPos)){
-            return false;
-        }
-        // 重新设置轨迹
-        route.next.set(tmpPos);
-        isTempPlace = true;
-
-        return true;
-    }
-
-
     public boolean arriveBasePoint() {
         Point pre = baseLine.left;
         boolean arrive =  isArrivePoint(pre,basePoint);
@@ -637,6 +601,7 @@ public class Robot {
         if (tmpSafeMode && inSafePlace){
             blockFps ++;
             if (blockFps > maxWaitBlockFps){
+                Main.printLog(333333);
                 recoveryPath();
                 blockFps = 0;
             }
@@ -689,23 +654,10 @@ public class Robot {
             if (tmpSafeMode){
                 calcTmpRoute(route.target,winner);
             }else {
+                Main.printLog(444444);
                 recoveryPath();
             }
 //        recoveryPath();
-        }
-    }
-
-    public HashSet<Pos> getResultSet(){
-        if (nextStation == null) return null;
-        if (nextStation == srcStation){
-            if (lastStation == null){
-                return nextStation.paths.getResSet(carry==0,start);
-            }else {
-                return lastStation.paths.getResSet(carry==0,nextStation.pos);
-            }
-        }else {
-            // nextstation = dest
-            return srcStation.paths.getResSet(carry==0,nextStation.pos);
         }
     }
 
@@ -765,6 +717,7 @@ public class Robot {
         // 设置对方为我的loser机器人
         if (tmpSafeMode){
             // 若我是loser，先解除封印
+            Main.printLog(55555);
             recoveryPath();
         }
         weakRobot.resetStatus();
@@ -781,6 +734,7 @@ public class Robot {
         if (!losers.isEmpty()){
             HashSet<Robot> tmp = new HashSet<>(losers);
             for (Robot loser : tmp) {
+                Main.printLog(66666);
                 loser.recoveryPath();
             }
             losers.clear();

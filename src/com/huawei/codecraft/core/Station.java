@@ -66,6 +66,10 @@ public class Station implements Comparable{
         bookPro = false;
         bookRow = new boolean[8];
         paths = new Path(pos);
+        if (type>3){
+            leftTime = -1;  // 初始化，马上要用
+        }
+
     }
     
     @Override

@@ -40,7 +40,7 @@ public class Main {
     public static final boolean menu = true;    // 是否从路径读取
     public static final int robotNum = 4;
     public static final HashSet<Integer> testRobot = new HashSet<>();
-    public static int mapSeq;   // 是第几号地图，做优化
+    public static int mapSeq = 0;   // 是第几号地图，做优化
     public static boolean specialMapMode = false;   // 是否针对地图做优化
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
     public static int[] clockCoef = new int[]{1, 1, 1, 1}; // 碰撞旋转系数
@@ -250,17 +250,17 @@ public class Main {
 
     // 初始化地图顺序
     private static void initMapSeq() {
-        if (stations[0].type == 1){
-            mapSeq = 1;
-        }else if (stations[0].type == 6){
-            mapSeq = 2;
-        }else if (stations[0].type == 3){
-            mapSeq = 3;
-        }else if (stations[0].type == 7){
-            mapSeq = 4;
-        }else {
-            mapSeq = -1;    // 未初始化
-        }
+//        if (stations[0].type == 1){
+//            mapSeq = 1;
+//        }else if (stations[0].type == 6){
+//            mapSeq = 2;
+//        }else if (stations[0].type == 3){
+//            mapSeq = 3;
+//        }else if (stations[0].type == 7){
+//            mapSeq = 4;
+//        }else {
+//            mapSeq = -1;    // 未初始化
+//        }
         Main.printLog("mapSeq:"+mapSeq);
     }
 

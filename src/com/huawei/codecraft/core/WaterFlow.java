@@ -77,7 +77,13 @@ public class WaterFlow {
                if (robot.lastStation.type <= 6){
                    sta456Sched(robot);
                }else{
-                   sta789Sched(robot);
+                   if (Main.mapSeq == -2){
+                       commonSched(robot);
+                   }else {
+                       sta789Sched(robot);
+                   }
+
+//                   sta789Sched(robot);
                }
            }
        }
@@ -89,6 +95,18 @@ public class WaterFlow {
             simpleSched(robot);
             return;
         }
+
+        if (Main.mapSeq == -2){
+            // 贪心算法
+            Station src = selectTimeShortestStation(robot);
+            if (src != null){
+                Main.printLog(src+" "+src.availNextStation);
+                robot.setSrcDest(src,src.availNextStation);
+                return;
+            }
+            return;
+        }
+
 
         // 1、是否有456要运送的
         Station src = closestAndHaveProSta(robot);
@@ -135,22 +153,44 @@ public class WaterFlow {
     public Station selectTimeShortestStation(Robot robot) {
         Station shortestStation = null;
         double shortest = 10000;
-        for(int i=0;i<Main.stationNum;i++){
 
-            Station station = Main.stations[i];
-            if (station.zone !=robot.zone || station.leftTime == -1 || station.bookPro) continue;
-            double dis = station.pos.calcDistance(robot.pos);
-            double time1 = robot.calcFpsToPlace(dis);         // todo 时间要改
-            double time = Math.max(time1,station.leftTime);
-            if (time < shortest){
-                // 卖方有货，卖方有位置
-                Station oth = station.chooseAvailableNextStation();
-                if (oth != null){
-                    shortestStation = station;
-                    shortest = time;
+        for (ArrayList<Station> list : zone.stationsMap.values()) {
+            for (Station station : list) {
+                if (Main.mapSeq == -2) {
+                    if (station.type == 7) continue;
+                }
+                if (station.leftTime == -1 || (station.bookPro && station.type>3)) continue;
+                double dis = station.pos.calcDistance(robot.pos);
+                double time1 = robot.calcFpsToPlace(dis);         // todo 时间要改
+                double time = Math.max(time1,station.leftTime);
+                if (time < shortest){
+                    // 卖方有货，卖方有位置
+                    Station oth = station.chooseAvailableNextStation();
+                    if (oth != null){
+                        shortestStation = station;
+                        shortest = time;
+                    }
                 }
             }
         }
+
+
+//        for(int i=0;i<Main.stationNum;i++){
+//
+//            Station station = Main.stations[i];
+//            if (station.zone !=robot.zone || station.leftTime == -1 || station.bookPro) continue;
+//            double dis = station.pos.calcDistance(robot.pos);
+//            double time1 = robot.calcFpsToPlace(dis);         // todo 时间要改
+//            double time = Math.max(time1,station.leftTime);
+//            if (time < shortest){
+//                // 卖方有货，卖方有位置
+//                Station oth = station.chooseAvailableNextStation();
+//                if (oth != null){
+//                    shortestStation = station;
+//                    shortest = time;
+//                }
+//            }
+//        }
         return shortestStation;
     }
 

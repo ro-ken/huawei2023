@@ -30,13 +30,11 @@ public class Route{
 
     public double realDistance;
     public double realAngleDistance;    // 速度与目标向量的夹角
-    public double setMinAngle;   // 设置临界减速角度
-    public double setMinDistance;   // 设置临界减速距离
+
     double theoryTurn;
-    double angleOffset;
+
     double stopMinDistance;
     double stopMinAngleDistance;
-    public boolean endWaitMode = false; // 是否使用终点等待模式
 
     public static double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
     public static double verticalSafeDistanceCoef = 1.5;   // 半径乘子，每个机器人紧急距离，外人不得靠近
@@ -313,7 +311,7 @@ public class Route{
             double angle = calcDeltaAngle(vec);
             double verSafeDis = verticalSafeDistanceCoef * robot.getRadius() + 2 * robot.getRadius();
             if (angle < staPerAngleRange && dis < realDistance){
-                if (Robot.judgeWidth && verDis > verSafeDis){
+                if (verDis > verSafeDis){
                     continue;
                 }
                 safe = false;
@@ -350,7 +348,7 @@ public class Route{
                     break;  // 紧急情况
                 }else {
                     if (angle < perceptionAngleRange){
-                        if (Robot.judgeWidth && verDis > verSafeDis){
+                        if (verDis > verSafeDis){
                             continue;
                         }
                         safe = false;
@@ -521,7 +519,7 @@ public class Route{
 
     // 计算当前的安全级别 0:安全，1：有墙，2有机器人
     private void calcSafeLevel() {
-        unsafeLevel = 0;    // 先置位安全状态
+        unsafeLevel = 0;    // 先置为安全状态
         if (!robot.tmpSafeMode){        // 暂时不考虑两个loser相遇的情况
             // 如果不是这个模式，需要检测和其他机器人是否碰撞
             if (willBump()){
@@ -562,6 +560,7 @@ public class Route{
         for (Robot oth : robot.zone.robots) {
             if (oth == robot || oth.winner == robot) continue;  // 对方避让情况，不避让
             // 未来会发生碰撞
+            if (oth.route == null) continue;
             if (posSet.contains(Astar.Point2Pos(oth.pos)) || oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
                 double dis = robot.pos.calcDistance(oth.pos);
                 // 距离较近
@@ -894,12 +893,17 @@ public class Route{
         // 判断自己和另一个机器人谁更弱小，谁让路
         // todo 后面可以修改
 
-        if (posSet.contains(Astar.Point2Pos(oth.pos)) && !oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
+//        if (posSet.contains(Astar.Point2Pos(oth.pos)) && !oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
+//            // 对方在我的路线上，我不在对方的路线上,我避让
+//          return robot;
+//        }
+
+        if (robotIsInRoute(posSet,oth.pos) && !robotIsInRoute(oth.route.posSet,robot.pos)){
             // 对方在我的路线上，我不在对方的路线上,我避让
-          return robot;
+            return robot;
         }
 
-        if (!posSet.contains(Astar.Point2Pos(oth.pos)) && oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
+        if (!robotIsInRoute(posSet,oth.pos) && robotIsInRoute(oth.route.posSet,robot.pos)){
             // 情况相反
             return oth;
         }
@@ -925,10 +929,6 @@ public class Route{
             return robot;
         }
 
-        if (oth.route.roadIsWide()){
-            return oth; // 对方路很宽，对方避让
-        }
-
         // 没货的避让
         if (robot.carry == 1 && oth.carry == 0){
             return oth;
@@ -936,6 +936,11 @@ public class Route{
 
         if (robot.carry == 0 && oth.carry == 1){
             return robot;
+        }
+
+        if (oth.route.roadIsWide()){
+
+            return oth; // 对方路很宽，对方避让
         }
 
         // 比较两个节点剩余的路程，远的让路，todo 可比较里安全点近的避让
@@ -947,6 +952,20 @@ public class Route{
         }else {
             return robot;
         }
+    }
+
+    private boolean robotIsInRoute(HashSet<Pos> posSet, Point point) {
+        // 判断是机器人否在路线上
+        //考虑机器人的宽度
+        Pos pos = Astar.Point2Pos(point);
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                if (posSet.contains(new Pos(pos.x+i,pos.y+j))){
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     // 计算剩下的路还剩多少fps
@@ -1175,5 +1194,15 @@ public class Route{
 //        Main.printLog("pos:next"+robot.pos + "," + next);
 //        Main.printLog("path:"+path);
 //        Main.printLog("index:"+pathIndex);
+    }
+
+    public void deletePos() {
+        Pos pos = Astar.Point2Pos(robot.pos);
+        for (int i = -1; i < 2; i++) {
+            for (int j = -1; j < 2; j++) {
+                posSet.remove(new Pos(pos.x + i,pos.y+j));
+            }
+        }
+
     }
 }
