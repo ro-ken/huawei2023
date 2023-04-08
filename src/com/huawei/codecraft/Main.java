@@ -43,6 +43,8 @@ public class Main {
     public static boolean specialMapMode = false;   // 是否针对地图做优化
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
     public static int[] clockCoef = new int[]{1, 1, 1, 1}; // 碰撞旋转系数
+    public static int workRobot;
+    public static int destoryTimes;
 
     public static void main(String[] args) throws FileNotFoundException {
 
@@ -74,7 +76,12 @@ public class Main {
             printLog(frameID);
             readUtilOK();
             Frame(frameID);
-            handleFrame();
+
+            if (mapSeq == -1){
+                destoryType1();
+            }else {
+                handleFrame();
+            }
             Ok();
         }
     }
@@ -243,17 +250,18 @@ public class Main {
 
     // 初始化地图顺序
     private static void initMapSeq() {
-       if (stations[0].type == 5){
-           mapSeq = 1;
-       }else if (stations[0].type == 6 && stations[1].type == 2 ){
-           mapSeq = 2;
-       }else if (stations[0].type == 1){
-           mapSeq = 3;
-       }else if (stations[0].type == 6){
-           mapSeq = 4;
-       }else {
-           mapSeq = -1;    // 未初始化
-       }
+//       if (stations[0].type == 5){
+//           mapSeq = 1;
+//       }else if (stations[0].type == 6 && stations[1].type == 2 ){
+//           mapSeq = 2;
+//       }else if (stations[0].type == 1){
+//           mapSeq = 3;
+//       }else if (stations[0].type == 6){
+//           mapSeq = 4;
+//       }else {
+//           mapSeq = -1;    // 未初始化
+//       }
+        mapSeq = -1;
         Main.printLog("mapSeq:"+mapSeq);
     }
 
@@ -402,6 +410,49 @@ public class Main {
     public static void printLog(Object log){
         if (test){
             System.out.println(log);
+        }
+    }
+    
+        private static void goTostationNUM_0() {
+        if (robots[workRobot].StationId != robots[workRobot].zone.stationsMap.get(1).get(0).id) {
+            robots[workRobot].nextStation = robots[workRobot].zone.stationsMap.get(1).get(0);
+            if (robots[workRobot].route.arriveNext()){
+                robots[workRobot].route.updateNext();
+            }
+            
+            if (robots[workRobot].blockDetect()){
+                // 若发生阻塞，需要重新规划路线
+                robots[workRobot].setNewPath();
+            }
+
+            robots[workRobot].route.calcParamEveryFrame();    // 通用参数
+            robots[workRobot].calcMoveEquation();     //  运动方程
+            robots[workRobot].rush();
+        }
+    }
+
+    private static void destoryType1() {
+        // 找一个能买 1 的机器人完成神圣的使命
+        for (int i = 0; i < 4; i++) {
+            if (robots[i].zone.stationsMap.get(1).size() != 0) {
+                workRobot = i;
+                break;
+            }
+        }
+        // 用于摸出黑图
+        robots[workRobot].nextStation =  robots[workRobot].zone.stationsMap.get(1).get(0);
+        goTostationNUM_0();
+        if (robots[workRobot].isArrive() && robots[workRobot].carry == 0) {
+                Buy(0);
+                printLog("times");
+                printLog("buy");
+        }
+        else if (robots[workRobot].isArrive() && robots[workRobot].carry == 1){
+            if (destoryTimes < stations[0].type - 1) {
+                destoryTimes++;
+                Destroy(0);
+                printLog("destroy");
+            }
         }
     }
 
