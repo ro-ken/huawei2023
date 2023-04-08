@@ -37,7 +37,6 @@ public class Main {
     public static final int fps = 50;
     public static final boolean test = true;    // 是否可写入
     public static final boolean writePath = true;    // 是否可写入
-    public static final boolean menu = true;    // 是否从路径读取
     public static final int robotNum = 4;
     public static final HashSet<Integer> testRobot = new HashSet<>();
     public static int mapSeq = 0;   // 是第几号地图，做优化
@@ -67,11 +66,6 @@ public class Main {
 
     private static void schedule() {
         initialization();
-
-        if (menu){
-            StationMenu.setStationPath();
-        }
-
         Ok();
         while (inStream.hasNextLine()) {
             String line = inStream.nextLine();
@@ -276,7 +270,28 @@ public class Main {
 //        if (mapSeq == 4) {
 //            Route.lineSpeedCoef = 1.5;
 //        }
+        if (mapSeq == 1) {
+            StationMenu.map1();
+            Route.minPosNum = 1;
+
+        }else if (mapSeq == 2) {
+            StationMenu.map2();
+            Route.minPosNum = 8;
+
+        }else if (mapSeq == 3) {
+            Route.minPosNum = 10;
+
+
+        }else if (mapSeq == 4) {
+
+        }
+    /*
+    if (mapSeq == 3) {
     }
+    if (mapSeq == 4) {
+    }*/
+    }
+
 
 
 

@@ -16,7 +16,7 @@ public class Route{
     Robot robot;
     public Point target;    // 目标点
     public ArrayList<Point> path;   // 要经过的一些列点
-    public HashSet<Pos> posSet;     // 存储行进路径的，pos，创建route的时候需要赋值
+    public HashSet<Pos> posSet = new HashSet<>();     // 存储行进路径的，pos，创建route的时候需要赋值
     public int pathIndex;   // 指向next一个点
     public Point next;  // 下一个要到的点
     public double changeAngle = Robot.pi;  // 当前路线和下一条路线的夹角，若夹角较小，直接冲
@@ -54,8 +54,8 @@ public class Route{
     public Point avoidWallPoint;    // 避免与墙体碰撞的临时点
     public static double avoidWallPointSpeed = Robot.maxSpeed/2.0;    // 判断与墙体会发生碰撞，去往临时点的最大速度
     public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行避让操作
-    public static double predictWillBumpMinDis = 10;    // 预测是否会发生碰撞的距离
-    public static int minPosNum = 20;    // 预测是否会发生碰撞的点的个数，一个点0.5m左右
+    public static final double predictWillBumpMinDis = 10;    // 预测是否会发生碰撞的距离，不用改
+    public static int minPosNum = 20;    // 预测是否会发生碰撞的点的个数，一个点0.5m左右 todo 重要参数
 
     public static int wideDis = 8;   //  *0.5
     ArrayList<Integer> unsafeRobotIds;
@@ -1203,6 +1203,9 @@ public class Route{
     }
 
     public void deletePos() {
+        //todo
+        if (posSet == null) return;
+
         Pos pos = Astar.Point2Pos(robot.pos);
         for (int i = -1; i < 2; i++) {
             for (int j = -1; j < 2; j++) {
