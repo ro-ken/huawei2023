@@ -77,7 +77,7 @@ public class WaterFlow {
                if (robot.lastStation.type <= 6){
                    sta456Sched(robot);
                }else{
-                   if (Main.mapSeq == -2){
+                   if (Main.mapSeq == 4){
                        commonSched(robot);
                    }else {
                        sta789Sched(robot);
@@ -96,7 +96,7 @@ public class WaterFlow {
             return;
         }
 
-        if (Main.mapSeq == -2){
+        if (Main.mapSeq == 4){
             // 贪心算法
             Station src = selectTimeShortestStation(robot);
             if (src != null){
@@ -156,7 +156,7 @@ public class WaterFlow {
 
         for (ArrayList<Station> list : zone.stationsMap.values()) {
             for (Station station : list) {
-                if (Main.mapSeq == -2) {
+                if (Main.mapSeq == 4) {
                     if (station.type == 7) continue;
                 }
                 if (station.leftTime == -1 || (station.bookPro && station.type>3)) continue;

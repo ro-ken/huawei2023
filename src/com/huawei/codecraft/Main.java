@@ -250,17 +250,17 @@ public class Main {
 
     // 初始化地图顺序
     private static void initMapSeq() {
-//        if (stations[0].type == 1){
-//            mapSeq = 1;
-//        }else if (stations[0].type == 6){
-//            mapSeq = 2;
-//        }else if (stations[0].type == 3){
-//            mapSeq = 3;
-//        }else if (stations[0].type == 7){
-//            mapSeq = 4;
-//        }else {
-//            mapSeq = -1;    // 未初始化
-//        }
+       if (stations[0].type == 5){
+           mapSeq = 1;
+       }else if (stations[0].type == 6 && stations[1].type == 2 ){
+           mapSeq = 2;
+       }else if (stations[0].type == 1){
+           mapSeq = 3;
+       }else if (stations[0].type == 6){
+           mapSeq = 4;
+       }else {
+           mapSeq = -1;    // 未初始化
+       }
         Main.printLog("mapSeq:"+mapSeq);
     }
 
