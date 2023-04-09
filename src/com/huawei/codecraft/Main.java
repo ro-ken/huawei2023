@@ -35,7 +35,7 @@ public class Main {
     public static final int duration = 5 * 60 * 50;
     public static final int JudgeDuration = duration - 30 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int fps = 50;
-    public static final boolean test = false;    // 是否可写入
+    public static final boolean test = true;    // 是否可写入
     public static final boolean writePath = true;    // 是否可写入
     public static final int robotNum = 4;
     public static final HashSet<Integer> testRobot = new HashSet<>();
@@ -77,11 +77,11 @@ public class Main {
             readUtilOK();
             Frame(frameID);
 
-//            if (mapSeq == -1){
-//                destoryType1();
-//            }else {
-//                handleFrame();
-//            }
+        //    if (mapSeq == -1){
+        //        destoryType1();
+        //    }else {
+        //        handleFrame();
+        //    }
             handleFrame();
             Ok();
         }
@@ -259,17 +259,17 @@ public class Main {
 
     // 初始化地图顺序
     private static void initMapSeq() {
-       if (stations[0].type == 2 && stations[1].type == 1 && stations[2].type == 7){
-           mapSeq = 1;
-       }else if (stations[0].type == 6 && stations[1].type == 2 ){
-           mapSeq = 2;
-       }else if (stations[0].type == 1){
-           mapSeq = 3;
-       }else if (stations[0].type == 6){
-           mapSeq = 4;
-       }else {
-           mapSeq = -1;    // 未初始化
-       }
+        if (stations[0].type == 2 && stations[1].type == 1){
+            mapSeq = 1;
+        }else if (stations[0].type == 8 && stations[1].type == 1 ){
+            mapSeq = 2;
+        }else if (stations[0].type == 1){
+            mapSeq = 3;
+        }else if (stations[0].type == 9){
+            mapSeq = 4;
+        }else {
+            mapSeq = 0;    // 未初始化
+        }
 //        mapSeq = -1;
         Main.printLog("mapSeq:"+mapSeq);
     }
@@ -277,19 +277,28 @@ public class Main {
     public static void initSpecialMapParam() {
 
         if (mapSeq == 1) {
-//            StationMenu.map1();
-            Route.minPosNum = 1;
+           StationMenu.map1();
+            // Route.perceptionAngleRange = Robot.pi / 10;
 
         }else if (mapSeq == 2) {
-//            StationMenu.map2();
-            Route.minPosNum = 8;
+            StationMenu.map2();
+            // Route.emergencyDistanceCoef = 0.6;
+            // Robot.detectWallWideCoef = 0.8;   
+            Route.avoidWallPointSpeed = Robot.maxSpeed * 53 / 100; 
+            Route.minPosNum = 16;
+            Robot.maxWaitBlockFps = 100;
+            Robot.blockJudgeFps = 50;
 
         }else if (mapSeq == 3) {
-            Route.minPosNum = 10;
-
+            // Route.minPosNum = 16;
+            // Robot.maxWaitBlockFps = 50 * 2;
+            // // Robot.detectWallWideCoef = 0.8;
+            // Robot.blockJudgeFps = 50;
 
         }else if (mapSeq == 4) {
-
+            Route.minPosNum = 18;
+            Robot.maxWaitBlockFps = 50 * 2;
+            Robot.blockJudgeFps = 25;
         }
     /*
     if (mapSeq == 3) {
