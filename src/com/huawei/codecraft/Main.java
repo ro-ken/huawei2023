@@ -35,8 +35,8 @@ public class Main {
     public static final int duration = 5 * 60 * 50;
     public static final int JudgeDuration = duration - 30 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int fps = 50;
-    public static final boolean test = true;    // 是否可写入
-    public static final boolean writePath = true;    // 是否可写入
+    public static final boolean test = false;    // 是否可写入
+    public static final boolean writePath = false;    // 是否可写入
     public static final int robotNum = 4;
     public static final HashSet<Integer> testRobot = new HashSet<>();
     public static int mapSeq = 0;   // 是第几号地图，做优化
@@ -290,6 +290,7 @@ public class Main {
             Robot.blockJudgeFps = 50;
 
         }else if (mapSeq == 3) {
+            Route.avoidWallPointSpeed = Robot.maxSpeed * 58 / 100; 
             // Route.minPosNum = 16;
             // Robot.maxWaitBlockFps = 50 * 2;
             // // Robot.detectWallWideCoef = 0.8;
