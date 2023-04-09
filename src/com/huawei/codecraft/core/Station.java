@@ -380,7 +380,9 @@ public class Station implements Comparable{
         }
         if (type == 7){
             calcCanBuyStations();
-            closest89 = Objects.requireNonNull(canSellStations.peek()).key;
+            if (canSellStations.peek() != null){
+                closest89 = Objects.requireNonNull(canSellStations.peek()).key;
+            }
             if (closest89 != null){
                 cycleAvgValue = calc7CycleAvgValue(closest89.pos);
             }else {

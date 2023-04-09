@@ -259,7 +259,7 @@ public class Main {
 
     // 初始化地图顺序
     private static void initMapSeq() {
-       if (stations[0].type == 5){
+       if (stations[0].type == 2 && stations[1].type == 1 && stations[2].type == 7){
            mapSeq = 1;
        }else if (stations[0].type == 6 && stations[1].type == 2 ){
            mapSeq = 2;

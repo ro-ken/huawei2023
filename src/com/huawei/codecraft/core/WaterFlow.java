@@ -32,7 +32,10 @@ public class WaterFlow {
         completed = new HashMap<>();
         halfComp = new HashMap<>();
         robots = new ArrayList<>();
-        sellMinFps = target.pathToFps(false,target.closest89.pos);
+        if (target.closest89 != null){
+            sellMinFps = target.pathToFps(false,target.closest89.pos);
+        }
+
         init();
     }
     private void init() {
@@ -77,7 +80,7 @@ public class WaterFlow {
                if (robot.lastStation.type <= 6){
                    sta456Sched(robot);
                }else{
-                   if (Main.mapSeq == -5){
+                   if (Main.mapSeq == 1){
                        commonSched(robot);
                    }else {
                        sta789Sched(robot);
@@ -96,7 +99,7 @@ public class WaterFlow {
             return;
         }
 
-        if (Main.mapSeq == -5){
+        if (Main.mapSeq == 1){
             // 贪心算法
             Station src = selectTimeShortestStation(robot);
             if (src != null){
@@ -156,7 +159,7 @@ public class WaterFlow {
 
         for (ArrayList<Station> list : zone.stationsMap.values()) {
             for (Station station : list) {
-                if (Main.mapSeq == -5) {
+                if (Main.mapSeq == 1) {
                     if (station.type == 7) continue;
                 }
                 if (station.leftTime == -1 || (station.bookPro && station.type>3)) continue;
@@ -199,7 +202,9 @@ public class WaterFlow {
         Main.printLog("target7:" + target.canSell() + ":" + target.proStatus + ":" + target.bookPro );
         if (target.canSell()){
             // 七八九的情况，判断7是否有物品
-            robot.setSrcDest(target, Objects.requireNonNull(target.canSellStations.peek()).key);
+            if (target.canSellStations.peek()!= null){
+                robot.setSrcDest(target, Objects.requireNonNull(target.canSellStations.peek()).key);
+            }
         }else {
             commonSched(robot);
         }
