@@ -35,7 +35,7 @@ public class Main {
     public static final int duration = 5 * 60 * 50;
     public static final int JudgeDuration = duration - 30 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int fps = 50;
-    public static final boolean test = true;    // 是否可写入
+    public static final boolean test = false;    // 是否可写入
     public static final boolean writePath = true;    // 是否可写入
     public static final int robotNum = 4;
     public static final HashSet<Integer> testRobot = new HashSet<>();
@@ -152,6 +152,8 @@ public class Main {
                     robots[i].changeTarget();
                 }else {
                     robots[i].waitStationMode = true;
+                    Main.printLog("kkkkkkkkkkkkkkkkkkkk");
+                    Main.printLog("rokin");
                 }
             }
             // 如果到中间点要换下一个点
@@ -257,40 +259,29 @@ public class Main {
 
     // 初始化地图顺序
     private static void initMapSeq() {
-//       if (stations[0].type == 5){
-//           mapSeq = 1;
-//       }else if (stations[0].type == 6 && stations[1].type == 2 ){
-//           mapSeq = 2;
-//       }else if (stations[0].type == 1){
-//           mapSeq = 3;
-//       }else if (stations[0].type == 6){
-//           mapSeq = 4;
-//       }else {
-//           mapSeq = -1;    // 未初始化
-//       }
-        mapSeq = -1;
+       if (stations[0].type == 5){
+           mapSeq = 1;
+       }else if (stations[0].type == 6 && stations[1].type == 2 ){
+           mapSeq = 2;
+       }else if (stations[0].type == 1){
+           mapSeq = 3;
+       }else if (stations[0].type == 6){
+           mapSeq = 4;
+       }else {
+           mapSeq = -1;    // 未初始化
+       }
+//        mapSeq = -1;
         Main.printLog("mapSeq:"+mapSeq);
     }
 
     public static void initSpecialMapParam() {
-//        if (mapSeq == 1) {
-//            Route.emergencyAngle = Robot.pi/10;
-//        }
-//        if (mapSeq == 2) {
-//            Route.emergencyDistanceCoef = 0.6;
-//        }
-//        if (mapSeq == 3) {
-//            Route.perceptionAngleRange = Robot.pi/10;
-//        }
-//        if (mapSeq == 4) {
-//            Route.lineSpeedCoef = 1.5;
-//        }
+
         if (mapSeq == 1) {
-            StationMenu.map1();
+//            StationMenu.map1();
             Route.minPosNum = 1;
 
         }else if (mapSeq == 2) {
-            StationMenu.map2();
+//            StationMenu.map2();
             Route.minPosNum = 8;
 
         }else if (mapSeq == 3) {

@@ -49,6 +49,57 @@ public class Astar {
         }
     }
 
+    public void blockAvoidMaps2(int[][] maps) {
+        int x = targetPosition.x, y = targetPosition.y;
+        int startI = Math.max(x - 2, 0);
+        int startJ = Math.max(y - 2, 0);
+        int endI = x + 2 < Mapinfo.row ? x + 2 : Mapinfo.row - 1;
+        int endJ = y + 2 < Mapinfo.col ? y + 2 : Mapinfo.col - 1;
+
+        for (int i = startI; i <= endI; i++) {
+            for (int j = startJ; j <= endJ; j++) {
+                if (posNotInTwoPos(startPosition,targetPosition,i,j)){
+                    maps[i][j] = 2;
+                }
+            }
+        }
+    }
+
+    private boolean posNotInTwoPos(Pos s, Pos t, int i, int j) {
+        if (i == t.x && j == t.y){
+            return false;   //中点放出来
+        }
+        //
+        if (s.x == t.x && s.y == t.y){
+            return true;
+        }
+        boolean notIn = true;
+        if (s.x != t.x && s.y != t.y){
+            //
+            boolean flag1 = (t.x - s.x) * (t.x-i) > 0; //同侧
+            boolean flag2 = (t.y - s.y) * (t.y-j) > 0; //同侧
+            if (flag1 && flag2){
+                return false;
+            }
+
+        }else {
+            if (s.x == t.x){
+                boolean flag2 = (t.y - s.y) * (t.y-j) > 0; //同侧
+                boolean flag3 = Math.abs(t.x - i) <= 1; //
+                if (flag2 && flag3){
+                    return false;
+                }
+            }else {
+                boolean flag1 = (t.x - s.x) * (t.x-i) > 0; //同侧
+                boolean flag3 = Math.abs(t.y - j) <= 1; //
+                if (flag1 && flag3){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     // 创建两点之间的直线方程
     public Pair calLineExpression(Pos starPos, Pos endPos) {
         Point startPoint = Pos2Point(starPos);
@@ -127,6 +178,15 @@ public class Astar {
         Astar ast = new Astar(fixMap,src,midPoint);
 
         Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
+        return sp;
+    }
+    public static Point getSafePoint2(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1,Point midPoint){
+
+        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
+//        Main.printLog("midPoint" + midPoint);
+        Astar ast = new Astar(fixMap,src,midPoint);
+
+        Point sp = ast.getTmpAvoidPoint2(!isEmpty, pos1);
         return sp;
     }
 
@@ -226,6 +286,36 @@ public class Astar {
         return true;
     }
 
+    public Point getPoint2(int[][] maps, HashSet<Pos> pos1) {
+        if (pos1.size() == 0) {
+            return null;
+        }
+        ArrayList<Pos> openList = new ArrayList<Pos>();; // 存储带拓展节点
+        openList.add(targetPosition);
+        maps[targetPosition.x][targetPosition.y] = 1; // 起点已探索
+        int time = 0;
+        while (openList.size() != 0 && time != maxTimes) {
+            time++;
+            Pos curPos = openList.get(0);
+            openList.remove(curPos);
+            // 上下左右四个方向探索
+            // 开始从上下左右依次加入节点
+            if (getFullGrid(curPos, pos1)) {
+                return Pos2Point(curPos);
+            }
+            for (int i = 0; i < dirX.length / 2; i++) {
+                int x = curPos.x + dirX[i];
+                int y = curPos.y + dirY[i];
+                if (Mapinfo.isInMap(x, y) && maps[x][y] == 0) {
+                    maps[x][y] = 1; // 节点设置已探索
+                    Pos explorePos = new Pos(x, y);
+                    openList.add(explorePos);
+                }
+            }
+        }
+        return null;
+    }
+
     public Point getPoint(int[][] maps, HashSet<Pos> pos1) {
         if (pos1.size() == 0) {
             return null;
@@ -263,6 +353,15 @@ public class Astar {
         blockAvoidMaps(maps);       // 阻塞地图，减小计算量
         return getPoint(maps, pos1);
     }
+
+    public Point getTmpAvoidPoint2(boolean carry,HashSet<Pos> pos1) {
+
+        int[][] maps = new int[Mapinfo.row][Mapinfo.col];
+        initAvoidMaps(maps);    // 用于找避让点的地图，0 未探索 1 已探索 2 障碍物
+        blockAvoidMaps2(maps);       // 阻塞地图，减小计算量
+        return getPoint2(maps, pos1);
+    }
+
 
     // 将得到的路径左边合并并返回结果坐标
     public  ArrayList<Point> getResult(boolean carry) {

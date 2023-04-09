@@ -568,15 +568,18 @@ public class Route{
             // 未来会发生碰撞
             if (oth.route == null) continue;
             if (oth.nextStation == null)continue;
-            if (posSet.contains(Astar.Point2Pos(oth.pos)) || oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
+            if (posSet.contains(Astar.Point2Pos(oth.pos))) {
                 double dis = robot.pos.calcDistance(oth.pos);
-                // 距离较近
-                if (dis < predictWillBumpMinDis && dis < minDis){
-                    // 取最近的机器人进行避让
+                if (oth.route.posSet.contains(Astar.Point2Pos(robot.pos)) || dis < 3) {
+                    // 距离较近
+                    if (dis < predictWillBumpMinDis && dis < minDis) {
+                        minDis = dis;
+                        // 取最近的机器人进行避让
 //                    int posNum = Astar.calcDis(robot.carry == 0, robot.pos, oth.pos);
-                    int posNum = Astar.calcDisAndMidPoint(robot.carry == 0, robot.pos, oth.pos,robot.midPoint);
-                    if (posNum <= minPosNum){
-                        willBumpRobot = oth;
+                        int posNum = Astar.calcDisAndMidPoint(robot.carry == 0, robot.pos, oth.pos, robot.midPoint);
+                        if (posNum <= minPosNum) {
+                            willBumpRobot = oth;
+                        }
                     }
                 }
             }
@@ -652,6 +655,11 @@ public class Route{
         double x = line.left.x;
 //        Main.printLog("x - line.right.x=" + x +"-"+line.right.x);
         int times = 0;
+//        for (int i = 0; i < 3; i++) {
+//            Point wall = getWallByX(x,line);
+//            if (wall != null) return wall;
+//            x =Point.fixAxis2Center(x)+offset;
+//        }
         while (Math.abs(x - line.right.x) >= 0.5){
             if (times > 10){
                 return null;
@@ -684,6 +692,13 @@ public class Route{
         Point tmp = new Point(start);
 //        Main.printLog("tmp.y - end.y=" + tmp.y +"-"+end.y);
         int times = 0;
+//        for (int i = 0; i < 3; i++) {
+//            if (posIsWall(tmp)){
+//                return tmp;
+//            }
+//            tmp.y +=offset;
+//        }
+//
         while (Math.abs(tmp.y - end.y)>=0.5){
             if (posIsWall(tmp)){
                 return tmp;

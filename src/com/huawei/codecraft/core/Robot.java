@@ -18,18 +18,18 @@ import java.util.Random;
  */
 public class Robot {
 
-    public static final double minDis = 0.2; // 判定离临时点多近算到达
-    public static final int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
-    public static final double maxSpeedCoef = 1.5;
-    public static final double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
-    public static final int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
-    public static final double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
-    public static final int blockJudgeFps = 20 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点
-    public static final int maxWaitBlockFps = 50 * 3 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
+    public static double minDis = 0.2; // 判定离临时点多近算到达
+    public static int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
+    public static double maxSpeedCoef = 1.5;
+    public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
+    public static int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
+    public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
+    public static int blockJudgeFps = 30 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点,
+    public static int maxWaitBlockFps = 50 * 3 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
 
-    public static final double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
-    public static final double detectWallWideCoef = 1.0 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
-    public static final double arriveBPDis = 1.0;     // 其他小车躲避的点
+    public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
+    public static double detectWallWideCoef = 1.0 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
+    public static double arriveBPDis = 1.0;     // 其他小车躲避的点
 
     public static final double pi  = 3.1415926;
     public static final double emptyRadius = 0.45;
@@ -723,7 +723,7 @@ public class Robot {
     }
 
     public Point selectTmpSafePoint(Point dest, HashSet<Pos> posSet, Point midPoint) {
-        Point sp = Astar.getSafePoint(carry == 0, pos, dest, posSet,midPoint);
+        Point sp = Astar.getSafePoint2(carry == 0, pos, dest, posSet,midPoint);
 
         HashSet<Point> ps = new HashSet<>();
         for (Pos pos1 : posSet) {
