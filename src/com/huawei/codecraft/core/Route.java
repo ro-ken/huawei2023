@@ -520,11 +520,6 @@ public class Route{
     // 计算当前的安全级别 0:安全，1：有墙，2有机器人
     private void calcSafeLevel() {
         
-        if (Main.mapSeq == -1 ){
-            unsafeLevel = 0;
-            return;
-        }
-        
         unsafeLevel = 0;    // 先置为安全状态
         if (!robot.tmpSafeMode){        // 暂时不考虑两个loser相遇的情况
             // 如果不是这个模式，需要检测和其他机器人是否碰撞

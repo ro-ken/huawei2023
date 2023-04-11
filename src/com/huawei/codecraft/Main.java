@@ -5,6 +5,8 @@ import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.*;
 
+import javax.swing.text.AbstractDocument.LeafElement;
+
 import com.huawei.codecraft.core.*;
 import com.huawei.codecraft.menu.StationMenu;
 import com.huawei.codecraft.util.Point;
@@ -21,9 +23,14 @@ public class Main {
     public static int frameID=0;
 //    public static MyThread thread;
 
+    public static boolean isBlue = false;           // 是红方还是蓝方 true 蓝方，false 红方
     public static final Robot[] robots = new Robot[4];
-    public static final Station[] stations = new Station[50];
-    public static final Map<Integer, ArrayList<Station>> stationsMap = new HashMap<>(); // 类型，以及对应的工作站集合
+    public static final Station[] stations =  new Station[50];
+    public static final Station[] stationsBlue = new Station[50];   // 记录对手得工作台
+    public static final Station[] stationsRed = new Station[50];   // 记录对手得工作台
+    public static  Map<Integer, ArrayList<Station>> stationsMap; // 类型，以及对应的工作站集合
+    public static final Map<Integer, ArrayList<Station>> stationsMapBlue = new HashMap<>(); // 类型，以及对应的工作站集合
+    public static final Map<Integer, ArrayList<Station>> stationsMapRed = new HashMap<>(); // 类型，以及对应的工作站集合
     public static final Map<Point, Station> pointStaMap = new HashMap<>(); // 坐标工作站map
     public static final int[][] wallMap = new int[100][100];   // 存储墙的地图
     public static final double unreachableCost = 1000000000;    // 不可达费用
@@ -35,7 +42,7 @@ public class Main {
     public static final int duration = 5 * 60 * 50;
     public static final int JudgeDuration = duration - 30 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int fps = 50;
-    public static final boolean test = false;    // 是否可写入
+    public static final boolean test = true;    // 是否可写入
     public static final boolean writePath = false;    // 是否可写入
     public static final int robotNum = 4;
     public static final HashSet<Integer> testRobot = new HashSet<>();
@@ -43,8 +50,6 @@ public class Main {
     public static boolean specialMapMode = false;   // 是否针对地图做优化
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
     public static int[] clockCoef = new int[]{1, 1, 1, 1}; // 碰撞旋转系数
-    public static int workRobot;
-    public static int destoryTimes;
 
     public static void main(String[] args) throws FileNotFoundException {
 
@@ -76,12 +81,6 @@ public class Main {
             printLog(frameID);
             readUtilOK();
             Frame(frameID);
-
-        //    if (mapSeq == -1){
-        //        destoryType1();
-        //    }else {
-        //        handleFrame();
-        //    }
             handleFrame();
             Ok();
         }
@@ -166,8 +165,8 @@ public class Main {
 
         initMap();      //  初始化地图
         initZone();     //  初始化区域
-        initMapSeq();      // 初始化地图序列
-        initSpecialMapParam();    // 初始化地图序列参数
+        // initMapSeq();      // 初始化地图序列
+        // initSpecialMapParam();    // 初始化地图序列参数
         initStations();     // 初始化工作站
         initWaterFlow();    // 初始化流水线
 
@@ -189,6 +188,14 @@ public class Main {
         printLog(zoneMap);
     }
 
+    private static void initStationMap(){
+        for (int i = 0; i < stationNum; i++) {
+            Station station = isBlue == true ? stationsBlue[i] : stationsRed[i];
+            stations[i] = station;
+        }
+        stationsMap = isBlue == true ? new HashMap<>(stationsMapBlue) : new HashMap<>(stationsMapRed);
+    }
+
     private static void initStations() {
         for (int i = 0; i < stationNum; i++) {
             stations[i].initialization();           // 第一次初始化，能卖给哪些节点
@@ -207,19 +214,25 @@ public class Main {
     private static void initMap() {
         String line;
         int row = 101;
-        int stationId = 0;
+        int stationIdBlue = 0;
+        int stationIdRed = 0;
         int robotId= 0;
+        
+        line = inStream.nextLine();
+        if ("BLUE".equals(line)) {
+            isBlue = true;
+        }
         while (inStream.hasNextLine()) {
             row --;
             double y = row * 0.5 - 0.25;
             line = inStream.nextLine();
             if ("OK".equals(line)) {
-                stationNum = stationId;
+                stationNum = isBlue == true ? stationIdBlue : stationIdRed;
+                initStationMap(); // 初始化工作台，确认属于哪一方
                 for (Integer key: stationsMap.keySet()){
                     printLog("type = " + key + " , nums = " +stationsMap.get(key).size());
                 }
                 printLog("total = "+ stationNum);
-
                 return ;
             }
 
@@ -230,86 +243,57 @@ public class Main {
                     wallMap[100-row][i] = -1;    // 给地图赋值
                     continue;
                 }
-                if (c == '#') {
+                else if (c == '#') {
                     wallMap[100-row][i] = -2;    // 给地图赋值
                     continue;
                 }
-                if (c == 'A'){
+                else if (c == 'A' && isBlue == true){
                     wallMap[100-row][i] = robotId + 100;    // 给地图赋值
                     robots[robotId] = new Robot(robotId,x,y,robotId);
                     robotPos.put(robotId + 100, new Pos(100-row, i));
                     robotId++;
-                }else {
-                    wallMap[100-row][i] = stationId;    // 给地图赋值
+                }
+                else if (c == 'B' && isBlue == false) {
+                    wallMap[100-row][i] = robotId + 100;    // 给地图赋值
+                    robots[robotId] = new Robot(robotId,x,y,robotId);
+                    robotPos.put(robotId + 100, new Pos(100-row, i));
+                    robotId++;
+                } 
+                else if (c <= '9' && c >= '1'){
+                    if (isBlue == true) {
+                        wallMap[100-row][i] = stationIdBlue;    // 给地图赋值
+                    }
                     int type = Character.getNumericValue(c);
-                    Station station = new Station(stationId,type,x,y);
-                    stations[stationId] = station;
-                    if (!stationsMap.containsKey(type)){
+                    Station station = new Station(stationIdBlue,type,x,y);
+                    stationsBlue[stationIdBlue] = station;
+                    if (!stationsMapBlue.containsKey(type)){
                         ArrayList<Station> list = new ArrayList<>();
                         list.add(station);
-                        stationsMap.put(type,list);
+                        stationsMapBlue.put(type,list);
                     }else {
-                        stationsMap.get(type).add(station);
+                        stationsMapBlue.get(type).add(station);
                     }
-                    stationId ++;
+                    stationIdBlue++;
+                }
+                else if (c <= 'i' && c >= 'a') {
+                    if (isBlue == false) {
+                        wallMap[100-row][i] = stationIdRed;    // 给地图赋值
+                    }
+                    int type = c - 'a' + 1;
+                    Station station = new Station(stationIdRed,type,x,y);
+                    stationsRed[stationIdRed] = station;
+                    if (!stationsMapRed.containsKey(type)){
+                        ArrayList<Station> list = new ArrayList<>();
+                        list.add(station);
+                        stationsMapRed.put(type,list);
+                    }else {
+                        stationsMapRed.get(type).add(station);
+                    }
+                    stationIdRed++;
                 }
             }
         }
     }
-
-    // 初始化地图顺序
-    private static void initMapSeq() {
-        if (stations[0].type == 2 && stations[1].type == 1){
-            mapSeq = 1;
-        }else if (stations[0].type == 8 && stations[1].type == 1 ){
-            mapSeq = 2;
-        }else if (stations[0].type == 1){
-            mapSeq = 3;
-        }else if (stations[0].type == 9){
-            mapSeq = 4;
-        }else {
-            mapSeq = 0;    // 未初始化
-        }
-//        mapSeq = -1;
-        Main.printLog("mapSeq:"+mapSeq);
-    }
-
-    public static void initSpecialMapParam() {
-
-        if (mapSeq == 1) {
-           StationMenu.map1();
-            // Route.perceptionAngleRange = Robot.pi / 10;
-
-        }else if (mapSeq == 2) {
-            StationMenu.map2();
-            // Route.emergencyDistanceCoef = 0.6;
-            // Robot.detectWallWideCoef = 0.8;   
-            Route.avoidWallPointSpeed = Robot.maxSpeed * 53 / 100; 
-            Route.minPosNum = 16;
-            Robot.maxWaitBlockFps = 100;
-            Robot.blockJudgeFps = 50;
-
-        }else if (mapSeq == 3) {
-            Route.avoidWallPointSpeed = Robot.maxSpeed * 58 / 100; 
-            // Route.minPosNum = 16;
-            // Robot.maxWaitBlockFps = 50 * 2;
-            // // Robot.detectWallWideCoef = 0.8;
-            // Robot.blockJudgeFps = 50;
-
-        }else if (mapSeq == 4) {
-            Route.minPosNum = 18;
-            Robot.maxWaitBlockFps = 50 * 2;
-            Robot.blockJudgeFps = 25;
-        }
-    /*
-    if (mapSeq == 3) {
-    }
-    if (mapSeq == 4) {
-    }*/
-    }
-
-
-
 
     // 选择最有价值的生产流水线投入生产，明确一条流水线有哪些节点
     private static void initWaterFlow() {
@@ -373,7 +357,7 @@ public class Main {
                 station.leftTime = Integer.parseInt(parts[3]);
                 station.rowStatus = Integer.parseInt(parts[4]);
                 station.proStatus = Integer.parseInt(parts[5]);
-            }else{
+            }else if (stationId < stationNum + robots.length){
                 Robot robot = robots[stationId-stationNum];
                 robot.StationId = Integer.parseInt(parts[0]);
                 robot.carry = Integer.parseInt(parts[1]);
@@ -385,6 +369,13 @@ public class Main {
                 robot.turn = Double.parseDouble(parts[7]);
                 robot.pos.x = Double.parseDouble(parts[8]);
                 robot.pos.y = Double.parseDouble(parts[9]);
+            } 
+            else {
+                Robot robot = robots[stationId - stationNum - robots.length];
+                //                Main.printLog(line); //数据量大
+                for (int i = 0; i < 360; i++) {
+                    robot.radar[i] = Double.parseDouble(parts[i]);
+                }
             }
         }
     }
@@ -420,50 +411,6 @@ public class Main {
             System.out.println(log);
         }
     }
-    
-        private static void goTostationNUM_0() {
-        if (robots[workRobot].StationId != robots[workRobot].zone.stationsMap.get(1).get(0).id) {
-            robots[workRobot].nextStation = robots[workRobot].zone.stationsMap.get(1).get(0);
-            if (robots[workRobot].route.arriveNext()){
-                robots[workRobot].route.updateNext();
-            }
-            
-            if (robots[workRobot].blockDetect()){
-                // 若发生阻塞，需要重新规划路线
-                robots[workRobot].setNewPath();
-            }
-
-            robots[workRobot].route.calcParamEveryFrame();    // 通用参数
-            robots[workRobot].calcMoveEquation();     //  运动方程
-            robots[workRobot].rush();
-        }
-    }
-
-    private static void destoryType1() {
-        // 找一个能买 1 的机器人完成神圣的使命
-        for (int i = 0; i < 4; i++) {
-            if (robots[i].zone.stationsMap.get(1).size() != 0) {
-                workRobot = i;
-                break;
-            }
-        }
-        // 用于摸出黑图
-        robots[workRobot].nextStation =  robots[workRobot].zone.stationsMap.get(1).get(0);
-        goTostationNUM_0();
-        if (robots[workRobot].isArrive() && robots[workRobot].carry == 0) {
-                Buy(0);
-                printLog("times");
-                printLog("buy");
-        }
-        else if (robots[workRobot].isArrive() && robots[workRobot].carry == 1){
-            if (destoryTimes < stations[0].type - 1) {
-                destoryTimes++;
-                Destroy(0);
-                printLog("destroy");
-            }
-        }
-    }
-
 }
 
 

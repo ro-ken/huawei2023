@@ -17,32 +17,6 @@ import java.util.Random;
  * @Description: TODO
  */
 public class Robot {
-
-    public static double minDis = 0.2; // 判定离临时点多近算到达
-    public static int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
-    public static double maxSpeedCoef = 1.5;
-    public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
-    public static int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
-    public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
-    public static int blockJudgeFps = 30 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点,
-    public static int maxWaitBlockFps = 50 * 3 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
-
-    public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
-    public static double detectWallWideCoef = 1.0 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
-    public static double arriveBPDis = 1.0;     // 其他小车躲避的点
-
-    public static final double pi  = 3.1415926;
-    public static final double emptyRadius = 0.45;
-    public static final double fullRadius = 0.53;
-    public static final int density = 20;
-    public static final int maxSpeed = 6;//m/s
-//    public static final int minSpeed = -2;//m/s
-    public static final double maxRotate = pi;//rad/s
-    public static final int maxForce = 250;//N
-    public static final int maxRotateForce = 50;//N*m
-
-    public static  double canForwardRad = pi/2 ; // 行走最小角度偏移量
-    public static  double maxForwardRad = pi/4 ; // 最大速度的最小角度
 //    public static final double angleSpeedOffset = 0.1 ; //(rad)最大误差 0.003
     public static double emptyA;     //加速度,19.6487587,刹车距离 = 36/2a = 0.916, 刹车时间 = 6/a = 0.30536s  fps = 15.26
     public static double fullA;     //加速度,14.164733,刹车距离 = 36/2a = 1.27,刹车时间 = 6/a = 0.4236     fps =  21.18
@@ -67,6 +41,7 @@ public class Robot {
     public double lineVy;    //线速度， m/s
     public double turn; //朝向 [-pi,pi] 0朝向右，pi/2  朝上
     public Point pos;
+    public double[] radar = new double[360]; //雷达信息
 //    public double x, y; //坐标
 
     public Station nextStation;    // null : no target to go
@@ -96,9 +71,34 @@ public class Robot {
 
     public int lastDisFps = 0; // 越来越远 经过了几帧
 
-
     public double blockFps = 0;    // 目前阻塞的帧数
+    
     //下面参数可调
+    public static double minDis = 0.2; // 判定离临时点多近算到达
+    public static int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
+    public static double maxSpeedCoef = 1.5;
+    public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
+    public static int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
+    public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
+    public static int blockJudgeFps = 30 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点,
+    public static int maxWaitBlockFps = 50 * 3 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
+
+    public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
+    public static double detectWallWideCoef = 1.0 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
+    public static double arriveBPDis = 1.0;     // 其他小车躲避的点
+
+    public static final double pi  = 3.1415926;
+    public static final double emptyRadius = 0.45;
+    public static final double fullRadius = 0.53;
+    public static final int density = 20;
+    public static final int maxSpeed = 6;//m/s
+    //    public static final int minSpeed = -2;//m/s
+    public static final double maxRotate = pi;//rad/s
+    public static final int maxForce = 250;//N
+    public static final int maxRotateForce = 50;//N*m
+
+    public static  double canForwardRad = pi/2 ; // 行走最小角度偏移量
+    public static  double maxForwardRad = pi/4 ; // 最大速度的最小角度
 
     public Robot winner;
     public HashSet<Robot> losers = new HashSet<>(); // 要避让我的点
