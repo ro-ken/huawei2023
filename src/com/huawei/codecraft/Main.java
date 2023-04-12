@@ -39,7 +39,7 @@ public class Main {
     public static Map<Integer,Zone> zoneMap = new HashMap<>();
     public static Mapinfo mapinfo;
     public static int stationNum = 0;
-    public static final int duration = 5 * 60 * 50;
+    public static final int duration = 4 * 60 * 50;     // 比赛时长
     public static final int JudgeDuration = duration - 30 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int fps = 50;
     public static final boolean test = true;    // 是否可写入
@@ -151,8 +151,6 @@ public class Main {
                     robots[i].changeTarget();
                 }else {
                     robots[i].waitStationMode = true;
-                    Main.printLog("kkkkkkkkkkkkkkkkkkkk");
-                    Main.printLog("rokin");
                 }
             }
             // 如果到中间点要换下一个点
@@ -190,10 +188,10 @@ public class Main {
 
     private static void initStationMap(){
         for (int i = 0; i < stationNum; i++) {
-            Station station = isBlue == true ? stationsBlue[i] : stationsRed[i];
+            Station station = isBlue ? stationsBlue[i] : stationsRed[i];
             stations[i] = station;
         }
-        stationsMap = isBlue == true ? new HashMap<>(stationsMapBlue) : new HashMap<>(stationsMapRed);
+        stationsMap = isBlue ? new HashMap<>(stationsMapBlue) : new HashMap<>(stationsMapRed);
     }
 
     private static void initStations() {
@@ -227,7 +225,7 @@ public class Main {
             double y = row * 0.5 - 0.25;
             line = inStream.nextLine();
             if ("OK".equals(line)) {
-                stationNum = isBlue == true ? stationIdBlue : stationIdRed;
+                stationNum = isBlue ? stationIdBlue : stationIdRed;
                 initStationMap(); // 初始化工作台，确认属于哪一方
                 for (Integer key: stationsMap.keySet()){
                     printLog("type = " + key + " , nums = " +stationsMap.get(key).size());
@@ -247,20 +245,20 @@ public class Main {
                     wallMap[100-row][i] = -2;    // 给地图赋值
                     continue;
                 }
-                else if (c == 'A' && isBlue == true){
+                else if (c == 'A' && isBlue){
                     wallMap[100-row][i] = robotId + 100;    // 给地图赋值
                     robots[robotId] = new Robot(robotId,x,y,robotId);
                     robotPos.put(robotId + 100, new Pos(100-row, i));
                     robotId++;
                 }
-                else if (c == 'B' && isBlue == false) {
+                else if (c == 'B' && !isBlue) {
                     wallMap[100-row][i] = robotId + 100;    // 给地图赋值
                     robots[robotId] = new Robot(robotId,x,y,robotId);
                     robotPos.put(robotId + 100, new Pos(100-row, i));
                     robotId++;
                 } 
                 else if (c <= '9' && c >= '1'){
-                    if (isBlue == true) {
+                    if (isBlue) {
                         wallMap[100-row][i] = stationIdBlue;    // 给地图赋值
                     }
                     int type = Character.getNumericValue(c);
@@ -276,7 +274,7 @@ public class Main {
                     stationIdBlue++;
                 }
                 else if (c <= 'i' && c >= 'a') {
-                    if (isBlue == false) {
+                    if (!isBlue) {
                         wallMap[100-row][i] = stationIdRed;    // 给地图赋值
                     }
                     int type = c - 'a' + 1;

@@ -52,9 +52,6 @@ public class Station implements Comparable{
         item[8] = new StationItem(8,new int[]{7},1,new int[]{});
         item[9] = new StationItem(9,new int[]{1,2,3,4,5,6,7},1,new int[]{});
 
-        emptyMinDistance = calcMinDistance(true);
-        fullMinDistance = calcMinDistance(false);
-
     }
 
     // 构造函数
@@ -70,6 +67,9 @@ public class Station implements Comparable{
             leftTime = -1;  // 初始化，马上要用
         }
 
+
+        emptyMinDistance = calcMinDistance(true);
+        fullMinDistance = calcMinDistance(false);
     }
     
     @Override
@@ -142,9 +142,9 @@ public class Station implements Comparable{
         return go + back;
     }
 
-    private static double calcMinDistance(boolean isEmpty) {
+    private double calcMinDistance(boolean isEmpty) {
         double a = isEmpty ? Robot.emptyA:Robot.fullA;
-        return Math.pow(Robot.maxSpeed,2)/(a);
+        return Math.pow(Robot.getMaxSpeed(),2)/(a);
     }
 
     public double calcSingleCycleAvgValue(Point other) {

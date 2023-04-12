@@ -52,10 +52,10 @@ public class Route{
     // 下面是新加参数
 
     public Point avoidWallPoint;    // 避免与墙体碰撞的临时点
-    public static double avoidWallPointSpeed = Robot.maxSpeed/2.0;    // 判断与墙体会发生碰撞，去往临时点的最大速度
+    public double avoidWallPointSpeed = 3.5;    // 判断与墙体会发生碰撞，去往临时点的最大速度
     public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行避让操作
     public static final double predictWillBumpMinDis = 10;    // 预测是否会发生碰撞的距离，不用改
-    public static int minPosNum = 20;    // 预测是否会发生碰撞的点的个数，一个点0.5m左右 todo 重要参数
+    public static int minPosNum = 15;    // 预测是否会发生碰撞的点的个数，一个点0.5m左右 todo 重要参数
 
     public static int wideDis = 8;   //  *0.5
     ArrayList<Integer> unsafeRobotIds;
@@ -178,7 +178,7 @@ public class Route{
             // 速度太小，加速
 //            printLineSpeed = Robot.maxSpeed;
             if (realAngleDistance < Robot.maxForwardRad){
-                printLineSpeed = Robot.maxSpeed;
+                printLineSpeed = robot.maxSpeed;
             }else if (isNotInEdge()){       // todo  到时候得改一改
                 printLineSpeed = Robot.rotateSpeedEquation.getY(realAngleDistance);
             }else {
@@ -238,7 +238,7 @@ public class Route{
             // 速度太小，加速
 //            printLineSpeed = Robot.maxSpeed;
             if (realAngleDistance < Robot.maxForwardRad){
-                printLineSpeed = Robot.maxSpeed;
+                printLineSpeed = robot.maxSpeed;
             }else {
                 printLineSpeed = 0;
             }
@@ -460,7 +460,7 @@ public class Route{
                 clockwise = calcAvoidBumpClockwise(speed,posVec);
             }
         }
-        printLineSpeed = Robot.maxSpeed * speedCoef;
+        printLineSpeed = robot.maxSpeed * speedCoef;
         printTurnSpeed = Robot.maxRotate * clockwise * rotateCoef;
     }
 

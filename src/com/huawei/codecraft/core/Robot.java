@@ -55,8 +55,7 @@ public class Robot {
     public Point start; // 出生的地点
     public Point midPoint = new Point(); // 记录相撞坐标的中点
     // 碰撞相关
-    public boolean isTempPlace = false;   // 是否去往临时目的地，避免碰撞
-    public Point tmpPos;
+
     public Line topLine;   // 轨迹上面的线
     public Line belowLine;     // 轨迹下面的线
     public Line midLine;     // 轨迹下面的线
@@ -90,12 +89,11 @@ public class Robot {
     public static final double pi  = 3.1415926;
     public static final double emptyRadius = 0.45;
     public static final double fullRadius = 0.53;
-    public static final int density = 20;
-    public static final int maxSpeed = 6;//m/s
-    //    public static final int minSpeed = -2;//m/s
+    public int density = 20;
+    public int maxSpeed = 6;//m/s
     public static final double maxRotate = pi;//rad/s
-    public static final int maxForce = 250;//N
-    public static final int maxRotateForce = 50;//N*m
+    public double maxForce = 250;//N
+    public double maxRotateForce = 50;//N*m
 
     public static  double canForwardRad = pi/2 ; // 行走最小角度偏移量
     public static  double maxForwardRad = pi/4 ; // 最大速度的最小角度
@@ -104,7 +102,17 @@ public class Robot {
     public HashSet<Robot> losers = new HashSet<>(); // 要避让我的点
     public Route route;
 
-    static {
+    public Robot(int stationId, double x, double y, int robotId) {
+
+        if (!Main.isBlue){
+            // 红方的参数
+            maxSpeed = 7;
+            density = 15;
+            maxForce = 187.5;
+            maxRotateForce = 37.5;
+        }
+
+        // 先计算基本参数
         emptyA = calcAcceleration(emptyRadius);
         fullA = calcAcceleration(fullRadius);
 
@@ -113,11 +121,7 @@ public class Robot {
 
         emptyMinAngle = calcMinAngle(true);
         fullMinAngle = calcMinAngle(false);
-    }
 
-
-
-    public Robot(int stationId, double x, double y, int robotId) {
         StationId = stationId;
         this.nextStation = null;
         this.srcStation = null;
@@ -132,6 +136,15 @@ public class Robot {
 
     }
 
+
+    public static double getMaxSpeed() {
+        if (Main.isBlue){
+            return 6;
+        }else {
+            return 7;
+        }
+    }
+
     @Override
     public String toString() {
         return "Robot{" +
@@ -140,7 +153,7 @@ public class Robot {
                 '}';
     }
 
-    private static double calcAcceleration(double radius) {
+    private double calcAcceleration(double radius) {
         double s = pi * radius * radius;
         double m = s * density;
         double a = maxForce / m;
@@ -177,6 +190,7 @@ public class Robot {
         return (int) (time*50);
     }
 
+
     // 若以当前速度加速到达，最快要多久
     private int calcFpsToPlaceInCurSpeed(double dis) {
         double time = 0;
@@ -212,7 +226,7 @@ public class Robot {
 
     }
 
-    private static double calcRotateAcce(double radius) {
+    private double calcRotateAcce(double radius) {
         double s = pi * radius * radius;
         double m = s * density;
         double I = m * radius * radius * 0.5;
