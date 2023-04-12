@@ -43,8 +43,6 @@ public class Main {
     public static final boolean writePath = false;    // 是否可写入
     public static final int robotNum = 4;
     public static final HashSet<Integer> testRobot = new HashSet<>();
-    public static int mapSeq = 0;   // 是第几号地图，做优化
-    public static boolean specialMapMode = false;   // 是否针对地图做优化
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
     public static int[] clockCoef = new int[]{1, 1, 1, 1}; // 碰撞旋转系数
 
@@ -98,7 +96,7 @@ public class Main {
                   robots[i].goToEmptyPlace();
                   continue;
               }
-              Main.printLog("pos:next:"+robots[i].pos + "," + robots[i].route.next);
+              printLog("pos:next:["+robots[i].pos + "," + robots[i].route.next+"]");
 
               if (robots[i].waitStationMode){
                   robots[i].goToNearStation();
@@ -224,10 +222,17 @@ public class Main {
             if ("OK".equals(line)) {
                 stationNum = isBlue ? stationIdBlue : stationIdRed;
                 initStationMap(); // 初始化工作台，确认属于哪一方
-                for (Integer key: stationsMap.keySet()){
-                    printLog("type = " + key + " , nums = " +stationsMap.get(key).size());
+                printLog("blue station:");
+                for (Integer key: stationsMapBlue.keySet()){
+                    printLog("type = " + key + " , nums = " +stationsMapBlue.get(key).size());
                 }
-                printLog("total = "+ stationNum);
+                printLog("blue total = "+ stationIdBlue);
+                printLog("red station:");
+                for (Integer key: stationsMapRed.keySet()){
+                    printLog("type = " + key + " , nums = " +stationsMapRed.get(key).size());
+                }
+                printLog("red total = "+ stationIdRed);
+                printLog("total num = "+ (stationIdRed + stationIdRed));
                 return ;
             }
 

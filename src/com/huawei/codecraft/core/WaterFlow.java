@@ -80,13 +80,13 @@ public class WaterFlow {
                if (robot.lastStation.type <= 6){
                    sta456Sched(robot);
                }else{
-                   if (Main.mapSeq == 1){
-                       commonSched(robot);
-                   }else {
-                       sta789Sched(robot);
-                   }
+//                   if (Main.mapSeq == 1){
+//                       commonSched(robot);
+//                   }else {
+//                       sta789Sched(robot);
+//                   }
 
-//                   sta789Sched(robot);
+                   sta789Sched(robot);
                }
            }
        }
@@ -98,18 +98,6 @@ public class WaterFlow {
             simpleSched(robot);
             return;
         }
-
-        if (Main.mapSeq == 1){
-            // 贪心算法
-            Station src = selectTimeShortestStation(robot);
-            if (src != null){
-                Main.printLog(src+" "+src.availNextStation);
-                robot.setSrcDest(src,src.availNextStation);
-                return;
-            }
-            return;
-        }
-
 
         // 1、是否有456要运送的
         Station src = closestAndHaveProSta(robot);
@@ -159,9 +147,7 @@ public class WaterFlow {
 
         for (ArrayList<Station> list : zone.stationsMap.values()) {
             for (Station station : list) {
-                if (Main.mapSeq == 1) {
-                    if (station.type == 7) continue;
-                }
+//                    if (station.type == 7) continue;
                 if (station.leftTime == -1 || (station.bookPro && station.type>3)) continue;
                 double dis = station.pos.calcDistance(robot.pos);
                 double time1 = robot.calcFpsToPlace(dis);         // todo 时间要改
