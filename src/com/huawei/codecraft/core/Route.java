@@ -119,23 +119,6 @@ public class Route{
         return cw;
     }
 
-    public void calcClockwiseCoef() {
-        // 紧急事件中只会有1个机器人,解决同转问题
-        int id = unsafeRobotIds.get(0);
-        if (Main.clockCoef[robot.id] != -1) {   // 判断过了，被前面的机器人置为了 -1
-            // 计算两个向量的旋转角度是否一致
-
-            Point speed2 = Main.robots[id].route.speed;
-            Point vec1 = robot.pos.calcVector(Main.robots[id].pos);//new Point(Main.robots[id].pos.x - robot.pos.x, Main.robots[id].pos.y - robot.pos.y);
-            Point vec2 = Main.robots[id].pos.calcVector(robot.pos);//new Point(robot.pos.x - Main.robots[id].pos.x, robot.pos.y - Main.robots[id].pos.y);
-            double dot1 = speed.calcDot(vec1);
-            double dot2 = speed2.calcDot(vec2);
-            if (dot1 * dot2 <= 0) {
-                Main.clockCoef[id] *= -1;
-            }
-        }
-    }
-
     public void calcClockwise() {
         if (theoryTurn>robot.turn && theoryTurn - robot.turn < Robot.pi || theoryTurn<robot.turn && robot.turn - theoryTurn > Robot.pi){
             clockwise = 1;
@@ -248,7 +231,6 @@ public class Route{
             printLineSpeed = 0;
         }
 
-
         //计算角速度
         if (stopMinAngleDistance < realAngleDistance){
             printTurnSpeed = Robot.maxRotate * clockwise;
@@ -275,8 +257,6 @@ public class Route{
         }else {
             processNormalEvent();
         }
-//        calcClockwiseCoef();
-//        Main.clockCoef[robot.id] = 1;
     }
 
     // 关键参数，每一帧需要重新计算
@@ -359,53 +339,6 @@ public class Route{
         }
         return safe;
     }
-
-    // 两个机器人符合对撞的条件
-    private boolean fitMeetCase(Robot oth) {
-        double dis = robot.pos.calcDistance(oth.pos);   //相对距离
-        double d1 = robot.pos.calcDistance(next);
-        double d2 = oth.pos.calcDistance(oth.route.next);
-        if (dis >= d1 || dis >= d2){
-            return false;   // 不符合条件
-        }
-        return (realAngleDistance < 0.1) && (oth.route.realAngleDistance < 0.1);
-    }
-
-    private boolean normalSafeDetect(Robot other,double emgDis, double verSafeDis, double safeDis) {
-        boolean safe = true;
-
-        double dis = robot.pos.calcDistance(other.pos);
-        if (dis<safeDis){
-            // 目前只判断了两个条件，夹角和是否在内圈，后面第二圈也可以加一下判断
-            Point vec = robot.pos.calcVector(other.pos);
-            double verDis = calcVerticalDistance(other.pos);// 计算向量和速度垂直的距离
-            double angle = calcDeltaAngle(vec);
-            if (dis < emgDis && angle < emergencyAngle) {
-                // 目前只考虑一个紧急情况，若有多个，选取最紧急的
-                if (unsafeLevel <3){
-                    unsafeRobotIds.clear(); //重新队列
-                }
-
-                safe = false;
-                isEmergency = true;
-                emergencyPos = other.pos;
-                unsafeRobotIds.add(other.id);
-                unsafeLevel = 3;    // 不安全级别最高
-            }else {
-                // 若等于3 说明前面有不安全的节点，此节点此时不需要判断了
-                if (unsafeLevel<=2 && verDis < verSafeDis){
-                    if (unsafeLevel <2){
-                        unsafeRobotIds.clear(); //重新队列
-                    }
-                    unsafeLevel = 2;
-                    safe = false;
-                    unsafeRobotIds.add(other.id);
-                }
-            }
-        }
-        return safe;
-    }
-
 
     public boolean isNotInEdge() {
 
@@ -774,41 +707,6 @@ public class Route{
         }
 
     }
-
-    private HashSet<Pos> selectTrueWinRobot(Robot weakRobot, Robot winRobot) {
-        // 给当前节点避让，
-
-
-        return null;
-    }
-
-    // 选择安全点，到安全点去
-    private Point selectTmpSafePoint() {
-        // 根据目标机器人的路线，选择一个能避开的点
-        Point sp = null;
-        if (pathIndex < 2) return null;
-        ArrayList<Point> tmpPath = new ArrayList<>();
-        tmpPath.add(robot.pos);
-        for (int i = pathIndex -1; i < path.size(); i++) {
-            tmpPath.add(path.get(i));   // 把对面的点全入队
-        }
-        for (int i=0;i< tmpPath.size()-1;i++){
-            // 分别去判断两个点中间有没有安全位置
-            sp = detectSafePoint(tmpPath.get(i),tmpPath.get(i+1));
-            if (sp != null){
-                break;
-            }
-        }
-        if (sp == null){
-            // 如果中间都没有找到安全点，去目标点的前面
-            Line line = getLastPathLine();
-            sp = Objects.requireNonNull(line).getPointDis2dest(1.5);
-            robot.setBase(line,line.right);
-
-        }
-        return sp;
-    }
-
 
     private Line getLastPathLine() {
         Point src = path.get(path.size()-2);
@@ -1202,8 +1100,7 @@ public class Route{
     public boolean arriveNext() {
         if (pathIndex-2<0) return false;
         // 如果机器人到了目标点的前方，也算过了
-//        Main.printLog("pathIndex" + pathIndex);
-//        Main.printLog(path);
+
         Point pre = path.get(pathIndex-2);
         return robot.isArrivePoint(pre,next);
     }
@@ -1213,15 +1110,10 @@ public class Route{
     // 更换下一个点
     public void updateNext() {
         next = getNextPoint();
-//        Main.printLog("pos:next"+robot.pos + "," + next);
-//        Main.printLog("path:"+path);
-//        Main.printLog("index:"+pathIndex);
     }
 
     public void deletePos() {
-        //todo
         if (posSet == null) return;
-
         Pos pos = Astar.Point2Pos(robot.pos);
         for (int i = -1; i < 2; i++) {
             for (int j = -1; j < 2; j++) {

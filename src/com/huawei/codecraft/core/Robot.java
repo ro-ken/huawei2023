@@ -262,7 +262,7 @@ public class Robot {
 
         clearWinner();
         // 重新寻找新路径
-        if (nextStation.paths == null) return;
+        if (nextStation == null || nextStation.paths == null) return;
         ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);
         HashSet<Pos> pos1 = nextStation.paths.getResSet(carry==0,pos);
         path = Path.reversePath(path);
@@ -646,9 +646,7 @@ public class Robot {
     public boolean isArrivePoint(Point pre, Point next) {
         double dis1 = pre.calcDistance(next);
         double dis2 = pre.calcDistance(pos);
-//        Main.printLog("bp dis"+dis1);
-//        Main.printLog("pre" + pre + "pos" + pos);
-//        Main.printLog("pos dis"+dis2);
+
         if (dis2>dis1){
             return true;
         }

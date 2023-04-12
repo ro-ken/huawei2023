@@ -155,6 +155,11 @@ public class Astar {
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
         Astar ast = new Astar(fixMap,src,dest);
         ast.search();
+        Main.printLog("ast list" + ast.resultList); // todo 有越界异常
+        if (ast.resultList.size() == 0){
+            mid.set(src);
+            return 100000;  // 未找到
+        }
         mid.set(ast.resultList.get(ast.resultList.size()/2));
         return ast.resultList.size();
     }
