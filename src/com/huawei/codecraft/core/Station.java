@@ -16,7 +16,7 @@ public class Station implements Comparable{
     public static double emptyMinDistance; // 加速减速临界值 ,空载   ,速度 0 -> 6 ->0 全程距离
     public static double fullMinDistance; // 加速减速临界值 ，满载   ,速度 0 -> 6 ->0 全程距离
 
-    public PriorityQueue<Pair> canSellStations = new PriorityQueue<>();;
+    public PriorityQueue<Pair> canSellStations = new PriorityQueue<>();
     public Map<Integer,PriorityQueue<Pair>> canBuyStationsMap = new HashMap<>();  // Pair 存储的是 到其他station的fps
 
     public Station availNextStation;
@@ -35,7 +35,7 @@ public class Station implements Comparable{
     public boolean[] bookRow;    // 原料空格是否预定
     public boolean bookPro;      // 产品空格是否预定
     public int bookNum = 0; // 已经有多少机器人在往这个点赶
-
+    public StationStatus place = StationStatus.EMPTY;   // 工作台位置的状态，是否被其他机器人占用
 
     // 流水线参数
     public double cycleAvgValue;    // 生产一个周期的平均价值  ,赚的钱数/ 花费的时间
@@ -223,7 +223,7 @@ public class Station implements Comparable{
     public Station chooseAvailableNextStation() {
         for(Pair pair : canSellStations){
             Station oth = pair.getKey();
-            if (oth.canBuy(type)){
+            if (oth.canBuy(type) && oth.place != StationStatus.BLOCK){
                 availNextStation = oth;
                 return oth;
             }
@@ -259,7 +259,7 @@ public class Station implements Comparable{
         }
         return minSta;
     }
-    
+
     @Override
     public int compareTo(Object o) {
         Station st = (Station) o;
@@ -338,9 +338,6 @@ public class Station implements Comparable{
                     }
                 }
             }
-//            Main.printLog(this);
-//            Main.printLog(canSellStations);
-
         }
     }
 

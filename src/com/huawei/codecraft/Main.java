@@ -39,10 +39,11 @@ public class Main {
     public static final int duration = 4 * 60 * 50;     // 比赛时长
     public static final int JudgeDuration = duration - 30 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int fps = 50;
-    public static final boolean test = true;    // 是否可写入
+    public static final boolean test = false;    // 是否可写入
     public static final boolean writePath = false;    // 是否可写入
     public static final boolean slowMode = false;   // 等待模式，让每帧时间尽可能长，留出时间给后台处理
     public static final int robotNum = 4;
+    public static final int attackRobotNum = 1;     // 设置的进攻机器人的个数
     public static final HashSet<Integer> testRobot = new HashSet<>();
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
     public static int[] clockCoef = new int[]{1, 1, 1, 1}; // 碰撞旋转系数
@@ -63,6 +64,29 @@ public class Main {
         testRobot.add(3);
 
         schedule();
+    }
+
+    // 核心代码，分析如何运动
+    private static void handleFrame() {
+
+        // 先计算每个机器人的参数，后面好用
+        for (int i = 0; i < robotNum; i++) {
+            if (!testRobot.contains(i)) continue;
+            calcParam(i);
+        }
+
+        for (int i = 0; i < robotNum; i++) {
+            if (!robots[i].earn){
+                robots[i].attack();
+                continue;
+            }
+            if (!testRobot.contains(i)) continue;
+            if (robots[i].nextStation == null) continue;
+            if (robots[i].isArrive()){
+                handleArrive(i);
+            }
+            robots[i].rush();
+        }
     }
 
     private static void schedule() {
@@ -95,24 +119,7 @@ public class Main {
         }
     }
 
-    // 核心代码，分析如何运动
-      private static void handleFrame() {
 
-            // 先计算每个机器人的参数，后面好用
-          for (int i = 0; i < robotNum; i++) {
-              if (!testRobot.contains(i)) continue;
-              calcParam(i);
-          }
-
-        for (int i = 0; i < robotNum; i++) {
-            if (!testRobot.contains(i)) continue;
-            if (robots[i].nextStation == null) continue;
-            if (robots[i].isArrive()){
-                handleArrive(i);
-            }
-            robots[i].rush();
-        }
-    }
 
     private static void calcParam(int i) {
         if (robots[i].nextStation == null){
@@ -177,7 +184,8 @@ public class Main {
         initMap();      //  初始化地图
         initZone();     //  初始化区域
         initStations();     // 初始化工作站
-        initWaterFlow();    // 初始化流水线
+        initZone2();
+//        initWaterFlow();    // 初始化流水线
 
         if (writePath && test){
             for (int i = 0; i < stationNum; i++) {
@@ -188,6 +196,14 @@ public class Main {
 
         long t2 = System.currentTimeMillis();
         printLog("init time = " + (t2 - t1) + "ms");
+    }
+
+    private static void initZone2() {
+        // 给zone加一个优先队列
+        for (Zone zone : zoneMap.values()) {
+            zone.setPrioQueue();
+            zone.initRobot();
+        }
     }
 
     private static void initZone() {

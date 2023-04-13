@@ -74,7 +74,7 @@ public class Robot {
     public boolean earn = true;    // 是否是赚钱机器人，否则就是去干扰的
     
     //下面参数可调
-    public static double minDis = 0.2; // 判定离临时点多近算到达
+    public static double minDis = 0.1; // 判定离临时点多近算到达
     public static int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
     public static double maxSpeedCoef = 1.5;
     public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
@@ -319,6 +319,7 @@ public class Robot {
                 useWaterFlowChangeMode();
 //                lastStation = nextStation;
             }
+            lastStation = nextStation;
             nextStation = srcStation = destStation = null;
 
         }
@@ -520,10 +521,7 @@ public class Robot {
                 }
             }
         }
-
-
         route.rush2();
-
         route.deletePos();  // 以走过的点要删除，防止发生误判
     }
 
@@ -611,7 +609,7 @@ public class Robot {
     // 选一个最佳的工作站
     public void selectBestStation() {
         if (waterFlow == null){
-            return; // 机器人没有流水线，暂停生成
+            zone.scheduler(this);
         }else {
             waterFlow.scheduler(this);
 //            taskIsOK();
@@ -631,7 +629,7 @@ public class Robot {
         }
 
         src.bookNum ++;
-        if (dest.type <= 6){
+        if (dest.type <= 6 && waterFlow != null){
             waterFlow.halfComp.put(dest.type,waterFlow.halfComp.get(dest.type) +1);    // 原料数 +1
         }
 
@@ -665,7 +663,6 @@ public class Robot {
             waterFlow.completed.put(nextStation.type,waterFlow.completed.get(nextStation.type) + 1);    // 完成数 + 1
             waterFlow.halfComp.put(nextStation.type,waterFlow.halfComp.get(nextStation.type) - 2);    // 原料数 -2
         }
-        lastStation = nextStation;
     }
 
     public boolean blockDetect() {
@@ -695,22 +692,6 @@ public class Robot {
         return false;
     }
 
-
-//
-//    public void setNewPath() {
-//        // 重新寻找新路径
-//        if (nextStation.paths == null) return;
-//        tmpSafeMode = false;
-//        winner = null;
-//        ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);
-//        path = Path.reversePath(path);
-//        route = new Route(nextStation.pos,this,path);
-//        route.calcParamEveryFrame();    // 通用参数
-//        calcMoveEquation();     //  运动方程
-//        Main.printLog("blocked renew path"+path);
-//    }
-
-
     public void setNewPath() {
 
         avoidBumpMode = false;
@@ -732,7 +713,6 @@ public class Robot {
                 Main.printLog(444444);
                 recoveryPath();
             }
-//        recoveryPath();
         }
     }
 
@@ -907,6 +887,41 @@ public class Robot {
             }
         }
         return radarPoints;
+    }
+
+    public void attack() {
+        // 机器人攻击策略
+        if (Main.stationsBlue[0].type == 3){
+            // 图1
+            if (Main.isBlue){
+                nextStation = Main.stationsRed[12];
+                if (route == null){
+                    calcRoute();
+                }
+            }else {
+                nextStation = Main.stationsBlue[12];
+                if (route == null){
+                    calcRoute();
+                }
+            }
+
+        }else {
+            //图2
+            if (Main.isBlue){
+                nextStation = Main.stationsRed[8];
+                if (route == null){
+                    calcRoute();
+                }
+
+            }else {
+                nextStation = Main.stationsBlue[8];
+                if (route == null){
+                    calcRoute();
+                }
+
+            }
+        }
+        route.rush2();
     }
 }
 

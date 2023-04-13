@@ -14,7 +14,7 @@ import java.util.*;
 // 生产流水线
 public class WaterFlow {
     public Station target;     // 流水线终极目标
-    public Station target2;     // 流水线备用目标
+
     boolean isType7;    // 是否是7号工作站
     Zone zone;  //属于哪个区域
     int sellMinFps;     // 卖掉 target货物的fps
