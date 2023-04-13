@@ -385,9 +385,10 @@ public class Astar {
         if (size < 2){
             return;
         }
+        result.add(mergeList.get(0));
         Point prePoint = mergeList.get(0);
         Pos prePos = Point2Pos(prePoint);
-        for (int i = 1; i < size; i++) {
+        for (int i = 1; i < size - 1; i++) {
             // 两点相邻，直接优化掉后面的点，可能有些激进，但是目前就这样处理，
             Point curPoint = mergeList.get(i);
             Pos curPos = Point2Pos(curPoint);
@@ -402,12 +403,7 @@ public class Astar {
             prePoint = curPoint;
             prePos = curPos;
         }
-        Point p =  mergeList.get(mergeList.size() - 1);
-        // 没有发生偏转
-        if (Math.abs(p.x - prePoint.x) < 0.01 && Math.abs(p.y - prePoint.y) < 0.01) {
-            return;
-        }
-        result.add(p);
+       result.add(mergeList.get(mergeList.size() - 1));
     }
 
     public int isCriticalPos(Pos curPos) {
