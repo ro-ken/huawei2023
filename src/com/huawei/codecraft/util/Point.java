@@ -218,4 +218,38 @@ public class Point{
         Point p= Astar.Pos2Point(pos);
         set(p);
     }
+
+
+    public static double epsion = 0.0001; // 半径偏差区间
+
+    //若识别出来的点为机器人，则返回坐标+状态
+    public static RadarPoint getCenterPos(double x1, double y1, double x2, double y2, double x3, double y3){
+        double a = 2 * (x2 - x1);
+        double b = 2 * (y2 - y1);
+        double d = 2 * (x3 - x2);
+        double e = 2 * (y3 - y2);
+        double divisor = b * d - e * a;
+        if (divisor == 0)
+            return null;
+        double c = x2 * x2 + y2 * y2 - x1 * x1 - y1 * y1;
+        double f = x3 * x3 + y3 * y3 - x2 * x2 - y2 * y2;
+        double x = (b * f - e * c) / divisor;
+        double y = (d * c - a * f) / divisor;
+        double r = Math.sqrt((x - x1) * (x - x1) + (y - y1) * (y - y1));// 半径
+        if (Robot.emptyRadius - epsion < r && r < Robot.emptyRadius + epsion){
+            long x_l =(long)(x*100);
+            double x_d = x_l/100D;
+            long y_l =(long)(y*100);
+            double y_d = y_l/100D;
+            return new RadarPoint(x_d, y_d, 0);
+        }else if (Robot.fullRadius - epsion < r && r < Robot.fullRadius + epsion){
+            long x_l =(long)(x*100);
+            double x_d = x_l/100D;
+            long y_l =(long)(y*100);
+            double y_d = y_l/100D;
+            return new RadarPoint(x_d, y_d, 1);
+        }
+        return null;
+    }
+
 }

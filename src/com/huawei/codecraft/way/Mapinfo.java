@@ -298,6 +298,8 @@ public class Mapinfo {
                     // 没有先创建
                     zone = new Zone(zoneId);
                     zoneMap.put(zoneId,zone);
+                }else {
+                    zone = zoneMap.get(zoneId);
                 }
                 // 分别把，机器人和station 加到zone里面去
                 for (int rid : robotId.get(zoneId)) {

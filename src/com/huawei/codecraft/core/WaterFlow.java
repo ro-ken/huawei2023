@@ -162,24 +162,6 @@ public class WaterFlow {
                 }
             }
         }
-
-
-//        for(int i=0;i<Main.stationNum;i++){
-//
-//            Station station = Main.stations[i];
-//            if (station.zone !=robot.zone || station.leftTime == -1 || station.bookPro) continue;
-//            double dis = station.pos.calcDistance(robot.pos);
-//            double time1 = robot.calcFpsToPlace(dis);         // todo 时间要改
-//            double time = Math.max(time1,station.leftTime);
-//            if (time < shortest){
-//                // 卖方有货，卖方有位置
-//                Station oth = station.chooseAvailableNextStation();
-//                if (oth != null){
-//                    shortestStation = station;
-//                    shortest = time;
-//                }
-//            }
-//        }
         return shortestStation;
     }
 

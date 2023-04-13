@@ -41,6 +41,7 @@ public class Main {
     public static final int fps = 50;
     public static final boolean test = true;    // 是否可写入
     public static final boolean writePath = false;    // 是否可写入
+    public static final boolean slowMode = false;   // 等待模式，让每帧时间尽可能长，留出时间给后台处理
     public static final int robotNum = 4;
     public static final HashSet<Integer> testRobot = new HashSet<>();
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
@@ -52,10 +53,8 @@ public class Main {
             if (writePath){
                 path = new PrintStream("./4.txt");
             }
-
             log = new PrintStream("./log.txt");
             System.setOut(log);//把创建的打印输出流赋给系统。即系统下次向 ps输出
-//            printLog("这行语句将会被写到log.txt文件中");
         }
 
         testRobot.add(0);
@@ -69,15 +68,30 @@ public class Main {
     private static void schedule() {
         initialization();
         Ok();
+        long t0,t1,t2 = System.currentTimeMillis();
         while (inStream.hasNextLine()) {
+            t0 = System.currentTimeMillis();
+            printLog("system handle = t0-t2 = " + (t0-t2) );
             String line = inStream.nextLine();
             String[] parts = line.split(" ");
             frameID = Integer.parseInt(parts[0]);
             printLog(frameID);
             readUtilOK();
+
             Frame(frameID);
+            t1 = System.currentTimeMillis();
+            printLog("read time = t1-t0 = " + (t1-t0) );
             handleFrame();
+
+            if (slowMode){
+                while (t2-t0<13){
+                    t2 = System.currentTimeMillis();
+                }
+            }
+
             Ok();
+            t2 = System.currentTimeMillis();
+            printLog("handle time = t2-t1 = " + (t2-t1) );
         }
     }
 
@@ -86,70 +100,74 @@ public class Main {
 
             // 先计算每个机器人的参数，后面好用
           for (int i = 0; i < robotNum; i++) {
-//              if (i!= 3) continue;
               if (!testRobot.contains(i)) continue;
-
-              if (robots[i].nextStation == null){
-                  robots[i].selectBestStation();
-              }
-              if (robots[i].nextStation == null){
-                  robots[i].goToEmptyPlace();
-                  continue;
-              }
-              printLog("pos:next:["+robots[i].pos + "," + robots[i].route.next+"]");
-
-              if (robots[i].waitStationMode){
-                  robots[i].goToNearStation();
-                  continue;
-              }
-
-              if (robots[i].blockDetect()){
-                  // 若发生阻塞，需要重新规划路线
-                  robots[i].setNewPath();
-              }
-
-
-              if (robots[i].route.arriveNext()){
-                  robots[i].route.updateNext();
-              }
-
-              robots[i].route.calcParamEveryFrame();    // 通用参数
-              robots[i].calcMoveEquation();     //  运动方程
+              calcParam(i);
           }
 
         for (int i = 0; i < robotNum; i++) {
             if (!testRobot.contains(i)) continue;
             if (robots[i].nextStation == null) continue;
             if (robots[i].isArrive()){
-//                    Main.printLog("arrive");
-                // 有物品就买，没有就等待,逐帧判断
-                if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){
-                    if (frameID > JudgeDuration){
-                        if (!robots[i].canBugJudge()){
-                            continue;
-                        }
-                    }
-                    Buy(i);
-                    robots[i].srcStation.bookPro = false;       //解除预定
-                    robots[i].srcStation.bookNum--;       //
-                    robots[i].destStation.bookNum++;       //
-                    printLog("buy");
-                    robots[i].changeTarget();
-                    // 有物品就卖，没有就等待,逐帧判断
-                } else if (robots[i].nextStation == robots[i].destStation && !robots[i].nextStation.positionIsFull(robots[i].carry)){
-                    Sell(i);
-                    robots[i].destStation.bookRow[robots[i].srcStation.type] = false;   //解除预定
-                    robots[i].destStation.setPosition(robots[i].srcStation.type);       // 卖了以后对应物品空格置1
-//                        bookRow[robots[i].srcStation.type] = false;   //解除预定
-                    robots[i].destStation.bookNum--;       //解除预定
-                    printLog("sell");
-                    robots[i].changeTarget();
-                }else {
-                    robots[i].waitStationMode = true;
+                handleArrive(i);
+            }
+            robots[i].rush();
+        }
+    }
+
+    private static void calcParam(int i) {
+        if (robots[i].nextStation == null){
+            robots[i].selectBestStation();
+        }
+        if (robots[i].nextStation == null){
+            robots[i].goToEmptyPlace();
+            return;
+        }
+//              printLog("pos:next:["+robots[i].pos + "," + robots[i].route.next+"]");
+
+        if (robots[i].waitStationMode){
+            robots[i].goToNearStation();
+            return;
+        }
+
+        if (robots[i].blockDetect()){
+            // 若发生阻塞，需要重新规划路线
+            robots[i].setNewPath();
+        }
+
+
+        if (robots[i].route.arriveNext()){
+            robots[i].route.updateNext();
+        }
+
+        robots[i].route.calcParamEveryFrame();    // 通用参数
+        robots[i].calcMoveEquation();     //  运动方程
+    }
+
+    private static void handleArrive(int i) {
+        // 有物品就买，没有就等待,逐帧判断
+        if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){
+            if (frameID > JudgeDuration){
+                if (!robots[i].canBugJudge()){
+                    return;
                 }
             }
-            // 如果到中间点要换下一个点
-            robots[i].rush();
+            Buy(i);
+            robots[i].srcStation.bookPro = false;       //解除预定
+            robots[i].srcStation.bookNum--;       //
+            robots[i].destStation.bookNum++;       //
+            printLog("buy");
+            robots[i].changeTarget();
+            // 有物品就卖，没有就等待,逐帧判断
+        } else if (robots[i].nextStation == robots[i].destStation && !robots[i].nextStation.positionIsFull(robots[i].carry)){
+            Sell(i);
+            robots[i].destStation.bookRow[robots[i].srcStation.type] = false;   //解除预定
+            robots[i].destStation.setPosition(robots[i].srcStation.type);       // 卖了以后对应物品空格置1
+//                        bookRow[robots[i].srcStation.type] = false;   //解除预定
+            robots[i].destStation.bookNum--;       //解除预定
+            printLog("sell");
+            robots[i].changeTarget();
+        }else {
+            robots[i].waitStationMode = true;
         }
     }
 
@@ -158,8 +176,6 @@ public class Main {
 
         initMap();      //  初始化地图
         initZone();     //  初始化区域
-        // initMapSeq();      // 初始化地图序列
-        // initSpecialMapParam();    // 初始化地图序列参数
         initStations();     // 初始化工作站
         initWaterFlow();    // 初始化流水线
 
@@ -334,8 +350,51 @@ public class Main {
                 }
             }
         }
-        printLog(waterFlows);
+//        printLog(waterFlows);
     }
+
+    // 选择最有价值的生产流水线投入生产，明确一条流水线有哪些节点
+    private static void initWaterFlow2() {
+        for (Zone zone : zoneMap.values()) {
+            if (zone.stationsMap.containsKey(7)){
+                // 最多开2条流水线
+                ArrayList<Station> sts = zone.stationsMap.get(7);
+                if(sts.size() == 1){
+                    WaterFlow flow = new WaterFlow(sts.get(0),zone);
+                    flow.assignRobot(4);//分配4个
+                    waterFlows.add(flow);
+                }else {
+                    Collections.sort(sts);
+                    for (int i=0;i<2;i++){
+                        WaterFlow flow = new WaterFlow(sts.get(i),zone);
+                        flow.assignRobot(2);    // 每条流水线两个机器人   todo 可尝试更换策略
+                        waterFlows.add(flow);
+                    }
+                }
+//                for (Station st : sts) {
+//                    printLog("id" + st.id + " value fps" + st.cycleAvgValue);
+//                }
+//                printLog(sts);
+
+            }else {
+                // 最多选择4条流水线
+                ArrayList<Station> sts = zone.getStations();
+                Collections.sort(sts);
+//                for (int i = 0; i < sts.size(); i++) {
+//                    printLog(sts.get(i)+ ":" + sts.get(i).cycleAvgValue);
+//                }
+                for (int i = 0; i < zone.robots.size(); i++) {
+                    if (sts.size() > i && sts.get(i).cycleAvgValue>0){    // 没有那么多工作站，不分了
+                        WaterFlow flow = new WaterFlow(sts.get(i),zone);
+                        flow.assignRobot(1);    // 一个机器人负责一个
+                        waterFlows.add(flow);
+                    }
+                }
+            }
+        }
+//        printLog(waterFlows);
+    }
+
 
     private static void readUtilOK() {
         String line;

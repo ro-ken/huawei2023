@@ -4,6 +4,7 @@ import com.huawei.codecraft.Main;
 import com.huawei.codecraft.util.Line;
 import com.huawei.codecraft.util.Path;
 import com.huawei.codecraft.util.Point;
+import com.huawei.codecraft.util.RadarPoint;
 import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Pos;
 
@@ -63,7 +64,6 @@ public class Robot {
     public boolean tmpSafeMode = false;    // 是否去临时安全点
     public boolean waitStationMode = false;    // 是否去临时安全点
     public boolean avoidBumpMode = false;   // 与其他机器人阻塞，临时避障模式
-    public int avoidBumpModeFps;
     public boolean inSafePlace = false;    // 是否到达临时点
 
     public double lastDis = 100000; // 在临时点判断是否距离另外的机器人越来越远
@@ -71,6 +71,7 @@ public class Robot {
     public int lastDisFps = 0; // 越来越远 经过了几帧
 
     public double blockFps = 0;    // 目前阻塞的帧数
+    public boolean earn = true;    // 是否是赚钱机器人，否则就是去干扰的
     
     //下面参数可调
     public static double minDis = 0.2; // 判定离临时点多近算到达
@@ -101,6 +102,7 @@ public class Robot {
     public Robot winner;
     public HashSet<Robot> losers = new HashSet<>(); // 要避让我的点
     public Route route;
+    public static int step = 2;//计算雷达扫描出360//step个点的坐标
 
     public Robot(int stationId, double x, double y, int robotId) {
 
@@ -872,6 +874,39 @@ public class Robot {
 
         Main.Forward(id,printSpeed);
         Main.Rotate(id,printRotate);
+    }
+
+
+    public HashSet<RadarPoint> getRadarPoint() {
+        ArrayList<Point> points = new ArrayList<>();
+        double degree = pi * 2 / 360;
+        double azimuthAngle; //方位角
+        for (int i = 0; i < 360 / step; i++) {
+            double angle = turn + degree * i * step;
+            if (pi > angle && angle > 0) {
+                azimuthAngle = angle % pi;
+            } else {
+                azimuthAngle = angle % pi - pi;
+            }
+            points.add(new Point(pos.x + Math.cos(azimuthAngle) * radar[step * i],
+                    pos.y + Math.sin(azimuthAngle) * radar[step * i]));
+        }
+
+        ArrayList<Point> pointsAdd = new ArrayList<>();
+        pointsAdd.add(points.get(points.size()-1));
+        pointsAdd.addAll(points);
+        pointsAdd.add(points.get(0));
+
+        HashSet<RadarPoint> radarPoints = new HashSet<>();
+
+        for (int i = 1; i < 360 / step + 1; i++) {
+            RadarPoint centerPos = Point.getCenterPos(pointsAdd.get(i - 1).x, pointsAdd.get(i - 1).y, pointsAdd.get(i).x,
+                    pointsAdd.get(i).y, pointsAdd.get(i + 1).x, pointsAdd.get(i + 1).y);
+            if (centerPos != null){
+                radarPoints.add(centerPos);
+            }
+        }
+        return radarPoints;
     }
 }
 

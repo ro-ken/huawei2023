@@ -451,6 +451,35 @@ public class Route{
     }
 
     // 计算当前的安全级别 0:安全，1：有墙，2有机器人
+    private void calcSafeLevel2() {
+
+        unsafeLevel = 0;    // 先置为安全状态
+        if (!robot.tmpSafeMode){
+            // 如果不是这个模式，需要检测和其他机器人是否碰撞
+            if (willBump()){
+                setTmpSafeMode2();
+            } else if (canBump()){
+                unsafeLevel = 2;
+            }
+        }
+
+        if (unsafeLevel == 0){
+            // 如果不是 正在错车，需要判断和墙的距离
+            Point wall = frontHasWall();
+
+            if (wall != null && wall.calcDistance(robot.pos) <= 2){     // todo 参数可调
+                Main.printLog(robot + "wall" + wall);
+                unsafeLevel = 1;
+                // 前方有墙，需要稍微绕一绕
+                // 给一个转弯的路口的点，先到转弯路口去
+                avoidWallPoint = calcAvoidWallPoint(wall);
+                // 运动3
+            }
+        }
+    }
+
+
+    // 计算当前的安全级别 0:安全，1：有墙，2有机器人
     private void calcSafeLevel() {
         
         unsafeLevel = 0;    // 先置为安全状态
@@ -460,13 +489,9 @@ public class Route{
                 setTmpSafeMode2();
             } else if (canBump()){
                 unsafeLevel = 2;
-
             }
         }
-//        if (canBump()){
-//            unsafeLevel = 2;
-//
-//        }
+
         if (unsafeLevel == 0){
             // 如果不是 正在错车，需要判断和墙的距离
             Point wall = frontHasWall();
