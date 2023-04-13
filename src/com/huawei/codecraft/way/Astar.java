@@ -19,7 +19,7 @@ public class Astar {
     // 后续使用优先队列进行优化
     // PriorityQueue<Pos> openList;
     public ArrayList<Pos> resultList;    // 存储结果节点
-    public ArrayList<Pos> mergeList;    // 存储合并的结果节点
+    public ArrayList<Point> mergeList;    // 存储合并的结果节点
     public ArrayList<Pos> fixList;
     public ArrayList<Point> result;     // 存储结果节点
 
@@ -101,9 +101,7 @@ public class Astar {
     }
 
     // 创建两点之间的直线方程
-    public Pair calLineExpression(Pos starPos, Pos endPos) {
-        Point startPoint = Pos2Point(starPos);
-        Point endPoint = Pos2Point(endPos);
+    public Pair calLineExpression(Point startPoint,  Point endPoint) {
         double k = (endPoint.y - startPoint.y) / (endPoint.x - startPoint.x);
         double b = startPoint.y - k * startPoint.x;
         return new Pair(k, b);
@@ -372,7 +370,7 @@ public class Astar {
     public  ArrayList<Point> getResult(boolean carry) {
         // 将结果返回，空载需要右移坐标，满载无需移动
         mergeResultList();
-        fixRoute();    // 修正得到的结果
+        fixRoute(carry);    // 修正得到的结果
         return result;
     }
 
@@ -381,18 +379,35 @@ public class Astar {
         return resultList;
     }
 
-    public void fixRoute() {
+    public void fixRoute(boolean carry) {
         // 没有结果，返回
         int size = mergeList.size();
         if (size < 2){
             return;
         }
-
-        for (int i = 0; i < size; i++) {
+        Point prePoint = mergeList.get(0);
+        Pos prePos = Point2Pos(prePoint);
+        for (int i = 1; i < size; i++) {
             // 两点相邻，直接优化掉后面的点，可能有些激进，但是目前就这样处理，
-            Pos curPos = mergeList.get(i);
-            result.add(Pos2Point(curPos));
+            Point curPoint = mergeList.get(i);
+            Pos curPos = Point2Pos(curPoint);
+            if (prePos.y == curPos.y || prePos.x == curPos.x) {
+                offsetPoint(prePoint, curPoint, prePos, curPos, carry);
+                result.add(prePoint);
+                result.add(curPoint);
+            }
+            else {
+                result.add(curPoint);
+            }
+            prePoint = curPoint;
+            prePos = curPos;
         }
+        Point p =  mergeList.get(mergeList.size() - 1);
+        // 没有发生偏转
+        if (Math.abs(p.x - prePoint.x) < 0.01 && Math.abs(p.y - prePoint.y) < 0.01) {
+            return;
+        }
+        result.add(p);
     }
 
     public int isCriticalPos(Pos curPos) {
@@ -474,6 +489,68 @@ public class Astar {
         }
     }
 
+    public void offsetPoint(Point startPoint, Point endPoint, Pos startPos, Pos endPos, boolean carry) {
+        int step = 1;
+        if (carry == true) {
+            return;
+        }
+        // 垂直
+        if (startPos.y == endPos.y) {
+            if (!Mapinfo.isInMap(startPos.x, startPos.y - 1)) {  // 左边是墙，直接右移
+                startPoint.x += 0.25;
+                endPoint.x += 0.25;
+                return;
+            }
+            else if (!Mapinfo.isInMap(startPos.x, startPos.y + 1)) {  // 右边是墙，直接左移
+                startPoint.x -= 0.25;
+                endPoint.x -= 0.25;
+                return;
+            }
+            else {
+                int turn = startPos.x < endPos.x ? 1 : -1;
+                for (int x = startPos.x; (x - endPos.x) * turn <= 0; x += turn * step) {
+                    if (Mapinfo.mapInfoOriginal[x][startPos.y - 1] == -2) {
+                        startPoint.x += carry ? 0.5 : 0.25;
+                        endPoint.x += carry ? 0.5 : 0.25;
+                        return;
+                    }
+                    if (Mapinfo.mapInfoOriginal[x][startPos.y + 1] == -2) {
+                        startPoint.x -= carry ? 0.5 : 0.25;
+                        endPoint.x -= carry ? 0.5 : 0.25;
+                        return;
+                    }
+                }
+            }
+        }
+        else {  // 水平
+            if (!Mapinfo.isInMap(startPos.x - 1, startPos.y)) {  // 上边是墙，直接下移
+                startPoint.y -= 0.25;
+                endPoint.y -= 0.25;
+                return;
+            }
+            else if (!Mapinfo.isInMap(startPos.x + 1, startPos.y)) {  // 下边是墙，直接上移
+                startPoint.y += 0.25;
+                endPoint.y += 0.25;
+                return;
+            }
+            else {
+                int turn = startPos.y < endPos.y ? 1 : -1;
+                for (int y = startPos.y; (y - endPos.y) * turn <= 0; y += turn * step) {
+                    if (Mapinfo.mapInfoOriginal[startPos.x - 1][y] == -2) {
+                        startPoint.y -= carry ? 0.5 : 0.25;
+                        endPoint.y -= carry ? 0.5 : 0.25;
+                        return;
+                    }
+                    if (Mapinfo.mapInfoOriginal[startPos.x + 1][y] == -2) {
+                        startPoint.y += carry ? 0.5 : 0.25;
+                        endPoint.y += carry ? 0.5 : 0.25;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     // 合并结果，将相同的坐标合并在一起
     public void mergeResultList() {
         // 没有结果，返回
@@ -482,22 +559,22 @@ public class Astar {
         }
         Pos startPos = resultList.get(0);
         Pos prePos = resultList.get(1);
-        mergeList.add(startPos);    // 起点加入合并列表
+        mergeList.add(Pos2Point(startPos));    // 起点加入合并列表
 
-        for (int index = 2; index < resultList.size() - 1; index++) {
+        for (int index = 2; index < resultList.size(); index++) {
             Pos curPos = resultList.get(index);
             if (curPos.x == startPos.x || curPos.y == startPos.y) {
                 prePos = curPos;
                 continue;
             }
-            Pair lineParam = calLineExpression(startPos, curPos);
+            Pair lineParam = calLineExpression(Pos2Point(startPos), Pos2Point(curPos));
             if (isObstacle(lineParam, startPos, curPos)) {   // 两点之间有障碍，这个点的前一个点就必须加入节点
-                mergeList.add(prePos);
+                mergeList.add(Pos2Point(prePos));
                 startPos = prePos;
             }
             prePos = curPos;
         }
-        mergeList.add(resultList.get(resultList.size() - 1));    // 终点加入合并列表
+        mergeList.add(Pos2Point(resultList.get(resultList.size() - 1)));    // 终点加入合并列表
     }
 
     // 将得到的坐标转为Point
