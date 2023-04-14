@@ -1,6 +1,7 @@
 package com.huawei.codecraft.way;
 
 import com.huawei.codecraft.Main;
+import com.huawei.codecraft.core.Robot;
 import com.huawei.codecraft.util.Point;
 
 import java.util.*;
@@ -44,23 +45,26 @@ public class Astar {
 
         for (int i = startI; i <= endI; i++) {
             for (int j = startJ; j <= endJ; j++) {
-                maps[i][j] = 2;
+                if (posNotInTwoPos(startPosition,targetPosition,i,j)){
+                    maps[i][j] = 2;
+                }
             }
         }
     }
 
-    public void blockAvoidMaps2(int[][] maps) {
-        int x = targetPosition.x, y = targetPosition.y;
-        int startI = Math.max(x - 2, 0);
-        int startJ = Math.max(y - 2, 0);
-        int endI = x + 2 < Mapinfo.row ? x + 2 : Mapinfo.row - 1;
-        int endJ = y + 2 < Mapinfo.col ? y + 2 : Mapinfo.col - 1;
-
-        for (int i = startI; i <= endI; i++) {
-            for (int j = startJ; j <= endJ; j++) {
-                if (posNotInTwoPos(startPosition,targetPosition,i,j)){
-                    maps[i][j] = 2;
-                }
+    // 将机器人的位置当作障碍物进行锁定
+    // todo：暂时直接封禁一圈，因为前面的东西拿东西突然变大，也会对路径产生影响
+    public void blockRobots(int id) {
+        for (int i = 0; i < Main.robots.length; i++) {
+            if (i == id) {
+                continue;
+            }
+            // 拿了东西直接把周围一圈围住
+            Pos position = Point2Pos(Main.robots[i].pos);
+            for (int j = 0; j < dirX.length; j++) {
+                int x = position.x + dirX[j];
+                int y = position.y + dirY[j];
+                board.getMsg(position).isOK = 2;
             }
         }
     }
@@ -174,22 +178,13 @@ public class Astar {
         return sp;
     }
 
-    public static Point getSafePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1,Point midPoint){
-
-        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-        Main.printLog("midPoint" + midPoint);
-        Astar ast = new Astar(fixMap,src,midPoint);
-
-        Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
-        return sp;
-    }
     public static Point getSafePoint2(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1,Point midPoint){
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
 //        Main.printLog("midPoint" + midPoint);
         Astar ast = new Astar(fixMap,src,midPoint);
 
-        Point sp = ast.getTmpAvoidPoint2(!isEmpty, pos1);
+        Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
         return sp;
     }
 
@@ -271,6 +266,45 @@ public class Astar {
         return Pos2Point(minPos);
     }
     
+    // 空载需要找 2 * 2 的网格，从该点进行寻找 -1 没找到，1 代表左上方 2 代表右上方 3 代表左下方 4 代表右下方
+    public int getEmptyGrid(Pos curPos, HashSet<Pos> set) {
+        if (set.contains(curPos)) {
+            return 0;
+        }
+        // 15 = 1111(2) 代表上下左右
+        int ret = 15;
+        // 上下左右四个方向
+        for (int i = 0; i < dirX.length / 2; i++) {
+            int x = curPos.x + dirX[i];
+            int y = curPos.y + dirY[i];
+            if (!Mapinfo.isInMap(x, y) || set.contains(new Pos(x, y)) || Mapinfo.mapInfoOriginal[x][y] == -2) {
+                ret &= ~(1 << 3 - i) & 0xFF;
+            }
+            if (ret == 3 || (ret & 3) == 0) {
+                return -1;
+            }
+        }
+
+        // 斜左上 左右 左下 右下
+        // 斜左上
+        if ((ret & 10) != 0 && Mapinfo.isInMap(curPos.x - 1, curPos.y - 1)  && !set.contains(new Pos(curPos.x - 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y - 1] != -2) {
+            return 0;
+        }
+        // 斜右上
+        if ((ret & 9) != 0 && Mapinfo.isInMap(curPos.x - 1, curPos.y + 1) && !set.contains(new Pos(curPos.x - 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y + 1] != -2) {
+            return 1;
+        }
+        // 斜左下
+        if ((ret & 6) != 0 && Mapinfo.isInMap(curPos.x + 1, curPos.y - 1) && !set.contains(new Pos(curPos.x + 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y - 1] != -2) {
+            return 2;
+        }
+        // 斜右下
+        if ((ret & 5) != 0 && Mapinfo.isInMap(curPos.x + 1, curPos.y + 1) && !set.contains(new Pos(curPos.x + 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y + 1] != -2) {
+            return 3;
+        }
+        return -1;
+    }
+
     // 0 代表找到，-1 没找到
     public boolean getFullGrid(Pos curPos, HashSet<Pos> set) {
         // 从当前点寻找 3 * 3 网格
@@ -289,7 +323,7 @@ public class Astar {
         return true;
     }
 
-    public Point getPoint2(int[][] maps, HashSet<Pos> pos1) {
+    public Point getPoint(int[][] maps, HashSet<Pos> pos1, boolean carry) {
         if (pos1.size() == 0) {
             return null;
         }
@@ -303,38 +337,23 @@ public class Astar {
             openList.remove(curPos);
             // 上下左右四个方向探索
             // 开始从上下左右依次加入节点
-            if (getFullGrid(curPos, pos1)) {
-                return Pos2Point(curPos);
-            }
-            for (int i = 0; i < dirX.length / 2; i++) {
-                int x = curPos.x + dirX[i];
-                int y = curPos.y + dirY[i];
-                if (Mapinfo.isInMap(x, y) && maps[x][y] == 0) {
-                    maps[x][y] = 1; // 节点设置已探索
-                    Pos explorePos = new Pos(x, y);
-                    openList.add(explorePos);
+            if (carry) {
+                if (getFullGrid(curPos, pos1)) {
+                    return Pos2Point(curPos);
                 }
             }
-        }
-        return null;
-    }
-
-    public Point getPoint(int[][] maps, HashSet<Pos> pos1) {
-        if (pos1.size() == 0) {
-            return null;
-        }
-        ArrayList<Pos> openList = new ArrayList<Pos>();; // 存储带拓展节点
-        openList.add(startPosition);
-        maps[startPosition.x][startPosition.y] = 1; // 起点已探索
-        int time = 0;
-        while (openList.size() != 0 && time != maxTimes) {
-            time++;
-            Pos curPos = openList.get(0);
-            openList.remove(curPos);
-            // 上下左右四个方向探索
-            // 开始从上下左右依次加入节点
-            if (getFullGrid(curPos, pos1)) {
-                return Pos2Point(curPos);
+            else {
+                int flag = getEmptyGrid(curPos, pos1);
+                if (flag >= 0) {
+                    Point p = Pos2Point(curPos);
+                    switch (flag) {
+                        case 0 : p.x -= 0.25; p.y += 0.25;break;
+                        case 1 : p.x += 0.25; p.y += 0.25;break;
+                        case 2 : p.x -= 0.25; p.y -= 0.25;break;
+                        case 3 : p.x += 0.25; p.y -= 0.25;break;
+                    }
+                    return p;
+                }
             }
             for (int i = 0; i < dirX.length / 2; i++) {
                 int x = curPos.x + dirX[i];
@@ -354,17 +373,8 @@ public class Astar {
         int[][] maps = new int[Mapinfo.row][Mapinfo.col];
         initAvoidMaps(maps);    // 用于找避让点的地图，0 未探索 1 已探索 2 障碍物
         blockAvoidMaps(maps);       // 阻塞地图，减小计算量
-        return getPoint(maps, pos1);
+        return getPoint(maps, pos1, carry);
     }
-
-    public Point getTmpAvoidPoint2(boolean carry,HashSet<Pos> pos1) {
-
-        int[][] maps = new int[Mapinfo.row][Mapinfo.col];
-        initAvoidMaps(maps);    // 用于找避让点的地图，0 未探索 1 已探索 2 障碍物
-        blockAvoidMaps2(maps);       // 阻塞地图，减小计算量
-        return getPoint2(maps, pos1);
-    }
-
 
     // 将得到的路径左边合并并返回结果坐标
     public  ArrayList<Point> getResult(boolean carry) {
