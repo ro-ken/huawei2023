@@ -87,7 +87,10 @@ public class Zone {
         Station dest = selectSlowestStation(target);
         if (dest != null){
             src = selectClosestSrcToDest(robot,dest);
-            robot.setSrcDest(src,dest);
+            Main.printLog("src:" + src + " dest: "+ dest);
+            if (src != null){
+                robot.setSrcDest(src,dest);
+            }
             return;
         }
 
@@ -95,7 +98,9 @@ public class Zone {
         dest = selectSlowestStationLast(target);
         if (dest != null){
             src = selectClosestSrcToDestLast(robot,dest);
-            robot.setSrcDest(src,dest);
+            if (src != null){
+                robot.setSrcDest(src,dest);
+            }
             return;
         }
 
@@ -119,13 +124,18 @@ public class Zone {
         double minTime = 100000;
         Station st = null;
         int books = dest.bookRawNum();
+        if (dest.haveEmptyPosition() || dest.getBookRawNum()>=2 || dest.bookRawNum()>=2){
+            return null;    //这个要配合上一个函数使用，此类是不能有空位的
+        }
+
         for (int ty : dest.getRaws()) {
+
             // 前面判断过了， books <2
             if (books == 0){
                 if (!dest.canBuy(ty)) continue;
             }else {
-                // 只要不是被预定的就行
-                if (dest.bookRow[ty]) continue;
+                // 不能是满的，
+                if (dest.positionIsFull(ty)) continue;
             }
 
             for (Station s:Main.stationsMap.get(ty)){
@@ -187,7 +197,7 @@ public class Zone {
             Station st = p.key;
             // 后一项保证前面运算的货物能生产，原料格能够空出来,
             // 为了防止堵死情况，可以再加个判断，pairs.size() == 1
-            if (st.bookRawNum()<2 && (st.proStatus==0 || st.leftTime == -1)){
+            if (st.getBookRawNum()<2 && (st.proStatus==0 || st.leftTime == -1)){
                 return st;
             }
         }
@@ -197,6 +207,7 @@ public class Zone {
     private Station selectSlowestStation(Station target) {
         // 选择target 进度最慢的任务
         ArrayList<Integer> tasks = selectSlowestTask(target);
+        Main.printLog("tasks" + tasks);
         int taskId = -1;
         HashSet<Integer> used = new HashSet<>();
         if (tasks.size() == 1){
@@ -232,10 +243,23 @@ public class Zone {
 
     // 从target选一个能用的new task
     private Station newTask(int taskId,Station target) {
+
         PriorityQueue<Pair> pairs = target.canBuyStationsMap.get(taskId);
+//        if (taskId == 6){
+//            Main.printLog(pairs);
+//            Main.printLog(pairs);
+//        }
         for (Pair p :pairs){
             // 选择当前没有被占用,并且可以生产的station
             Station st = p.key;
+//            if (taskId == 6){
+//                Main.printLog("1" + st.haveEmptyPosition());
+//                Main.printLog("1-2" + st.canBuy(2));
+//                Main.printLog("1-2-1" + st.positionIsFull(2) );
+//                Main.printLog("1-2-2" + st.bookRow[2]);
+//                Main.printLog("1-3" + st.canBuy(3));
+//                Main.printLog("2" + (st.place == StationStatus.EMPTY));
+//            }
             // 选择没有被阻塞的工作站
             if(st.haveEmptyPosition() && st.place == StationStatus.EMPTY){  // todo 后期可调整
                 return st;
@@ -270,9 +294,6 @@ public class Zone {
             int maxId = 0;
             for (int tp : list) {
 
-//                Main.printLog(tp);
-//                Main.printLog(target.canBuyStationsMap);
-
                 double fps = Objects.requireNonNull(target.canBuyStationsMap.get(tp).peek()).value;
                 if (fps > max){
                     max = fps;
@@ -289,7 +310,6 @@ public class Zone {
     }
 
     private ArrayList<Integer> selectSlowestTask(Station target) {
-
 //        456个数计算
 //        7的456原料位 + 机器人的nextStation
 //        选择少的搬运
@@ -302,13 +322,14 @@ public class Zone {
                 task[i] += 3;   // 做完的算3个
             }
             for (Robot robot : robots) {
-                if (robot.nextStation != null){
-                    if (robot.nextStation.type == type){
+                if (robot.destStation != null){
+                    if (robot.destStation.type == type){
                         task[i] += 2;   // 在做的算2
                     }
                 }
             }
         }
+//        Main.printLog("task:" + task[0] +","+ task[1] +","+ task[2]);
         int min = Math.min(Math.min(task[0],task[1]),task[2]);
         for (int i = 0; i < 3; i++) {
             if (task[i] == min){
@@ -407,30 +428,6 @@ public class Zone {
         return st;
     }
 
-//    private Station closestAndHaveProSta(Robot robot) {
-//        // 最先判断7是否有空位，而且有产品，把产品运送到7，不能停下来
-//        ArrayList<Integer> empty = target.getEmptyRaw();
-//        Station src = null;
-//        if (empty.size() >0 ){
-//            // 查看目前是否有产品，若有就运送过来（选择距离最近的） robot -> 456
-//            double minDis = 1000000;
-//            for(int tp:empty){
-//                for (Pair pair : target.canBuyStationsMap.get(tp)) {
-//                    Station st = pair.key;
-//                    if (st.canSell()) {
-//                        double dis = st.pathToFps(true,robot.pos);  // todo 需要实时计算路径长度
-//                        if (dis < minDis){
-//                            minDis = dis;
-//                            src = st;
-//                            break;
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        return src;
-//    }
-
     public void setPrioQueue() {
         // 给工作台设置一个优先队列
         if (stationsMap.containsKey(7)){
@@ -443,8 +440,16 @@ public class Zone {
         // 初始化机器人
         // todo 判断机器人个数，应该如何分配
         // 是否要考虑不同区域
-        if (robots.size() >= 3){
-            robots.get(0).earn = false;     // 派一个去攻击
+        if (Main.mapSeq == 1){
+            if (robots.size() >= 3){
+                robots.get(0).earn = false;     // 派一个去攻击
+            }
+        }
+
+        if (Main.mapSeq == 2 && Main.isBlue){
+            if (robots.size() >= 3){
+                robots.get(0).earn = false;     // 派一个去攻击
+            }
         }
 
     }

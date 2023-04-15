@@ -608,11 +608,7 @@ public class Route{
         double x = line.left.x;
 //        Main.printLog("x - line.right.x=" + x +"-"+line.right.x);
         int times = 0;
-//        for (int i = 0; i < 3; i++) {
-//            Point wall = getWallByX(x,line);
-//            if (wall != null) return wall;
-//            x =Point.fixAxis2Center(x)+offset;
-//        }
+
         while (Math.abs(x - line.right.x) >= 0.5){
             if (times > 10){
                 return null;
@@ -645,13 +641,7 @@ public class Route{
         Point tmp = new Point(start);
 //        Main.printLog("tmp.y - end.y=" + tmp.y +"-"+end.y);
         int times = 0;
-//        for (int i = 0; i < 3; i++) {
-//            if (posIsWall(tmp)){
-//                return tmp;
-//            }
-//            tmp.y +=offset;
-//        }
-//
+
         while (Math.abs(tmp.y - end.y)>=0.5){
             if (posIsWall(tmp)){
                 return tmp;
@@ -669,19 +659,6 @@ public class Route{
         if (posIsWall(end)) return end;
         return null;
     }
-
-//    private void setTmpSafeMode() {
-//        // 判断两辆车，应该让谁避让
-//        Robot other = Main.robots[unsafeRobotIds.get(0)];
-//
-//        Robot weakRobot = selectWeakRobot(other);
-//        // 避让车标志位赋值，安全点赋值
-//        Robot winRobot = robot == weakRobot? other:robot;
-//        Point sp = winRobot.route.selectTmpSafePoint();
-//        if (sp!= null){
-//            weakRobot.calcTmpRoute(sp,winRobot);   // 计算临时路由
-//        }
-//    }
 
     private void setTmpSafeMode2() {
         // 判断两辆车，应该让谁避让
@@ -1009,7 +986,7 @@ public class Route{
         return Main.wallMap[pos.x][pos.y] == -2;
     }
     public static boolean posIsWall(Point point) {
-        return posIsWall(point.x,point.y);
+        return point.isWall();//posIsWall(point.x,point.y);
     }
 
 

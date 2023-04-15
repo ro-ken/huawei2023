@@ -61,12 +61,16 @@ public class RadarPoint {
         return Objects.hash(x, y, isFull);
     }
 
+    public Point getPoint(){
+        return new Point(x,y);
+    }
+
     @Override
     public String toString() {
-        return "RadarPoint{" +
-                "x=" + x +
-                ", y=" + y +
-                ", isFull=" + isFull +
+        return "Radar{(" +
+                x + "," +
+                y +
+                "), full=" + isFull +
                 '}';
     }
 }

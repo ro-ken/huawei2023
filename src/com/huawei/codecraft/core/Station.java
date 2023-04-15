@@ -33,7 +33,9 @@ public class Station implements Comparable{
     public int rowStatus; // 原材料 二进制位表描述，例如 48(110000) 表示拥有物品 4 和 5
     public int proStatus; // 产品格 状态 0 无 1 有
     public boolean[] bookRow;    // 原料空格是否预定
+    public int[] bookRawNum; // 原料被预定的个数
     public boolean bookPro;      // 产品空格是否预定
+
     public int bookNum = 0; // 已经有多少机器人在往这个点赶
     public StationStatus place = StationStatus.EMPTY;   // 工作台位置的状态，是否被其他机器人占用
 
@@ -62,6 +64,7 @@ public class Station implements Comparable{
         Main.pointStaMap.put(pos,this); // 键值对赋值
         bookPro = false;
         bookRow = new boolean[8];
+        bookRawNum = new int[8];
         paths = new Path(pos);
         if (type>3){
             leftTime = -1;  // 初始化，马上要用
@@ -429,6 +432,15 @@ public class Station implements Comparable{
             if (bookRow[tp]){
                 i++;
             }
+        }
+        return i;
+    }
+
+    public int getBookRawNum() {
+        // 得到预定的总数
+        int i=0;
+        for (int tp : item[type].call) {
+            i+=bookRawNum[tp];
         }
         return i;
     }
