@@ -245,6 +245,11 @@ public class Main {
 
     private static void initMapSeq() {
 
+        if (Main.stationsBlue[0] == null || Main.stationsRed[0] == null) {
+            mapSeq = 3;
+            return;
+        }
+
         if (Main.stationsBlue[0].type == 3){
             mapSeq = 1;
         } else if (Main.stationsBlue[0].type == 1) {
@@ -280,7 +285,7 @@ public class Main {
     }
 
     private static void initFighterStations() {
-        for (int i = 0; i < stationNum; i++) {
+        for (int i = 0; i < fighterStationNum; i++) {
             fighterStations[i].fighterStationInitialization();           // 第一次初始化，能卖给哪些节点
         }
     }
@@ -293,13 +298,6 @@ public class Main {
         for (int i = 1; i <= 7; i++) {
             if (stationsMap.containsKey(i)){
                 ArrayList<Station> curStations = stationsMap.get(i);
-                for (Station st : curStations){
-                    st.initialization2();
-                }
-            }
-            // 初始化对方的工作台
-            if (fighterStationsMap.containsKey(i)) {
-                ArrayList<Station> curStations = fighterStationsMap.get(i);
                 for (Station st : curStations){
                     st.initialization2();
                 }

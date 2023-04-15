@@ -197,6 +197,8 @@ public class Station implements Comparable{
             canBuyStationsMap.put(tp,queue);
             ArrayList<Station> stations = zone.stationsMap.get(tp);
 
+            if (stations == null) continue;
+
             for (Station st : stations) {
                 double value = 0;
                 if (type < 7){
@@ -392,7 +394,6 @@ public class Station implements Comparable{
         }
 
         if (type>=4 && type <=6){
-            //
             calcCanBuyStations();
             calcFastestComposeFpsAndMoney();
             if (zone.stationsMap.containsKey(9)){

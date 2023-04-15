@@ -1007,12 +1007,12 @@ public class Robot {
                 // 每个st改标志位
                 if (st.pos.inCorner()){
                     // 在角落，撞不开，变阻塞
-//                    st.place = StationStatus.BLOCK;
-                    st.place = StationStatus.EMPTY;
+                    st.place = StationStatus.BLOCK;
+//                    st.place = StationStatus.EMPTY;
                 }else {
                     // 如果不在角落，就认为值可以撞开的
-//                    st.place = StationStatus.CANBUMP;
-                    st.place = StationStatus.EMPTY;
+                    st.place = StationStatus.CANBUMP;
+//                    st.place = StationStatus.EMPTY;
                 }
                 if (st.place != StationStatus.EMPTY){
                     Main.blockStations.add(st);
