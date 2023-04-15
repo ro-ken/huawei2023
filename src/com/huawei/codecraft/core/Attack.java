@@ -24,12 +24,12 @@ public class Attack {
 
     public void add2Posrange(Pos posAttack, HashSet<Pos> posRange, int range) {
         // 后续点不能出现在前一个点的范围内
-        int startJ = posAttack.x - range;
-        int endJ = posAttack.x + range;
-        int startK = posAttack.y - range;
-        int endK = posAttack.y + range;
-        for (int j = startJ; j <= endJ; j++) {
-            for (int k = startK; k <= endK; k++) {
+        int startI = posAttack.x - range;
+        int endI = posAttack.x + range;
+        int startJ = posAttack.y - range;
+        int endJ = posAttack.y + range;
+        for (int i = startI; i <= endI; i++) {
+            for (int j = startJ; j <= endJ; j++) {
                 Pos cuPos = new Pos(i, j);
                 if (!posRange.contains(cuPos)) {
                     posRange.add(cuPos);
@@ -38,11 +38,11 @@ public class Attack {
         }
     }
 
-    // 初始化路径点中的次数
+    // 初始化对方路径路径点中的次数
     private void initCntMap() {
         // 获取敌方的工作台
-        int length = Main.isBlue ? Main.stationsRed.length : Main.stationsBlue.length;
-        Station[] stations = Main.isBlue ? Main.stationsBlue : Main.stationsRed;
+        int length = Main.fighterStationNum;
+        Station[] stations = Main.fighterStations;
         // 将station路径中的pos全部记录到hash表中
         for (int i = 0; i < length; i++) {
             Map<Point,HashSet<Pos>> emptyPos = stations[i].paths.getResSetMap(false);
