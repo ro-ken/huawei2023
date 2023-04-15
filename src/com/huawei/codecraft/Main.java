@@ -79,12 +79,12 @@ public class Main {
         }
 
         for (int i = 0; i < robotNum; i++) {
-
+            if (!testRobot.contains(i)) continue;
             if (!robots[i].earn){
                 robots[i].attack();
                 continue;
             }
-            if (!testRobot.contains(i)) continue;
+
             if (robots[i].nextStation == null) continue;
             if (robots[i].isArrive()){
                 handleArrive(i);
@@ -509,7 +509,7 @@ public class Main {
         outStream.printf("%d\n", frameID);
     }
     public static void printLog(Object log){
-        if (test && isBlue){
+        if (test){
             System.out.println(log);
         }
     }

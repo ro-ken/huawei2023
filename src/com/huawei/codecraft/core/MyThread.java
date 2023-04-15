@@ -1,4 +1,6 @@
-package com.huawei.codecraft;
+package com.huawei.codecraft.core;
+
+import com.huawei.codecraft.Main;
 
 /**
  * @Author: ro_kin

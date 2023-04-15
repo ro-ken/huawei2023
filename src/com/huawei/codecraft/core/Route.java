@@ -9,7 +9,6 @@ import com.huawei.codecraft.way.Pos;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Objects;
 
 // 运动过程描述
 public class Route{
@@ -37,13 +36,13 @@ public class Route{
     double stopMinAngleDistance;
 
     public static double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
-    public static double verticalSafeDistanceCoef = 1.5;   // 半径乘子，每个机器人紧急距离，外人不得靠近
+    public static double verticalSafeDistanceCoef = 1.2;   // 半径乘子，垂直安全系数
     public static double lineSpeedCoef = 3;   // y = kx
     boolean isEmergency;// 是否紧急
     Point emergencyPos;    // 紧急机器人位置;
 
     public static double wallCoef = 3.2;      // 靠墙判定系数，多大算靠墙
-    public static double perceptionDistanceCoef = 2;  // 刹车距离 * 2 + emergencyDistance;这个距离以内要做出反应
+    public static double perceptionDistanceCoef = 4;  // 刹车距离 * 2 + emergencyDistance;这个距离以内要做出反应
     public static double perceptionAngleRange = Robot.pi/4;   // 前方一半视野角度
     public static double staPerAngleRange = Robot.pi/6;   // 静态视野
     public static double emergencyAngle = Robot.pi/2;   // 前方一半视野角度
@@ -55,9 +54,9 @@ public class Route{
     public double avoidWallPointSpeed = 3.5;    // 判断与墙体会发生碰撞，去往临时点的最大速度
     public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行避让操作
     public static final double predictWillBumpMinDis = 10;    // 预测是否会发生碰撞的距离，不用改
-    public static int minPosNum = 15;    // 预测是否会发生碰撞的点的个数，一个点0.5m左右 todo 重要参数
+    public static int minPosNum = 12;    // 预测是否会发生碰撞的点的个数，一个点0.5m左右 todo 重要参数
 
-    public static int wideDis = 8;   //  *0.5
+    public static int wideDis = 5;   //  *0.5
     ArrayList<Integer> unsafeRobotIds;
     Robot willBumpRobot;
     public int unsafeLevel;     //当前不安全级别  (1-3)
@@ -250,7 +249,6 @@ public class Route{
 
     private void calcUnsafePrintSpeed() {
         // 紧急情况，和其他机器人靠得很近，逃离
-//        Main.printLog(isEmergency);
 
         if (isEmergency){
             processEmergEvent();
@@ -397,20 +395,7 @@ public class Route{
         printTurnSpeed = Robot.maxRotate * clockwise * rotateCoef;
     }
 
-    // 给定设置角度和速度时设置减速偏转策略
     public void rush() {
-        calcSafePrintSpeed();   // 先计算安全速度
-
-        if (!isMoveSafe()) {
-            calcUnsafePrintSpeed();     // 不安全重新计算速度
-//            calcUnsafePrintSpeed2();     // 不安全重新计算速度
-        }
-
-        Main.Forward(robot.id,printLineSpeed);
-        Main.Rotate(robot.id,printTurnSpeed);
-    }
-
-    public void rush2() {
 
         calcSafeLevel();    // 先计算安全级别
 
@@ -421,7 +406,6 @@ public class Route{
             // 与墙体会碰撞
             handleUnsafeLevel1();
 
-//            calcSafePrintSpeed();
         }else if (unsafeLevel == 2){
             // 与其他机器人会发生碰撞
             handleUnsafeLevel2();
@@ -433,8 +417,33 @@ public class Route{
 
     private void handleUnsafeLevel2() {
         // 与其他机器人会发生碰撞
-        // todo 暂时调用原避障函数
-        calcUnsafePrintSpeed();
+        // 总体思想，前方物体在越靠近中心，速度越小，转向越大
+        // 若有前方多个物体，速度按最靠中心的，转向选择最近的计算
+
+        double speedCoef = 1;
+        double rotateCoef = 1;
+
+        if (unsafeRobotIds.size() == 0) return;
+        Robot oth = Main.robots[unsafeRobotIds.get(0)];     // 获取需要避让的机器人
+
+        // 如果是同向，减速就行
+        double delta = vector.calcDeltaAngle(oth.route.vector);
+        if (delta < Robot.pi/2 && oth.route.vector.norm() > 2){
+            // 同向情况,如果里终点很远，减速一下就行,减速不能太过
+            printLineSpeed = Math.max(3,oth.route.speed.norm());
+            printTurnSpeed = 0;
+        }else {
+            Point posVec = robot.pos.calcVector(oth.pos);
+            double angle = speed.calcDeltaAngle(posVec);
+            double cos = speed.calcDeltaCos(posVec);
+            double dis = robot.pos.calcDistance(oth.pos);
+            rotateCoef = cos;
+            // 不能处理，方向斜碰撞情况 \/
+            clockwise = calcAvoidBumpClockwise(speed,posVec);
+
+            printLineSpeed = robot.maxSpeed - 3 * cos;  // 最小速度 3
+            printTurnSpeed = Robot.maxRotate * clockwise * cos / 2;
+        }
     }
 
     private void handleUnsafeLevel1() {
@@ -451,44 +460,20 @@ public class Route{
     }
 
     // 计算当前的安全级别 0:安全，1：有墙，2有机器人
-    private void calcSafeLevel2() {
-
-        unsafeLevel = 0;    // 先置为安全状态
-        if (!robot.tmpSafeMode){
-            // 如果不是这个模式，需要检测和其他机器人是否碰撞
-            if (willBump()){
-                setTmpSafeMode2();
-            } else if (canBump()){
-                unsafeLevel = 2;
-            }
-        }
-
-        if (unsafeLevel == 0){
-            // 如果不是 正在错车，需要判断和墙的距离
-            Point wall = frontHasWall();
-
-            if (wall != null && wall.calcDistance(robot.pos) <= 2){     // todo 参数可调
-                Main.printLog(robot + "wall" + wall);
-                unsafeLevel = 1;
-                // 前方有墙，需要稍微绕一绕
-                // 给一个转弯的路口的点，先到转弯路口去
-                avoidWallPoint = calcAvoidWallPoint(wall);
-                // 运动3
-            }
-        }
-    }
-
-
-    // 计算当前的安全级别 0:安全，1：有墙，2有机器人
     private void calcSafeLevel() {
         
         unsafeLevel = 0;    // 先置为安全状态
-        if (!robot.tmpSafeMode){        // 暂时不考虑两个loser相遇的情况
-            // 如果不是这个模式，需要检测和其他机器人是否碰撞
-            if (willBump()){
-                setTmpSafeMode2();
-            } else if (canBump()){
-                unsafeLevel = 2;
+
+        // 如果快到终点，不考虑与机器人的碰撞
+        if (vector.norm() > 3){
+            if (!robot.tmpSafeMode){        // 暂时不考虑两个loser相遇的情况
+
+                // 如果不是这个模式，需要检测和其他机器人是否碰撞
+                if (willBump()){
+                    setTmpSafeMode2();
+                } else if (canBump()){
+                    unsafeLevel = 2;
+                }
             }
         }
 
@@ -522,9 +507,11 @@ public class Route{
             if (oth.route == null) continue;
             if (oth.nextStation == null)continue;
             if (posSet.contains(Astar.Point2Pos(oth.pos))) {
+                double angle = vector.calcDeltaAngle(oth.route.vector);
+                if (angle > Robot.pi) continue;
                 double dis = robot.pos.calcDistance(oth.pos);
-                if (oth.route.posSet.contains(Astar.Point2Pos(robot.pos)) || dis < 3) {
-                    // 距离较近
+                if (oth.route.posSet.contains(Astar.Point2Pos(robot.pos)) || dis < 1.5) {
+                    // 一宽一窄，距离较近才避让
                     if (dis < predictWillBumpMinDis && dis < minDis) {
                         minDis = dis;
                         // 取最近的机器人进行避让
@@ -686,6 +673,8 @@ public class Route{
         newWinner.setWeakRobot(weakRobot);
         Main.printLog("winner" + winRobot);
         Main.printLog("real winner" + newWinner);
+        printWinpath(pos1);
+
         Point sp = weakRobot.selectTmpSafePoint(winRobot.pos,pos1,robot.midPoint);
         // 选出一个临时点，避让机器人更改路线
         if (sp!= null){
@@ -695,6 +684,14 @@ public class Route{
         }else {
             Main.printLog("did not find safe point");
         }
+    }
+
+    private void printWinpath(HashSet<Pos> pos1) {
+        HashSet<Point> set = new HashSet<>();
+        for (Pos pos : pos1) {
+            set.add(Astar.Pos2Point(pos));
+        }
+        Main.printLog(set);
     }
 
     private void addSafePointToSet(HashSet<Pos> pos1, Point sp) {
@@ -707,7 +704,6 @@ public class Route{
                 pos1.add(new Pos(pos.x+i,pos.y+j));
             }
         }
-
     }
 
     private Line getLastPathLine() {
@@ -1021,63 +1017,41 @@ public class Route{
         double minDis = 1000000;
         for (int i = 0; i < 4; i++) {
             if (i == robot.id) continue;
-
-            if (Main.robots[i].winner == robot){
-                if (Main.robots[i].inSafePlace){
+            Robot oth = Main.robots[i];
+            if (oth.route == null) continue;
+            if (oth.winner == robot){
+                if (oth.inSafePlace){
                     continue;   // 如果避让 车到达了避让点，直接过去
                 }
             }
+            Point vec = robot.pos.calcVector(Main.robots[i].pos);
+            double delta = vector.calcDeltaAngle(vec);
+            if (delta > Robot.pi/2) continue; // 不考虑后方情况
 
-
-            double dis = robot.pos.calcDistance(Main.robots[i].pos);
+            double dis = robot.pos.calcDistance(oth.pos);
             if (dis<safeDis){
+                // 判断是否是同向
+                double angle = vector.calcDeltaAngle(oth.route.vector);
+                boolean f1 = angle < Robot.pi/2;        // 同侧
+                boolean f2 = oth.route.vector.norm() > 2;   // 没到终点
+                boolean f3 = oth.route.speed.norm() < 3 || (oth.carry <= 3 && robot.carry <=3); //不怕撞
+                if (f1 && f2 && f3) continue;   // 这种情况不用考虑，直接撞
+
                 // 判断夹角和是否在内圈
-                Point vec = robot.pos.calcVector(Main.robots[i].pos);
                 double verDis = calcVerticalDistance(Main.robots[i].pos);// 计算向量和速度垂直的距离
-                double angle = calcDeltaAngle(vec);
-                if (dis < emgDis && angle < emergencyAngle) {
-                    // 目前只考虑一个紧急情况，若有多个，选取最紧急的
+                // 不考虑紧急模式，我的眼里只有塔
+                if (verDis < verSafeDis){
                     safe = false;
-                    isEmergency = true;
-                    emergencyPos = Main.robots[i].pos;
-                    unsafeRobotIds.add(i);
-                    break;  // 紧急情况
-                }else {
-                    if (angle < perceptionAngleRange && verDis < verSafeDis){
-                        safe = false;
-                        if (dis < minDis){
-                            minDis  = dis;
-                            unsafeRobotIds.clear();
-                            unsafeRobotIds.add(i);
-                        }
+                    if (dis < minDis){
+                        minDis  = dis;
+                        unsafeRobotIds.clear();
+                        unsafeRobotIds.add(i);
                     }
                 }
+
             }
         }
         return !safe;
-    }
-
-
-    // 是否使用终点等待模式，防止终点碰撞
-    private void useEndWaitMode() {
-        // 若到了终点附件需判断,如果预定数量大于1，并且我不是最近的，或者我前面有其他station，需要减速暂停，终点等待模式
-        if (robot.nextStation.bookNum >= 1 && !target.nearWall()){  // 靠墙容易堵住
-            if(realDistance < robot.nextStation.getSafeDis()){
-                boolean flag1 = selfNotClosest();
-                boolean flag2 = frontNotSafe();
-
-                if (flag1 || flag2){
-                    printLineSpeed = 0;     // 需要暂停
-
-                    //计算角速度，朝向目标
-                    if (stopMinAngleDistance < realAngleDistance){
-                        printTurnSpeed = Robot.maxRotate * clockwise;
-                    }else {
-                        printTurnSpeed = 0;
-                    }
-                }
-            }
-        }
     }
 
     // 有很多机器人去这个工作站，我不是最近的一个

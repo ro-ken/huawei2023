@@ -215,6 +215,7 @@ public class Zone {
             taskId = tasks.get(0);
         }else {
             taskId = fairSelectTask(tasks,target);
+            Main.printLog("taskId" + taskId);
         }
         used.add(taskId);
         Station task = newTask(taskId,target);
@@ -282,6 +283,7 @@ public class Zone {
                 list.add(tp);
             }
         }
+
         // 有唯一最小值，返回
         if (list.size() == 1){
             return list.get(0);
@@ -290,17 +292,22 @@ public class Zone {
         // 若只有一个，有多个最小值，按照距离远的搬运，防止出现等待的情况
         // 若有2个以上，价值高的先搬运
         if (min == 1){
-            double max = 0;
-            int maxId = 0;
-            for (int tp : list) {
+//            double max = 0;
+//            int maxId = 0;
+//            for (int tp : list) {
+//
+//                double fps = Objects.requireNonNull(target.canBuyStationsMap.get(tp).peek()).value;
+//                if (fps > max){
+//                    max = fps;
+//                    maxId = tp;
+//                }
+//            }
+//            return maxId;
 
-                double fps = Objects.requireNonNull(target.canBuyStationsMap.get(tp).peek()).value;
-                if (fps > max){
-                    max = fps;
-                    maxId = tp;
-                }
+            if (list.size() == 3){
+                return 6;
             }
-            return maxId;
+            return Math.max(list.get(0),list.get(1)); // 2个任务 选最大  4 < 5 < 6
         }else {
             if (list.size() == 3){
                 return 6;
@@ -446,10 +453,19 @@ public class Zone {
             }
         }
 
-        if (Main.mapSeq == 2 && Main.isBlue){
-            if (robots.size() >= 3){
-                robots.get(0).earn = false;     // 派一个去攻击
+        if (Main.mapSeq == 2){
+            if (Main.isBlue){
+                if (robots.size() >= 3){
+                    robots.get(0).earn = false;     // 派一个去攻击
+                }
+            }else {
+                if (robots.size() >= 3){
+                    robots.get(0).earn = false;     // 派2个去攻击
+                    robots.get(1).earn = false;     // 派一个去攻击
+                }
+
             }
+
         }
 
     }

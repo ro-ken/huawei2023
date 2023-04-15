@@ -4,7 +4,6 @@ import com.huawei.codecraft.Main;
 import com.huawei.codecraft.util.*;
 import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Pos;
-import jdk.nashorn.internal.ir.Block;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -77,10 +76,10 @@ public class Robot {
     public static int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
     public static double maxSpeedCoef = 1.5;
     public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
-    public static int cacheFps = 50;     // 判断是否要送最后一个任务的临界时间 > 0
+    public static int cacheFps = 50 * 4;     // 判断是否要送最后一个任务的临界时间 > 0
     public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
     public static int blockJudgeFps = 30 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点,
-    public static int maxWaitBlockFps = 50 * 3 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
+    public static int maxWaitBlockFps = 25 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
 
     public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
     public static double detectWallWideCoef = 1.0 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
@@ -502,47 +501,55 @@ public class Robot {
         }
 
         if (avoidBumpMode){
-            Point fp = null ;
-            double minDis = 10000;
-            for (Robot oth : zone.robots) {
-                if (oth == this) continue;
-                double dis = pos.calcDistance(oth.pos);
-                if (dis < 3 && dis<minDis){
-                    minDis = dis;
-                    fp = oth.pos;   //选择距离自己最近的机器人
-                }
-            }
-
-            if (fp != null){
-                randomBack(fp);
-                return;
-            }else {
-                avoidBumpMode = false;
-                recoveryPath();     // 恢复路径
-            }
+            boolean ret = handleAvoidBumpMode();
+            if (ret) return;
         }
 
         if (tmpSafeMode){
+            handleTmpSafeMode();
+        }
+        route.rush();
+        route.deletePos();  // 以走过的点要删除，防止发生误判
+    }
 
-            if (!inSafePlace){
-                // 如果未到安全点，要判断是否到达
-//                if (route.pathIndex<2) return;
-                double dis = pos.calcDistance(route.target);
-                if (dis < minDis) {
-                    inSafePlace = true;
-                    blockFps = 0;   // 重新计数
-                }
-            }else {
-                // 到达了安全点，要判断是否能走
-
-                if (roadIsSafe()){
-                    Main.printLog(22222);
-                    recoveryPath();   // 对方通过狭窄路段，重新寻路
-                }
+    private void handleTmpSafeMode() {
+        if (!inSafePlace){
+            // 如果未到安全点，要判断是否到达
+            double dis = pos.calcDistance(route.target);
+            if (dis < minDis) {
+                inSafePlace = true;
+                blockFps = 0;   // 重新计数
+            }
+        }else {
+            // 到达了安全点，要判断是否能走
+            if (roadIsSafe()){
+                Main.printLog(22222);
+                recoveryPath();   // 对方通过狭窄路段，重新寻路
             }
         }
-        route.rush2();
-        route.deletePos();  // 以走过的点要删除，防止发生误判
+    }
+
+    private boolean handleAvoidBumpMode() {
+        boolean ret = false;
+        Point fp = null ;
+        double minDis = 10000;
+        for (Robot oth : zone.robots) {
+            if (oth == this) continue;
+            double dis = pos.calcDistance(oth.pos);
+            if (dis < 3 && dis<minDis){
+                minDis = dis;
+                fp = oth.pos;   //选择距离自己最近的机器人
+            }
+        }
+
+        if (fp != null){
+            randomBack(fp);
+            ret = true;
+        }else {
+            avoidBumpMode = false;
+            recoveryPath();     // 恢复路径
+        }
+        return ret;
     }
 
     private void fixOccupied() {
@@ -786,8 +793,9 @@ public class Robot {
     }
 
     public Point selectTmpSafePoint(Point dest, HashSet<Pos> posSet, Point midPoint) {
+//        Main.printLog(midPoint);
         Point sp = Astar.getSafePoint2(carry == 0, pos, dest, posSet,midPoint);
-
+        Main.printLog("sp:" + sp);
         HashSet<Point> ps = new HashSet<>();
         for (Pos pos1 : posSet) {
             ps.add(Astar.Pos2Point(pos1));
@@ -950,13 +958,18 @@ public class Robot {
                 }
 
             }else {
+                nextStation = Main.stationsBlue[6];
+                if (route == null){
+                    calcRoute();
+                }
 //                nextStation = Main.stationsBlue[8];
 //                if (route == null){
 //                    calcRoute();
 //                }
             }
         }
-        route.rush2();
+        Main.printLog(nextStation);
+        route.rush();
     }
 
     public void handleEnemy() {
@@ -982,12 +995,16 @@ public class Robot {
                 // 每个st改标志位
                 if (st.pos.inCorner()){
                     // 在角落，撞不开，变阻塞
-                    st.place = StationStatus.BLOCK;
+//                    st.place = StationStatus.BLOCK;
+                    st.place = StationStatus.EMPTY;
                 }else {
                     // 如果不在角落，就认为值可以撞开的
-                    st.place = StationStatus.CANBUMP;
+//                    st.place = StationStatus.CANBUMP;
+                    st.place = StationStatus.EMPTY;
                 }
-                Main.blockStations.add(st);
+                if (st.place != StationStatus.EMPTY){
+                    Main.blockStations.add(st);
+                }
             }
         }
     }

@@ -50,6 +50,14 @@ public class Astar {
                 }
             }
         }
+
+        for (int i = startI; i <= endI; i++) {
+            for (int j = startJ; j <= endJ; j++) {
+                System.out.print(maps[i][j]);
+                System.out.print(",");
+            }
+            System.out.println();
+        }
     }
 
     // 将机器人的位置当作障碍物进行锁定
@@ -77,24 +85,24 @@ public class Astar {
         if (s.x == t.x && s.y == t.y){
             return true;
         }
-        boolean notIn = true;
+
         if (s.x != t.x && s.y != t.y){
             //
-            boolean flag1 = (t.x - s.x) * (t.x-i) > 0; //同侧
-            boolean flag2 = (t.y - s.y) * (t.y-j) > 0; //同侧
+            boolean flag1 = (t.x - s.x) * (t.x-i) >= 0; //同侧
+            boolean flag2 = (t.y - s.y) * (t.y-j) >= 0; //同侧
             if (flag1 && flag2){
                 return false;
             }
 
         }else {
             if (s.x == t.x){
-                boolean flag2 = (t.y - s.y) * (t.y-j) > 0; //同侧
+                boolean flag2 = (t.y - s.y) * (t.y-j) >= 0; //同侧
                 boolean flag3 = Math.abs(t.x - i) <= 1; //
                 if (flag2 && flag3){
                     return false;
                 }
             }else {
-                boolean flag1 = (t.x - s.x) * (t.x-i) > 0; //同侧
+                boolean flag1 = (t.x - s.x) * (t.x-i) >= 0; //同侧
                 boolean flag3 = Math.abs(t.y - j) <= 1; //
                 if (flag1 && flag3){
                     return false;
@@ -157,7 +165,6 @@ public class Astar {
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
         Astar ast = new Astar(fixMap,src,dest);
         ast.search();
-        Main.printLog("ast list" + ast.resultList); // todo 有越界异常
         if (ast.resultList.size() == 0){
             mid.set(src);
             return 100000;  // 未找到
@@ -167,35 +174,33 @@ public class Astar {
     }
 
 
-
-
-    public static Point getSafePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1){
-
-        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-        Astar ast = new Astar(fixMap,src,dest);
-
-        Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
-        return sp;
-    }
+//    public static Point getSafePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1){
+//
+//        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
+//        Astar ast = new Astar(fixMap,src,dest);
+//
+//        Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
+//        return sp;
+//    }
 
     public static Point getSafePoint2(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1,Point midPoint){
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-//        Main.printLog("midPoint" + midPoint);
+        Main.printLog("midPoint" + midPoint);
         Astar ast = new Astar(fixMap,src,midPoint);
 
         Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
         return sp;
     }
 
-    public static Point getSafePointAndBasePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1){
-
-        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-        Astar ast = new Astar(fixMap,src,dest);
-
-        Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
-        return sp;
-    }
+//    public static Point getSafePointAndBasePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1){
+//
+//        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
+//        Astar ast = new Astar(fixMap,src,dest);
+//
+//        Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
+//        return sp;
+//    }
 
     public static ArrayList<Point> getPathAndResult(boolean isEmpty,Point src, Point dest,Set<Pos> posSet){
         double dis = src.calcDistance(dest);
@@ -228,9 +233,9 @@ public class Astar {
     }
 
     public static double getPosDistance(Pos pos1, Pos pos2) {
-            Point point1 = Pos2Point(pos1);
-            Point point2 = Pos2Point(pos2);
-            return Math.sqrt(Math.pow((point1.x - point2.x), 2) + Math.pow((point1.y - point2.y), 2));
+        Point point1 = Pos2Point(pos1);
+        Point point2 = Pos2Point(pos2);
+        return Math.sqrt(Math.pow((point1.x - point2.x), 2) + Math.pow((point1.y - point2.y), 2));
     }
     public static Point getClosestPoint(Point sp, HashSet<Pos> pos1) {
         if (pos1.size() == 0) {
@@ -244,32 +249,32 @@ public class Astar {
         double mindis = 50;
         int times = 0;
         while(!flag && times != findTimes) {   // 检查是否检测到了
-              for (int i = 0; i < dirX.length; i++) {
-                    int x = pos.x + dirX[i] * step;
-                    int y = pos.y + dirY[i] * step;
-                    Pos curPos = new Pos(x, y);
-                    if (Mapinfo.isInMap(x, y) && pos1.contains(curPos)) {
-                          flag = true;
-                          double curDis = getPosDistance(pos, curPos);
-                          if (mindis > curDis) {
-                                mindis = curDis;
-                                minPos.set(curPos);;
-                          }
+            for (int i = 0; i < dirX.length; i++) {
+                int x = pos.x + dirX[i] * step;
+                int y = pos.y + dirY[i] * step;
+                Pos curPos = new Pos(x, y);
+                if (Mapinfo.isInMap(x, y) && pos1.contains(curPos)) {
+                    flag = true;
+                    double curDis = getPosDistance(pos, curPos);
+                    if (mindis > curDis) {
+                        mindis = curDis;
+                        minPos.set(curPos);;
                     }
-              }
-              step++;
-              times++;
+                }
+            }
+            step++;
+            times++;
         }
         if (times == findTimes) {
             return null;
         }
         return Pos2Point(minPos);
     }
-    
+
     // 空载需要找 2 * 2 的网格，从该点进行寻找 -1 没找到，1 代表左上方 2 代表右上方 3 代表左下方 4 代表右下方
     public int getEmptyGrid(Pos curPos, HashSet<Pos> set) {
         if (set.contains(curPos)) {
-            return 0;
+            return -1;
         }
         // 15 = 1111(2) 代表上下左右
         int ret = 15;
@@ -280,26 +285,26 @@ public class Astar {
             if (!Mapinfo.isInMap(x, y) || set.contains(new Pos(x, y)) || Mapinfo.mapInfoOriginal[x][y] == -2) {
                 ret &= ~(1 << 3 - i) & 0xFF;
             }
-            if (ret == 3 || (ret & 3) == 0) {
+            if (ret <= 3 || (ret & 3) == 0) {
                 return -1;
             }
         }
 
         // 斜左上 左右 左下 右下
         // 斜左上
-        if ((ret & 10) != 0 && Mapinfo.isInMap(curPos.x - 1, curPos.y - 1)  && !set.contains(new Pos(curPos.x - 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y - 1] != -2) {
+        if ((ret & 10) == 10 && Mapinfo.isInMap(curPos.x - 1, curPos.y - 1)  && !set.contains(new Pos(curPos.x - 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y - 1] != -2) {
             return 0;
         }
         // 斜右上
-        if ((ret & 9) != 0 && Mapinfo.isInMap(curPos.x - 1, curPos.y + 1) && !set.contains(new Pos(curPos.x - 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y + 1] != -2) {
+        if ((ret & 9) == 9 && Mapinfo.isInMap(curPos.x - 1, curPos.y + 1) && !set.contains(new Pos(curPos.x - 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y + 1] != -2) {
             return 1;
         }
         // 斜左下
-        if ((ret & 6) != 0 && Mapinfo.isInMap(curPos.x + 1, curPos.y - 1) && !set.contains(new Pos(curPos.x + 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y - 1] != -2) {
+        if ((ret & 6) == 6 && Mapinfo.isInMap(curPos.x + 1, curPos.y - 1) && !set.contains(new Pos(curPos.x + 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y - 1] != -2) {
             return 2;
         }
         // 斜右下
-        if ((ret & 5) != 0 && Mapinfo.isInMap(curPos.x + 1, curPos.y + 1) && !set.contains(new Pos(curPos.x + 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y + 1] != -2) {
+        if ((ret & 5) == 5 && Mapinfo.isInMap(curPos.x + 1, curPos.y + 1) && !set.contains(new Pos(curPos.x + 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y + 1] != -2) {
             return 3;
         }
         return -1;
@@ -327,7 +332,7 @@ public class Astar {
         if (pos1.size() == 0) {
             return null;
         }
-        ArrayList<Pos> openList = new ArrayList<Pos>();; // 存储带拓展节点
+        ArrayList<Pos> openList = new ArrayList<>(); // 存储带拓展节点
         openList.add(targetPosition);
         maps[targetPosition.x][targetPosition.y] = 1; // 起点已探索
         int time = 0;
@@ -359,9 +364,9 @@ public class Astar {
                 int x = curPos.x + dirX[i];
                 int y = curPos.y + dirY[i];
                 if (Mapinfo.isInMap(x, y) && maps[x][y] == 0) {
-                        maps[x][y] = 1; // 节点设置已探索
-                        Pos explorePos = new Pos(x, y);
-                        openList.add(explorePos);
+                    maps[x][y] = 1; // 节点设置已探索
+                    Pos explorePos = new Pos(x, y);
+                    openList.add(explorePos);
                 }
             }
         }
@@ -413,7 +418,7 @@ public class Astar {
             prePoint = curPoint;
             prePos = curPos;
         }
-       result.add(mergeList.get(mergeList.size() - 1));
+        result.add(mergeList.get(mergeList.size() - 1));
     }
 
     public int isCriticalPos(Pos curPos) {
