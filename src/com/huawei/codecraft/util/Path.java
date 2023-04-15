@@ -189,7 +189,7 @@ public class Path {
     private Map<Point,ArrayList<Point>> getPathMap(boolean isEmpty) {
         return isEmpty? emptyPathMap:fullPathMap;
     }
-    private Map<Point,HashSet<Pos>> getResSetMap(boolean isEmpty) {
+    public Map<Point,HashSet<Pos>> getResSetMap(boolean isEmpty) {
         return isEmpty? emptyResSetMap:fullResSetMap;
     }
 }
