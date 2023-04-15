@@ -307,7 +307,7 @@ public class Mapinfo {
                 }
 
                 for (int fSid : fighterStationId.get(zoneId)) {
-                    Station st = Main.fighterStations[fSid];
+                    Station st = Main.fighterStations[fSid - Main.fighterStationNumStart];
                     if (!zone.fighterStationsMap.containsKey(st.type)){
                         ArrayList<Station> list = new ArrayList<>();
                         list.add(st);

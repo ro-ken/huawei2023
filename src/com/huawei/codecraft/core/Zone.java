@@ -358,7 +358,7 @@ public class Zone {
                 if (station.place == StationStatus.BLOCK) continue; // 阻塞了
                 if (station.leftTime == -1 || (station.bookPro && station.type>3)) continue;
                 double dis = station.pos.calcDistance(robot.pos);
-                double time1 = robot.calcFpsToPlace(dis);         // todo 时间要改
+                double time1 = robot.calcFpsToPlace(dis);
                 double time = Math.max(time1,station.leftTime);
                 if (time < shortest){
                     // 卖方有货，卖方有位置
@@ -444,30 +444,4 @@ public class Zone {
         }
     }
 
-    public void initRobot() {
-        // 初始化机器人
-        // todo 判断机器人个数，应该如何分配
-        // 是否要考虑不同区域
-        if (Main.mapSeq == 1){
-            if (robots.size() >= 3){
-                robots.get(0).earn = false;     // 派一个去攻击
-            }
-        }
-
-        if (Main.mapSeq == 2){
-            if (Main.isBlue){
-                if (robots.size() >= 3){
-                    robots.get(0).earn = false;     // 派一个去攻击
-                }
-            }else {
-                if (robots.size() >= 3){
-                    robots.get(0).earn = false;     // 派2个去攻击
-                    robots.get(1).earn = false;     // 派一个去攻击
-                }
-
-            }
-
-        }
-
-    }
 }

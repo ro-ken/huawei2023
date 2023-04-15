@@ -415,6 +415,27 @@ public class Route{
         Main.Rotate(robot.id,printTurnSpeed);
     }
 
+    public void attackBlock() {
+        // 阻塞攻击模式，到目的地就行
+
+        calcSafeLevel();    // 先计算安全级别
+
+        if (unsafeLevel == 0){
+            calcSafePrintSpeed2();   // 计算安全速度
+
+        }else if (unsafeLevel == 1){
+            // 与墙体会碰撞
+            handleUnsafeLevel1();
+
+        }else if (unsafeLevel == 2){
+            // 与其他机器人会发生碰撞
+            handleUnsafeLevel2();
+        }
+
+        Main.Forward(robot.id,printLineSpeed);
+        Main.Rotate(robot.id,printTurnSpeed);
+    }
+
     private void handleUnsafeLevel2() {
         // 与其他机器人会发生碰撞
         // 总体思想，前方物体在越靠近中心，速度越小，转向越大

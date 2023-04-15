@@ -30,6 +30,7 @@ public class Robot {
 
     int id;
     public Zone zone;   //所属的区域
+    public Attack attack;
     public int StationId; // -1 无 ，从0 开始 表示第几个工作台
     public int carry;  // 携带物品 1-7
     public double timeValue;  // 时间价值系数 [0.8 - 1]
@@ -933,44 +934,55 @@ public class Robot {
         Main.Rotate(id,printRotate);
     }
 
-    public void attack() {
-        // 机器人攻击策略
-        if (Main.mapSeq == 1){
-            // 图1
-            if (Main.isBlue){
-                nextStation = Main.stationsRed[12];
-                if (route == null){
-                    calcRoute();
-                }
-            }else {
-                nextStation = Main.stationsBlue[12];
-                if (route == null){
-                    calcRoute();
-                }
-            }
-
+    public void attack(){
+        if (attack.attackType == AttackType.BLOCK){
+            // 直接去目标点就可以了
+            route.attackBlock();
+            route.deletePos();  // 以走过的点要删除，防止发生误判
         }else {
-            //图2
-            if (Main.isBlue){
-                nextStation = Main.stationsRed[8];
-                if (route == null){
-                    calcRoute();
-                }
+            // todo 其他攻击类型策略
 
-            }else {
-                nextStation = Main.stationsBlue[6];
-                if (route == null){
-                    calcRoute();
-                }
-//                nextStation = Main.stationsBlue[8];
+        }
+    }
+
+//    public void attack() {
+//        // 机器人攻击策略
+//        if (Main.mapSeq == 1){
+//            // 图1
+//            if (Main.isBlue){
+//                nextStation = Main.stationsRed[12];
 //                if (route == null){
 //                    calcRoute();
 //                }
-            }
-        }
-        Main.printLog(nextStation);
-        route.rush();
-    }
+//            }else {
+//                nextStation = Main.stationsBlue[12];
+//                if (route == null){
+//                    calcRoute();
+//                }
+//            }
+//
+//        }else {
+//            //图2
+//            if (Main.isBlue){
+//                nextStation = Main.stationsRed[8];
+//                if (route == null){
+//                    calcRoute();
+//                }
+//
+//            }else {
+//                nextStation = Main.stationsBlue[6];
+//                if (route == null){
+//                    calcRoute();
+//                }
+////                nextStation = Main.stationsBlue[8];
+////                if (route == null){
+////                    calcRoute();
+////                }
+//            }
+//        }
+//        Main.printLog(nextStation);
+//        route.rush();
+//    }
 
     public void handleEnemy() {
         HashSet<Station> resets = new HashSet<>();

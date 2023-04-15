@@ -2,6 +2,8 @@ package com.huawei.codecraft.core;
 
 import java.util.*;
 import com.huawei.codecraft.Main;
+import com.huawei.codecraft.util.AttackType;
+import com.huawei.codecraft.util.Path;
 import com.huawei.codecraft.util.Point;
 import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Mapinfo;
@@ -9,20 +11,58 @@ import com.huawei.codecraft.way.Pos;
 
 // 攻击类
 public class Attack {
+    // 下面是全局静态属性
     private static double attackRange = 3;               // 设定攻击距离，机器人在这个点攻击多远的距离
     public static Point[] attackPoint = new Point[4];   // 记录需要攻击的点,最多 4 个
-    ArrayList<Robot> robots ;   // 负责攻击的机器人
-    Map<Pos, Integer> posCnt;   // 记录路径pos点出现的次数
-    
+    public static HashSet<Robot> robots = new HashSet<>();   // 负责攻击的机器人
+    public static Map<Pos, Integer> posCnt = new HashMap<>();   // 记录路径pos点出现的次数
 
-    public Attack(ArrayList<Robot> robots) {
-        this.robots = robots;
-        posCnt = new HashMap<>();
+    //下面是对象属性
+    public Point target;        // 目标点
+    public AttackType attackType;       // 攻击类型
+    public Path paths;
+    public Robot robot;
+
+    public static void init(){
         initCntMap();
         initAttackPoint();
     }
 
-    public void add2Posrange(Pos posAttack, HashSet<Pos> posRange, int range) {
+    public Attack(Robot robot ,Point target,AttackType tp) {
+        this.robot = robot;
+        robot.attack = this;
+        this.target = target;
+        this.attackType = tp;
+        paths = new Path(target);    //建立一条路径
+    }
+
+    public static void addRobot(Robot robot){
+        addRobot(robot,attackPoint[0]);     // 默认进攻第一个点，后期可调整
+    }
+
+    public static void addRobot(Robot robot, Point target){
+        addRobot(robot,target,AttackType.BLOCK);    // 默认调用阻塞模式
+    }
+
+    public static void addRobot(Robot robot, Point target,AttackType tp){
+        robot.earn = false; // 不是赚钱模式
+        Attack attack = new Attack(robot,target,tp);
+        Attack.robots.add(robot);
+        // 计算路线
+        attack.calcRouteFromNow();
+    }
+
+    public void calcRouteFromNow() {
+        // 计算从自身到目的地位置的路由
+
+        ArrayList<Point> path = paths.getPath(robot.carry == 0,robot.pos);   // 第一次，计算初始化的路径
+        HashSet<Pos> pos1 = paths.getResSet(robot.carry == 0,robot.pos);
+        path = Path.reversePath(path);
+        robot.route = new Route(target,robot,path,pos1);
+    }
+
+
+    public static void add2Posrange(Pos posAttack, HashSet<Pos> posRange, int range) {
         // 后续点不能出现在前一个点的范围内
         int startI = posAttack.x - range;
         int endI = posAttack.x + range;
@@ -39,7 +79,7 @@ public class Attack {
     }
 
     // 初始化对方路径路径点中的次数
-    private void initCntMap() {
+    private static void initCntMap() {
         // 获取敌方的工作台
         int length = Main.fighterStationNum;
         Station[] stations = Main.fighterStations;
@@ -75,7 +115,7 @@ public class Attack {
     }
 
     // 初始化攻击的点
-    private void initAttackPoint() {
+    private static void initAttackPoint() {
         // 将 Map 转化为 List
         List<Map.Entry<Pos, Integer>> list = new ArrayList<>(posCnt.entrySet());
 
@@ -106,5 +146,6 @@ public class Attack {
                 }  
             }
         }
+
     }
 }

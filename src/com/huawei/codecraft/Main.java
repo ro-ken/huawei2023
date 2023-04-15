@@ -78,13 +78,12 @@ public class Main {
         // 先计算每个机器人的参数，后面好用
         for (int i = 0; i < robotNum; i++) {
             if (!testRobot.contains(i)) continue;
-
             calcParam(i);
         }
 
         for (int i = 0; i < robotNum; i++) {
             if (!testRobot.contains(i)) continue;
-            if (!robots[i].earn){
+            if (robots[i].attack != null){
                 robots[i].attack();
                 continue;
             }
@@ -131,15 +130,15 @@ public class Main {
 
 
     private static void calcParam(int i) {
-        if (robots[i].nextStation == null){
-            if (!robots[i].earn) {
-                return;
-            }
+        if (robots[i].nextStation == null && robots[i].attack == null){
+//            if (!robots[i].earn) {
+//                return;
+//            }
             robots[i].selectBestStation();
             Main.printLog("blockStations " + blockStations);
             robots[i].printRoute();
         }
-        if (robots[i].nextStation == null){
+        if (robots[i].nextStation == null && robots[i].attack == null){
             robots[i].goToEmptyPlace();
             return;
         }
@@ -203,6 +202,8 @@ public class Main {
         initFighterStations(); // 初始化对方工作台的路径，只初始化可以卖的路径 
 
         initZone2();
+        initAttack();
+
 //        initWaterFlow();    // 初始化流水线
 
         if (writePath && test){
@@ -214,6 +215,32 @@ public class Main {
 
         long t2 = System.currentTimeMillis();
         printLog("init time = " + (t2 - t1) + "ms");
+    }
+
+    private static void initAttack() {
+        Attack.init();      // 初始化攻击类
+
+        // 初始化机器人
+        // todo 判断机器人个数，应该如何分配
+        // 是否要考虑不同区域
+        if (Main.mapSeq == 1){
+            if (isBlue){
+                Attack.addRobot(robots[0],Main.stationsRed[12].pos);
+            }else {
+                Attack.addRobot(robots[0],Main.stationsBlue[12].pos);
+            }
+        }
+
+        if (Main.mapSeq == 2){
+            if (Main.isBlue){
+                Attack.addRobot(robots[0],Main.stationsRed[8].pos);
+            }else {
+//                Attack.addRobot(robots[0],Attack.attackPoint[0]);
+//                Attack.addRobot(robots[1],Attack.attackPoint[1]);
+                Attack.addRobot(robots[0],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+2));
+                Attack.addRobot(robots[1],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+1));
+            }
+        }
     }
 
     private static void initMapSeq() {
@@ -229,7 +256,6 @@ public class Main {
         // 给zone加一个优先队列
         for (Zone zone : zoneMap.values()) {
             zone.setPrioQueue();
-            zone.initRobot();
         }
     }
 
