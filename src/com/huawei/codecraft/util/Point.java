@@ -6,6 +6,7 @@ import com.huawei.codecraft.core.Station;
 import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Pos;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Objects;
 import java.util.Queue;
@@ -211,6 +212,7 @@ public class Point{
 
     private boolean posIsStation(int x, int y) {
         if (x <0 || y<0 || x>99 || y>99) return false;
+
         return Main.wallMap[x][y] <=50 && Main.wallMap[x][y] >=0;
     }
 
@@ -237,19 +239,62 @@ public class Point{
         double y = (d * c - a * f) / divisor;
         double r = Math.sqrt((x - x1) * (x - x1) + (y - y1) * (y - y1));// 半径
         if (Robot.emptyRadius - epsion < r && r < Robot.emptyRadius + epsion){
-            long x_l =(long)(x*100);
-            double x_d = x_l/100D;
-            long y_l =(long)(y*100);
-            double y_d = y_l/100D;
+            double x_d = (double) Math.round(x*100) / 100;
+            double y_d = (double) Math.round(y*100) / 100;
             return new RadarPoint(x_d, y_d, 0);
         }else if (Robot.fullRadius - epsion < r && r < Robot.fullRadius + epsion){
-            long x_l =(long)(x*100);
-            double x_d = x_l/100D;
-            long y_l =(long)(y*100);
-            double y_d = y_l/100D;
+            double x_d = (double) Math.round(x*100) / 100;
+            double y_d = (double) Math.round(y*100) / 100;
             return new RadarPoint(x_d, y_d, 1);
         }
         return null;
     }
 
+    public ArrayList<Station> getNearStations() {
+        //以自己为中心，获取周围的所有的工作站
+        Pos pos = Astar.Point2Pos(this);
+        ArrayList<Station> stations = new ArrayList<>();
+        int dis = 1;
+        for (int i = -dis; i <= dis; i++) {
+            for (int j = -dis; j <= dis; j++) {
+                if (posIsStation(pos.x + i, pos.y + j)){
+                    stations.add(Main.pointStaMap.get(Astar.Pos2Point(new Pos(pos.x + i,pos.y + j))));
+                }
+            }
+        }
+
+        return stations;
+    }
+
+    public boolean inCorner() {
+        return false;
+    }
+
+    public boolean closeTo(Point point) {
+        // 两个点很接近
+        double dis = calcDistance(point);
+        return dis <= 0.3;
+    }
+
+    public boolean isWall() {
+        return posIsWall(x,y);
+    }
+
+    public static boolean posIsWall(double x, double y) {
+        if (notInMap(x,y)){
+            return true;
+        }
+        // 找出 x,y 属于哪一个点的区域
+        Pos pos = Astar.Point2Pos(new Point(x, y));
+        // -2 对应的是墙
+        return Main.wallMap[pos.x][pos.y] == -2;
+    }
+
+    public static boolean notInMap(double x, double y) {
+        // 是否不在地图内
+        boolean flag1 = x <= 0 || y <= 0;
+        boolean flag2 = x >= 50 || y >= 50;
+
+        return flag1 || flag2;
+    }
 }

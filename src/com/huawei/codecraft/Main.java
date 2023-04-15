@@ -39,12 +39,14 @@ public class Main {
     public static final int duration = 4 * 60 * 50;     // 比赛时长
     public static final int JudgeDuration = duration - 30 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int fps = 50;
-    public static final boolean test = false;    // 是否可写入
+    public static final boolean test = true;    // 是否可写入
     public static final boolean writePath = false;    // 是否可写入
     public static final boolean slowMode = false;   // 等待模式，让每帧时间尽可能长，留出时间给后台处理
     public static final int robotNum = 4;
+    public static int mapSeq = 0;   // 地图序号
     public static final int attackRobotNum = 1;     // 设置的进攻机器人的个数
     public static final HashSet<Integer> testRobot = new HashSet<>();
+    public static final HashSet<Station> blockStations = new HashSet<>();   // 附近有敌方机器人的工作站
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
     public static int[] clockCoef = new int[]{1, 1, 1, 1}; // 碰撞旋转系数
 
@@ -72,10 +74,12 @@ public class Main {
         // 先计算每个机器人的参数，后面好用
         for (int i = 0; i < robotNum; i++) {
             if (!testRobot.contains(i)) continue;
+
             calcParam(i);
         }
 
         for (int i = 0; i < robotNum; i++) {
+
             if (!robots[i].earn){
                 robots[i].attack();
                 continue;
@@ -91,11 +95,12 @@ public class Main {
 
     private static void schedule() {
         initialization();
+        Main.printLog("blue:"+isBlue);
         Ok();
         long t0,t1,t2 = System.currentTimeMillis();
         while (inStream.hasNextLine()) {
             t0 = System.currentTimeMillis();
-            printLog("system handle = t0-t2 = " + (t0-t2) );
+//            printLog("system handle = t0-t2 = " + (t0-t2) );
             String line = inStream.nextLine();
             String[] parts = line.split(" ");
             frameID = Integer.parseInt(parts[0]);
@@ -104,7 +109,7 @@ public class Main {
 
             Frame(frameID);
             t1 = System.currentTimeMillis();
-            printLog("read time = t1-t0 = " + (t1-t0) );
+//            printLog("read time = t1-t0 = " + (t1-t0) );
             handleFrame();
 
             if (slowMode){
@@ -115,7 +120,7 @@ public class Main {
 
             Ok();
             t2 = System.currentTimeMillis();
-            printLog("handle time = t2-t1 = " + (t2-t1) );
+//            printLog("handle time = t2-t1 = " + (t2-t1) );
         }
     }
 
@@ -123,7 +128,12 @@ public class Main {
 
     private static void calcParam(int i) {
         if (robots[i].nextStation == null){
+            if (!robots[i].earn) {
+                return;
+            }
             robots[i].selectBestStation();
+            Main.printLog("blockStations " + blockStations);
+            robots[i].printRoute();
         }
         if (robots[i].nextStation == null){
             robots[i].goToEmptyPlace();
@@ -141,13 +151,15 @@ public class Main {
             robots[i].setNewPath();
         }
 
-
         if (robots[i].route.arriveNext()){
             robots[i].route.updateNext();
         }
 
+        robots[i].handleEnemy();
+
         robots[i].route.calcParamEveryFrame();    // 通用参数
         robots[i].calcMoveEquation();     //  运动方程
+
     }
 
     private static void handleArrive(int i) {
@@ -159,18 +171,15 @@ public class Main {
                 }
             }
             Buy(i);
-            robots[i].srcStation.bookPro = false;       //解除预定
-            robots[i].srcStation.bookNum--;       //
-            robots[i].destStation.bookNum++;       //
+            robots[i].releaseSrc();
+//            robots[i].destStation.bookNum++;
             printLog("buy");
             robots[i].changeTarget();
             // 有物品就卖，没有就等待,逐帧判断
         } else if (robots[i].nextStation == robots[i].destStation && !robots[i].nextStation.positionIsFull(robots[i].carry)){
             Sell(i);
-            robots[i].destStation.bookRow[robots[i].srcStation.type] = false;   //解除预定
+            robots[i].releaseDest();    // 释放dest 资源
             robots[i].destStation.setPosition(robots[i].srcStation.type);       // 卖了以后对应物品空格置1
-//                        bookRow[robots[i].srcStation.type] = false;   //解除预定
-            robots[i].destStation.bookNum--;       //解除预定
             printLog("sell");
             robots[i].changeTarget();
         }else {
@@ -183,6 +192,9 @@ public class Main {
 
         initMap();      //  初始化地图
         initZone();     //  初始化区域
+
+        initMapSeq();
+
         initStations();     // 初始化工作站
         initZone2();
 //        initWaterFlow();    // 初始化流水线
@@ -198,6 +210,15 @@ public class Main {
         printLog("init time = " + (t2 - t1) + "ms");
     }
 
+    private static void initMapSeq() {
+
+        if (Main.stationsBlue[0].type == 3){
+            mapSeq = 1;
+        } else if (Main.stationsBlue[0].type == 1) {
+            mapSeq = 2;
+        }
+    }
+
     private static void initZone2() {
         // 给zone加一个优先队列
         for (Zone zone : zoneMap.values()) {
@@ -209,8 +230,8 @@ public class Main {
     private static void initZone() {
         mapinfo = new Mapinfo(wallMap);
         mapinfo.setZone(zoneMap);
-        printLog(mapinfo);
-        printLog(zoneMap);
+//        printLog(mapinfo);
+//        printLog(zoneMap);
     }
 
     private static void initStationMap(){
@@ -244,9 +265,7 @@ public class Main {
         int robotId= 0;
         
         line = inStream.nextLine();
-        if ("BLUE".equals(line)) {
-            isBlue = true;
-        }
+        isBlue = "BLUE".equals(line);
         while (inStream.hasNextLine()) {
             row --;
             double y = row * 0.5 - 0.25;
@@ -279,17 +298,25 @@ public class Main {
                     wallMap[100-row][i] = -2;    // 给地图赋值
                     continue;
                 }
-                else if (c == 'A' && isBlue){
-                    wallMap[100-row][i] = robotId + 100;    // 给地图赋值
-                    robots[robotId] = new Robot(robotId,x,y,robotId);
-                    robotPos.put(robotId + 100, new Pos(100-row, i));
-                    robotId++;
+                else if (c == 'A'){
+                    if (isBlue){
+                        wallMap[100-row][i] = robotId + 100;    // 给地图赋值
+                        robots[robotId] = new Robot(robotId,x,y,robotId);
+                        robotPos.put(robotId + 100, new Pos(100-row, i));
+                        robotId++;
+                    }else {
+                        wallMap[100-row][i] = -1;    // 给地图赋值
+                    }
                 }
-                else if (c == 'B' && !isBlue) {
-                    wallMap[100-row][i] = robotId + 100;    // 给地图赋值
-                    robots[robotId] = new Robot(robotId,x,y,robotId);
-                    robotPos.put(robotId + 100, new Pos(100-row, i));
-                    robotId++;
+                else if (c == 'B') {
+                    if (!isBlue){
+                        wallMap[100-row][i] = robotId + 100;    // 给地图赋值
+                        robots[robotId] = new Robot(robotId,x,y,robotId);
+                        robotPos.put(robotId + 100, new Pos(100-row, i));
+                        robotId++;
+                    }else {
+                        wallMap[100-row][i] = -1;    // 给地图赋值
+                    }
                 } 
                 else if (c <= '9' && c >= '1'){
                     if (isBlue) {
@@ -482,7 +509,7 @@ public class Main {
         outStream.printf("%d\n", frameID);
     }
     public static void printLog(Object log){
-        if (test){
+        if (test && isBlue){
             System.out.println(log);
         }
     }

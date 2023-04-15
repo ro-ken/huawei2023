@@ -1,12 +1,10 @@
 package com.huawei.codecraft.core;
 
 import com.huawei.codecraft.Main;
-import com.huawei.codecraft.util.Line;
-import com.huawei.codecraft.util.Path;
-import com.huawei.codecraft.util.Point;
-import com.huawei.codecraft.util.RadarPoint;
+import com.huawei.codecraft.util.*;
 import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Pos;
+import jdk.nashorn.internal.ir.Block;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -43,6 +41,7 @@ public class Robot {
     public double turn; //朝向 [-pi,pi] 0朝向右，pi/2  朝上
     public Point pos;
     public double[] radar = new double[360]; //雷达信息
+    HashSet<RadarPoint> enemy;
 //    public double x, y; //坐标
 
     public Station nextStation;    // null : no target to go
@@ -253,12 +252,26 @@ public class Robot {
                 pos1 = lastStation.paths.getResSet(isEmpty,nextStation.pos);
 //                path = nextStation.paths.getPath(isEmpty,lastStation.pos);
             }
-            Main.printLog(path);
-            Main.printLog(pos1);
+//            Main.printLog(path);
+//            Main.printLog(pos1);
             route = new Route(nextStation.pos,this,path,pos1);
         }
     }
 
+    public void calcRouteFromNow() {
+        // 计算从自身到目的地位置的路由
+
+        if (nextStation != null){
+
+            ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);   // 第一次，计算初始化的路径
+            HashSet<Pos> pos1 = nextStation.paths.getResSet(carry == 0,pos);
+            path = Path.reversePath(path);
+
+//            Main.printLog(path);
+//            Main.printLog(pos1);
+            route = new Route(nextStation.pos,this,path,pos1);
+        }
+    }
 
     public void recoveryPath() {
 
@@ -313,6 +326,7 @@ public class Robot {
         if (nextStation == srcStation){
             nextStation = destStation;
             lastStation = srcStation;
+            destStation.bookNum ++;
             calcRoute();
         }else {
             if (waterFlow != null) {
@@ -469,6 +483,12 @@ public class Robot {
             return;
         }
 
+        if (Main.blockStations.contains(nextStation)){
+            // 家被占了，考虑是换工作站还是撞开
+            Main.printLog("blockStations " + Main.blockStations);
+            fixOccupied();
+        }
+
         if (losers.size()>0){
             // 自己是winner，需要判断是否到达了basePoint 若是，则释放相应的节点
             for (Robot loser : losers) {
@@ -523,6 +543,50 @@ public class Robot {
         }
         route.rush2();
         route.deletePos();  // 以走过的点要删除，防止发生误判
+    }
+
+    private void fixOccupied() {
+
+        Main.printLog("Occupied" + nextStation);
+
+        if (carry == 0){
+            // 若是源被占
+            // 先释放资源
+            releaseSrc();
+            lastStation = nextStation = srcStation = destStation = null;
+//            zone.scheduler(this);     //todo 可尝试放开
+            // 解除关系，等待调度
+        }else {
+            // 查看是否有其他可用的next，有就送过去
+            Station dest = null;
+            int minFps = 10000000;
+            for (Station st : zone.stationsMap.get(nextStation.type)) {
+                if (st.place == StationStatus.EMPTY && st.canBuy(carry)){
+                    int fps = st.pathToFps(false,pos);  // 计算到自己的距离
+                    if(fps < minFps){
+                        minFps = fps;
+                        dest = st;
+                    }
+                }
+            }
+            Main.printLog("dest" + dest);
+            if (dest != null){
+                changeNextStation(dest);
+            }else {
+                // 没有其他源了，如果可以撞，直接撞
+                // 考虑是否丢弃，会亏钱
+                Main.printLog("no available next station");
+            }
+        }
+    }
+
+    private void changeNextStation(Station dest) {
+        Main.printLog("change next station" + dest);
+        // 先释放资源，
+        releaseDest();
+        // 更改目的地
+        nextStation = destStation = dest;
+        calcRouteFromNow();
     }
 
     // 随机后退
@@ -618,6 +682,8 @@ public class Robot {
     }
     
     public void setSrcDest(Station src, Station dest) {
+        if (src == null || dest == null) return;
+
         nextStation = srcStation = src;
         destStation = dest;
 
@@ -626,6 +692,7 @@ public class Robot {
 
         if (destStation.type <= 7)  {   // 8,9 不需要预定
             destStation.bookRow[srcStation.type] = true;
+            destStation.bookRawNum[srcStation.type] ++;
         }
 
         src.bookNum ++;
@@ -654,6 +721,8 @@ public class Robot {
         double dis = pos.calcDistance(next);
         return dis <= robotInPointDis;
     }
+
+
 
     private void useWaterFlowChangeMode() {
         // 流水线模式，加一些控制
@@ -723,8 +792,8 @@ public class Robot {
         for (Pos pos1 : posSet) {
             ps.add(Astar.Pos2Point(pos1));
         }
-        Main.printLog(this);
-        Main.printLog(ps);
+//        Main.printLog(this);
+//        Main.printLog(ps);
 
         return sp;
     }
@@ -856,42 +925,9 @@ public class Robot {
         Main.Rotate(id,printRotate);
     }
 
-
-    public HashSet<RadarPoint> getRadarPoint() {
-        ArrayList<Point> points = new ArrayList<>();
-        double degree = pi * 2 / 360;
-        double azimuthAngle; //方位角
-        for (int i = 0; i < 360 / step; i++) {
-            double angle = turn + degree * i * step;
-            if (pi > angle && angle > 0) {
-                azimuthAngle = angle % pi;
-            } else {
-                azimuthAngle = angle % pi - pi;
-            }
-            points.add(new Point(pos.x + Math.cos(azimuthAngle) * radar[step * i],
-                    pos.y + Math.sin(azimuthAngle) * radar[step * i]));
-        }
-
-        ArrayList<Point> pointsAdd = new ArrayList<>();
-        pointsAdd.add(points.get(points.size()-1));
-        pointsAdd.addAll(points);
-        pointsAdd.add(points.get(0));
-
-        HashSet<RadarPoint> radarPoints = new HashSet<>();
-
-        for (int i = 1; i < 360 / step + 1; i++) {
-            RadarPoint centerPos = Point.getCenterPos(pointsAdd.get(i - 1).x, pointsAdd.get(i - 1).y, pointsAdd.get(i).x,
-                    pointsAdd.get(i).y, pointsAdd.get(i + 1).x, pointsAdd.get(i + 1).y);
-            if (centerPos != null){
-                radarPoints.add(centerPos);
-            }
-        }
-        return radarPoints;
-    }
-
     public void attack() {
         // 机器人攻击策略
-        if (Main.stationsBlue[0].type == 3){
+        if (Main.mapSeq == 1){
             // 图1
             if (Main.isBlue){
                 nextStation = Main.stationsRed[12];
@@ -914,14 +950,142 @@ public class Robot {
                 }
 
             }else {
-                nextStation = Main.stationsBlue[8];
-                if (route == null){
-                    calcRoute();
-                }
-
+//                nextStation = Main.stationsBlue[8];
+//                if (route == null){
+//                    calcRoute();
+//                }
             }
         }
         route.rush2();
+    }
+
+    public void handleEnemy() {
+        HashSet<Station> resets = new HashSet<>();
+        for(Station st:Main.blockStations){
+            // 先遍历每个不正常的工作台，如果该机器人能看到，先恢复正常
+            Line line = new Line(pos,st.pos);
+            // 判断直线中间是否有墙
+            Point wall = Route.getNearBumpWall(line);
+            if (wall == null){
+                resets.add(st);
+                st.place = StationStatus.EMPTY;
+            }
+        }
+        Main.blockStations.removeAll(resets);   // 先恢复
+        enemy = getTrueEnemy();
+        Main.printLog("blue = " + Main.isBlue + " pos = "+pos);
+        Main.printLog("enemy" + enemy);
+        for (RadarPoint rp : enemy) {
+            Point point = rp.getPoint();
+            ArrayList<Station> nearStations = point.getNearStations();
+            for (Station st : nearStations) {
+                // 每个st改标志位
+                if (st.pos.inCorner()){
+                    // 在角落，撞不开，变阻塞
+                    st.place = StationStatus.BLOCK;
+                }else {
+                    // 如果不在角落，就认为值可以撞开的
+                    st.place = StationStatus.CANBUMP;
+                }
+                Main.blockStations.add(st);
+            }
+        }
+    }
+
+    private HashSet<RadarPoint> getTrueEnemy() {
+        // 可能某些点发生误判，要进行去重
+        HashSet<RadarPoint> rps = getRadarPoint();
+        HashSet<RadarPoint> enemy = new HashSet<>();
+        if (rps.size()>0){
+            for (RadarPoint rp : rps) {
+                Point point = rp.getPoint();
+                if (isFriend(point) || point.isWall()){
+                    continue;
+                }
+                enemy.add(rp);  // 既不是友军，也不是墙，那就是敌人
+            }
+        }
+        if (enemy.size() >0){
+            Main.printLog(rps);
+
+            for (Robot robot : zone.robots) {
+                Main.printLog(robot);
+            }
+//            for (int i = 0; i < 360; i++) {
+//                System.out.print(radar[i]);
+//                System.out.print(",");
+//            }
+        }
+
+        return enemy;
+    }
+
+    private boolean isFriend(Point point) {
+        // 该点是否是自己人
+        for (Robot robot : zone.robots) {
+            if (robot.pos.closeTo(point)){
+                return true;    //是友军
+            }
+        }
+        return false;
+    }
+
+    public void releaseSrc() {
+        // 释放 src 资源
+        srcStation.bookPro = false;       //解除预定
+        srcStation.bookNum--;       //
+    }
+
+    public void releaseDest() {
+        // 释放 dest 资源
+        destStation.bookRawNum[srcStation.type] --;
+        if (destStation.bookRawNum[srcStation.type] == 0){
+            // 没人占用在释放锁
+            destStation.bookRow[srcStation.type] = false;   //解除预定
+        }
+
+        destStation.bookNum--;       //解除预定
+    }
+    public HashSet<RadarPoint> getRadarPoint() {
+        ArrayList<Point> points = new ArrayList<>();
+        ArrayList<Double> radarList = new ArrayList<>();
+        double degree = pi * 2 / 360;
+        double azimuthAngle; //方位角
+        for (int i = 0; i < 360 / step; i++) {
+
+            double angle = turn + degree * i * step;
+            if (pi > angle && angle > 0) {
+                azimuthAngle = angle % pi;
+            } else {
+                azimuthAngle = angle % pi - pi;
+            }
+            points.add(new Point(pos.x + Math.cos(azimuthAngle) * radar[step * i],
+                    pos.y + Math.sin(azimuthAngle) * radar[step * i]));
+            radarList.add(radar[step * i]);
+        }
+
+        points.add(0, points.get(points.size()-1));
+        points.add(points.get(1));
+        radarList.add(0, radarList.get(radarList.size()-1));
+        radarList.add(radarList.get(1));
+
+        HashSet<RadarPoint> radarPoints = new HashSet<>();
+
+
+        for (int i = 1; i < points.size() - 1; i++) {
+            if(radarList.get(i) * 2 > radarList.get(i-1) + radarList.get(i+1)){
+                continue;//如果外凸 忽略
+            }
+            RadarPoint centerPos = Point.getCenterPos(points.get(i - 1).x, points.get(i - 1).y, points.get(i).x,
+                    points.get(i).y, points.get(i + 1).x, points.get(i + 1).y);
+            if (centerPos != null){
+                radarPoints.add(centerPos);
+            }
+        }
+        return radarPoints;
+    }
+    public void printRoute() {
+        Main.printLog("src:"+srcStation +" -> dest:"+destStation);
     }
 }
 
