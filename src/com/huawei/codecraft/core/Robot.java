@@ -1071,10 +1071,12 @@ public class Robot {
         for (int i = 0; i < 360 / step; i++) {
 
             double angle = turn + degree * i * step;
-            if (pi > angle && angle > 0) {
+            if (angle > 2 * pi) {
                 azimuthAngle = angle % pi;
-            } else {
+            } else if (angle > pi) {
                 azimuthAngle = angle % pi - pi;
+            } else {
+                azimuthAngle = angle;
             }
             points.add(new Point(pos.x + Math.cos(azimuthAngle) * radar[step * i],
                     pos.y + Math.sin(azimuthAngle) * radar[step * i]));
