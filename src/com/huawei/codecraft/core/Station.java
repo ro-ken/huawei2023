@@ -317,6 +317,32 @@ public class Station implements Comparable{
         return false;
     }
 
+    public void fighterStationInitialization() {
+          // 周围没有机器人，取消初始化
+          if (zone == null){
+            return;
+        }
+
+        // 初始化 1 ，给每个生产型节点设置售出节点的优先级队列
+        if (type<=7){
+            int[] canSell = item[type].canSell;
+            for(int tp:canSell){
+                if(!zone.fighterStationsMap.containsKey(tp)){
+                    continue;
+                }
+    //                ArrayList<Station> stations = Main.stationsMap.get(tp);
+                for (Station st : zone.fighterStationsMap.get(tp)) {
+    //                    Main.printLog(this+" : "+st);
+                    double value = pathToFps(false,st.pos);  //以时间排序
+                    if (value < Main.unreachableJudgeCost){
+                        Pair pair = new Pair(st, value);
+                        canSellStations.add(pair);
+                    }
+                }
+            }
+        }
+    }
+
     public void initialization() {
 
         // 周围没有机器人，取消初始化

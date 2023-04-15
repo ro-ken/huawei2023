@@ -11,6 +11,8 @@ import java.util.*;
 public class Mapinfo {
     static int[] bits = {20, 18, 12, 10};   // 用于判断斜边是否可以通过，按照上下左右是否有障碍物进行位运算
     static boolean[] isVisit = {false, false, false, false};       // 判断机器人是否已经寻找过
+    static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
+    static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
     public static int[][] mapInfoEmpty;
     public static int[][] mapInfoFull;
     public static int[][] mapInfoOri;      // 记录最原始的地图 -2表示障碍物，-1 表示空地，0-50表示工作台
@@ -19,8 +21,10 @@ public class Mapinfo {
     public static int col;
     Map<Integer, ArrayList<Integer>> robotId;      // 记录哪些机器人是连通的
     Map<Integer, ArrayList<Integer>> stationId;    // 记录哪些工作台是连通的
+    Map<Integer, ArrayList<Integer>> fighterStationId;    // 记录与对方哪些工作台是连通的
     ArrayList<Integer> robot;
     ArrayList<Integer> station;
+    ArrayList<Integer> fighterStation;
 
     public Mapinfo(int[][] mapinfo) {
         row = mapinfo.length;
@@ -33,6 +37,7 @@ public class Mapinfo {
         initMapEmpty(mapinfo);
         robotId = new HashMap<>();
         stationId = new HashMap<>();
+        fighterStationId = new HashMap<>();
     }
 
     @Override
@@ -54,65 +59,43 @@ public class Mapinfo {
         while (openList.size() != 0) {
             Pos currentPosition = openList.get(0);
             openList.remove(currentPosition);
+
+            // 待优化，按照上下左右得bit位判断是否存在障碍物
+            // 上下左右进行探索
+            int flag = 0;
+            for (int i = 0; i < dirX.length / 2; i++) {
+                int x = currentPosition.x + dirX[i];
+                int y = currentPosition.y + dirY[i];
+                if (isInMap(x, y)) {
+                    flag = (flag | (mapInfoOri[x][y] == -2 ? 1 : 0)) << 1;
+                    if (mapInfoOri[x][y] >= -1) {
+                        // 节点加入探索列表
+                        openList.add(new Pos(x, y));
+                        if (mapInfoOri[x][y] >= 100) {
+                            robot.add(mapInfoOri[x][y] - 100);
+                            isVisit[mapInfoOri[x][y] - 100] = true; // 机器人已经探索果了
+                        }
+                        else if (mapInfoOri[x][y] >= 0 && mapInfoOri[x][y] < 50) {
+//                            if (Main.stations[mapInfoOri[x][y]].type<=3 || mapInfoFull[x][y] == 0){
+                                station.add(mapInfoOri[x][y]);
+//                            }
+                        }
+                        else if (mapInfoOri[x][y] >= 50 && mapInfoOri[x][y] < 100) {
+                            fighterStation.add(mapInfoOri[x][y]);
+                        }
+                        // 节点设置为已探索，障碍物不能改变，不然会影响后续的点判断
+                        mapInfoOri[x][y] = -3;
+                    }
+                }
+            }
+
             // 开始从上下左右依次加入节点
             int[] rangeX = {currentPosition.x - 1, currentPosition.x + 1};
             int[] rangeY = {currentPosition.y - 1, currentPosition.y + 1};
-
-            // 待优化，按照上下左右得bit位判断是否存在障碍物
-            int flag = 0;
-            int y = currentPosition.y;
-            // 上下探索
-            for (int x : rangeX) {
-                if (isInMap(x, y)) {
-                    flag = (flag | (mapInfoOri[x][y] == -2 ? 1 : 0)) << 1;
-                    if (mapInfoOri[x][y] >= -1) {
-                        // 节点加入探索列表
-                        openList.add(new Pos(x, y));
-                        if (mapInfoOri[x][y] >= 100) {
-                            robot.add(mapInfoOri[x][y] - 100);
-                            isVisit[mapInfoOri[x][y] - 100] = true; // 机器人已经探索果了
-                        }
-                        else if (mapInfoOri[x][y] >= 0) {
-//                            if (Main.stations[mapInfoOri[x][y]].type<=3 || mapInfoFull[x][y] == 0){
-                                station.add(mapInfoOri[x][y]);
-//                            }
-                        }
-                        // 节点设置为已探索，障碍物不能改变，不然会影响后续的点判断
-                        mapInfoOri[x][y] = -3;
-                    }
-                }
-            }
-
-            // 左右
-            int x = currentPosition.x;
-            for (int i = 0; i < rangeY.length; i++) {
-                y = rangeY[i];
-                if (isInMap(x, y)) {
-                    flag = (flag | (mapInfoOri[x][y] == -2 ? 1 : 0)) << 1;
-                    if (mapInfoOri[x][y] >= -1) {
-                        // 节点加入探索列表
-                        openList.add(new Pos(x, y));
-                        if (mapInfoOri[x][y] >= 100) {
-                            robot.add(mapInfoOri[x][y] - 100);
-                            isVisit[mapInfoOri[x][y] - 100] = true; // 机器人已经探索果了
-                        }
-                        else if (mapInfoOri[x][y] >= 0) {
-//                            if (Main.stations[mapInfoOri[x][y]].type<=3 || mapInfoFull[x][y] == 0){
-                                station.add(mapInfoOri[x][y]);
-//                            }
-                        }
-                        // 节点设置为已探索，障碍物不能改变，不然会影响后续的点判断
-                        mapInfoOri[x][y] = -3;
-                    }
-                }
-            }
-
             // 往斜边寻找
             int index = 0;
-            for (int i = 0; i < rangeX.length; i++) {
-                for (int j = 0; j < rangeY.length; j++) {
-                    x = rangeX[i];
-                    y = rangeY[j];
+            for (int x : rangeX) {
+                for (int y : rangeY) {
                     if (isInMap(x, y) && ((flag & bits[index]) == 0)) {
                         if (mapInfoOri[x][y] >= -1) {
                             // 节点加入探索列表
@@ -121,10 +104,13 @@ public class Mapinfo {
                                 robot.add(mapInfoOri[x][y] - 100);
                                 isVisit[mapInfoOri[x][y] - 100] = true; // 机器人已经探索果了
                             }
-                            else if (mapInfoOri[x][y] >= 0) {
-//                                if (Main.stations[mapInfoOri[x][y]].type<=3 || mapInfoFull[x][y] == 0){
+                            else if (mapInfoOri[x][y] >= 0 && mapInfoOri[x][y] < 50) {
+    //                            if (Main.stations[mapInfoOri[x][y]].type<=3 || mapInfoFull[x][y] == 0){
                                     station.add(mapInfoOri[x][y]);
-//                                }
+    //                            }
+                            }
+                            else if (mapInfoOri[x][y] >= 50 && mapInfoOri[x][y] < 100) {
+                                fighterStation.add(mapInfoOri[x][y]);
                             }
                             // 节点设置为已探索，障碍物不能改变，不然会影响后续的点判断
                             mapInfoOri[x][y] = -3;
@@ -133,7 +119,6 @@ public class Mapinfo {
                     index++;
                 }
             }
-
         }
     }
 
@@ -166,6 +151,7 @@ public class Mapinfo {
             }
             robot = new ArrayList<Integer>();
             station = new ArrayList<Integer>();
+            fighterStation =  new ArrayList<Integer>();
             robot.add(key);
 
             Bfs(position, robotPos);   // 从机器人的位置做广度优先搜索
@@ -173,6 +159,7 @@ public class Mapinfo {
             // 结果加入hash表
             robotId.put(connectedArea, robot);
             stationId.put(connectedArea, station);
+            fighterStationId.put(connectedArea, fighterStation);
             connectedArea++;
         }
     }
@@ -315,6 +302,18 @@ public class Mapinfo {
                         zone.stationsMap.put(st.type,list);
                     }else {
                         zone.stationsMap.get(st.type).add(st);
+                    }
+                    st.zone = zone;
+                }
+
+                for (int fSid : fighterStationId.get(zoneId)) {
+                    Station st = Main.fighterStations[fSid];
+                    if (!zone.fighterStationsMap.containsKey(st.type)){
+                        ArrayList<Station> list = new ArrayList<>();
+                        list.add(st);
+                        zone.fighterStationsMap.put(st.type,list);
+                    }else {
+                        zone.fighterStationsMap.get(st.type).add(st);
                     }
                     st.zone = zone;
                 }

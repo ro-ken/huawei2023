@@ -23,9 +23,11 @@ public class Main {
     public static boolean isBlue = false;           // 是红方还是蓝方 true 蓝方，false 红方
     public static final Robot[] robots = new Robot[4];
     public static final Station[] stations =  new Station[50];
+    public static final Station[] fighterStations =  new Station[50];
     public static final Station[] stationsBlue = new Station[50];   // 记录对手得工作台
     public static final Station[] stationsRed = new Station[50];   // 记录对手得工作台
     public static  Map<Integer, ArrayList<Station>> stationsMap; // 类型，以及对应的工作站集合
+    public static  Map<Integer, ArrayList<Station>> fighterStationsMap; // 对手的类型，以及对应的工作站集合
     public static final Map<Integer, ArrayList<Station>> stationsMapBlue = new HashMap<>(); // 类型，以及对应的工作站集合
     public static final Map<Integer, ArrayList<Station>> stationsMapRed = new HashMap<>(); // 类型，以及对应的工作站集合
     public static final Map<Point, Station> pointStaMap = new HashMap<>(); // 坐标工作站map
@@ -36,6 +38,8 @@ public class Main {
     public static Map<Integer,Zone> zoneMap = new HashMap<>();
     public static Mapinfo mapinfo;
     public static int stationNum = 0;
+    public static int fighterStationNum = 0;
+    public static final int fighterStationNumStart = 50;
     public static final int duration = 4 * 60 * 50;     // 比赛时长
     public static final int JudgeDuration = duration - 30 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int fps = 50;
@@ -196,6 +200,8 @@ public class Main {
         initMapSeq();
 
         initStations();     // 初始化工作站
+        initFighterStations(); // 初始化对方工作台的路径，只初始化可以卖的路径 
+
         initZone2();
 //        initWaterFlow();    // 初始化流水线
 
@@ -239,7 +245,18 @@ public class Main {
             Station station = isBlue ? stationsBlue[i] : stationsRed[i];
             stations[i] = station;
         }
+        for (int i = 0; i < fighterStationNum; i++) {
+            Station station = isBlue ? stationsRed[i] : stationsBlue[i];
+            fighterStations[i] = station;
+        }
         stationsMap = isBlue ? new HashMap<>(stationsMapBlue) : new HashMap<>(stationsMapRed);
+        fighterStationsMap = isBlue ? new HashMap<>(stationsMapRed) : new HashMap<>(stationsMapBlue);
+    }
+
+    private static void initFighterStations() {
+        for (int i = 0; i < stationNum; i++) {
+            fighterStations[i].fighterStationInitialization();           // 第一次初始化，能卖给哪些节点
+        }
     }
 
     private static void initStations() {
@@ -249,8 +266,15 @@ public class Main {
         // 先初始化123，在456，在7
         for (int i = 1; i <= 7; i++) {
             if (stationsMap.containsKey(i)){
-                ArrayList<Station> stations = stationsMap.get(i);
-                for (Station st : stations){
+                ArrayList<Station> curStations = stationsMap.get(i);
+                for (Station st : curStations){
+                    st.initialization2();
+                }
+            }
+            // 初始化对方的工作台
+            if (fighterStationsMap.containsKey(i)) {
+                ArrayList<Station> curStations = fighterStationsMap.get(i);
+                for (Station st : curStations){
                     st.initialization2();
                 }
             }
@@ -272,6 +296,7 @@ public class Main {
             line = inStream.nextLine();
             if ("OK".equals(line)) {
                 stationNum = isBlue ? stationIdBlue : stationIdRed;
+                fighterStationNum = isBlue ? stationIdRed : stationIdBlue;
                 initStationMap(); // 初始化工作台，确认属于哪一方
                 printLog("blue station:");
                 for (Integer key: stationsMapBlue.keySet()){
@@ -322,6 +347,9 @@ public class Main {
                     if (isBlue) {
                         wallMap[100-row][i] = stationIdBlue;    // 给地图赋值
                     }
+                    else {
+                        wallMap[100-row][i] = stationIdBlue + fighterStationNumStart;    // 红色方，对方的工作台从50开始
+                    }
                     int type = Character.getNumericValue(c);
                     Station station = new Station(stationIdBlue,type,x,y);
                     stationsBlue[stationIdBlue] = station;
@@ -337,6 +365,9 @@ public class Main {
                 else if (c <= 'i' && c >= 'a') {
                     if (!isBlue) {
                         wallMap[100-row][i] = stationIdRed;    // 给地图赋值
+                    }
+                    else {
+                        wallMap[100-row][i] = stationIdRed + fighterStationNumStart;    // 蓝色方，对方的工作台从50开始
                     }
                     int type = c - 'a' + 1;
                     Station station = new Station(stationIdRed,type,x,y);

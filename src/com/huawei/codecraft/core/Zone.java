@@ -10,6 +10,7 @@ import java.util.*;
 public class Zone {
     public int id;  // 区域号
     public  Map<Integer, ArrayList<Station>> stationsMap = new HashMap<>(); // 类型，以及对应的工作站集合
+    public  Map<Integer, ArrayList<Station>> fighterStationsMap = new HashMap<>(); // 类型，以及对方的对应工作站集合
 
     ArrayList<Station> targets = new ArrayList<>(); // 存储7号工作台，按照价值降序
     public ArrayList<Robot> robots = new ArrayList<>();
