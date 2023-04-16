@@ -26,18 +26,22 @@ public class Mapinfo {
     ArrayList<Integer> station;
     ArrayList<Integer> fighterStation;
 
-    public Mapinfo(int[][] mapinfo) {
+    public Mapinfo() {
+        robotId = new HashMap<>();
+        stationId = new HashMap<>();
+        fighterStationId = new HashMap<>();
+    }
+
+    public static void init(int[][] mapinfo) {
         row = mapinfo.length;
         col = mapinfo[0].length;
         mapInfoEmpty = new int[row][col];
         mapInfoFull = new int[row][col];
         mapInfoOri = new int[row][col];
         mapInfoOriginal = new int[row][col];
+        initMapOri();
         initMapFull(mapinfo);
         initMapEmpty(mapinfo);
-        robotId = new HashMap<>();
-        stationId = new HashMap<>();
-        fighterStationId = new HashMap<>();
     }
 
     @Override
@@ -123,18 +127,48 @@ public class Mapinfo {
     }
 
 
+    public static void blockPos(int x, int y) {
+        mapInfoEmpty[x][y] = 1;
+        mapInfoOri[x][y] = -2;
+        mapInfoOriginal[x][y] = -2;
+    }
+
     // 开始直接处理斜角不能走的情况，方便空载封路
-    public void checkSideWay(int[][] mapinfo, int x, int y) {
+    // todo，会遗漏四个斜角和斜边，但是和付出的时间和地图概率相比，我觉得是值得忽略的
+    public static void checkSideWay(int[][] mapinfo, int x, int y) {
+        // 判断右边
+        if (isInMap(x, y + 1) && mapinfo[x][y + 1] == -1) {
+            if (isInMap(x, y + 2) && mapinfo[x][y + 2] == -2) {
+                blockPos(x, y + 1);
+            }
+            else if (isInMap(x - 1, y + 2) && mapinfo[x - 1][y + 2] == -2) {
+                blockPos(x, y + 1);
+            }
+            else if (isInMap(x + 1, y + 2) && mapinfo[x + 1][y + 2] == -2) {
+                blockPos(x, y + 1);
+            }
+        }
+        // 判断下边
+        if (isInMap(x + 1, y) && mapinfo[x + 1][y] == -1) {
+            if (isInMap(x + 2, y) && mapinfo[x + 2][y] == -2) {
+                blockPos(x + 1, y);
+            }
+            else if (isInMap(x + 2, y - 1) && mapinfo[x + 2][y - 1] == -2) {
+                blockPos(x + 1, y);
+            }
+            else if (isInMap(x + 2, y + 1) && mapinfo[x + 2][y + 1] == -2) {
+                blockPos(x + 1, y);
+            }
+        }
+        // 判断斜边
         if (isInMap(x + 1, y - 1) && mapinfo[x + 1][y - 1] == -1) {
             if (isInMap(x + 2, y - 2) && mapinfo[x + 2][y - 2] == -2) {
-                mapInfoOri[x + 1][y - 1] = -2;
-                mapInfoEmpty[x + 1][y - 1] = 1;
+                blockPos(x + 1, y - 1);
             }
         }
         if (isInMap(x + 1, y + 1) && mapinfo[x + 1][y + 1] == -1) {
             if (isInMap(x + 2, y + 2) && mapinfo[x + 2][y + 2] == -2) {
-                mapInfoOri[x + 1][y + 1] = -2;
-                mapInfoEmpty[x + 1][y + 1] = 1;
+                blockPos(x + 1, y + 1);
             }
         }
     }
@@ -178,12 +212,27 @@ public class Mapinfo {
         return isEmpty? mapInfoEmpty:mapInfoFull;
     }
     
-    // 初始化用于空载的地图
-    public void initMapEmpty(int[][] mapinfo) {
+    public static void initMapOri() {
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < col; j++) {
-                mapInfoOri[i][j] =  mapInfoOri[i][j] < 0 ? mapInfoOri[i][j] : mapinfo[i][j];   // 已被初始化的话不再初始化
-                mapInfoOriginal[i][j] = mapinfo[i][j];
+                mapInfoOri[i][j] = -1;
+                mapInfoOriginal[i][j] = -1;
+            }
+        }
+    }
+
+    // 初始化用于空载的地图
+    public static void initMapEmpty(int[][] mapinfo) {
+        for (int i = 0; i < row; i++) {
+            for (int j = 0; j < col; j++) {
+                if (mapinfo[i][j] >= 0) {
+                    mapInfoOri[i][j] = mapinfo[i][j];
+                    mapInfoOriginal[i][j] = mapinfo[i][j];
+                }
+                else {
+                    mapInfoOri[i][j] =  mapInfoOri[i][j] == -2 ? mapInfoOri[i][j] : mapinfo[i][j];   // 已被初始化的话不再初始化
+                    mapInfoOriginal[i][j] = mapInfoOriginal[i][j] == -2 ? mapInfoOriginal[i][j] : mapinfo[i][j];
+                }
 
                 if (mapinfo[i][j] == -2) {
                     // 检查斜边是否能走，不能走需要封闭斜边节点
@@ -223,7 +272,7 @@ public class Mapinfo {
     }
 
     // 初始化用于满载的地图
-    public  void initMapFull(int[][] mapinfo) {
+    public  static void initMapFull(int[][] mapinfo) {
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < col; j++) {
                 mapInfoOri[i][j] = mapinfo[i][j];   // 初始化原始的地图

@@ -274,8 +274,21 @@ public class Main {
     }
 
     private static void initZone() {
-        mapinfo = new Mapinfo(wallMap);
+        Mapinfo.init(wallMap);
+        mapinfo = new Mapinfo();
         mapinfo.setZone(zoneMap);
+        // for (int i = 0; i < 100; i++) {
+        //     String data = new String();
+        //     for (int j = 0; j < 100; j++) {
+        //         if (Mapinfo.mapInfoOriginal[i][j] == -2) {
+        //             data += '#';
+        //         }
+        //         else {
+        //             data += '.';
+        //         }
+        //     }
+        //     printLog(data);
+        // }
 //        printLog(mapinfo);
 //        printLog(zoneMap);
     }
