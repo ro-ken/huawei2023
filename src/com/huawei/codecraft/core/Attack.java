@@ -13,7 +13,9 @@ import com.huawei.codecraft.way.Pos;
 // 攻击类
 public class Attack {
     // 下面是全局静态属性
-    private static double attackRange = 2;               // 设定攻击距离，机器人在这个点攻击多远的距离
+    private static double attackRange = 2.5;               // 设定攻击距离，机器人在这个点攻击多远的距离
+    static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
+    static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
     public static Point[] attackPoint = new Point[4];   // 记录需要攻击的点,最多 4 个
     public static HashSet<Robot> robots = new HashSet<>();   // 负责攻击的机器人
     public static Map<Pos, Double> posCnt = new HashMap<>();   // 记录路径pos点的价值
@@ -90,30 +92,58 @@ public class Attack {
         return theoryMoney;
     }
 
-   // 初始化对方路径路径点中的次数
-   private static void initCntMap() {
-    // 获取敌方的工作台
-    int length = Main.fighterStationNum;
-    Station[] stations = Main.fighterStations;
-    // 将station路径中的pos全部记录到hash表中
-    for (int i = 0; i < length; i++) {
-        // 计算满载路径下的点
-        int type = stations[i].type;
-        Map<Point,HashSet<Pos>> fullPos = stations[i].paths.getResSetMap(false);
-        for (Point key : fullPos.keySet()) {
-            HashSet<Pos> posSet = fullPos.get(key);
-            double pathWeight = calcPathMoney(type, posSet.size() / 3);
-            for (Pos pos : posSet) {
-                // 对每个 Point 对应的 Pos 进行相关操作
-                if (posCnt.containsKey(pos)) {
-                    posCnt.put(pos, posCnt.get(pos) + pathWeight); // 自增
-                } else {
-                    posCnt.put(pos, pathWeight); // 初始化值为1
+    private static void fixPos(Pos curPos) {
+        // 将 Pos 点修正到路径中间，从而影响更多的地方
+        // 上下有墙 往中间移动
+        int flag = 15;
+        for (int i = 0; i < dirX.length / 2; i++) {
+            int x = curPos.x + dirX[i];
+            int y = curPos.y + dirY[i];
+            if (Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] == -2) {
+                flag &= ~(1 << 3 - i) & 0xFF;
+            }
+        }
+        // 上有墙，往下移动，下有墙，往上移动
+        if ((flag & 8) == 0 && Mapinfo.isInMap(curPos.x + 1, curPos.y) && Mapinfo.mapInfoOriginal[curPos.x + 1][curPos.y] != -2) {
+            curPos.x = curPos.x + 1;
+        }
+        else if ((flag & 4) == 0 && Mapinfo.isInMap(curPos.x - 1, curPos.y) && Mapinfo.mapInfoOriginal[curPos.x - 1][curPos.y] != -2) {
+            curPos.x = curPos.x - 1;
+        }
+        // 左边有墙，往右移动，右边有墙，往左移动
+        if ((flag & 2) == 0 && Mapinfo.isInMap(curPos.x, curPos.y + 1) && Mapinfo.mapInfoOriginal[curPos.x][curPos.y + 1] != -2) {
+            curPos.y = curPos.y + 1;
+        }
+        else if ((flag & 1) == 0 && Mapinfo.isInMap(curPos.x, curPos.y - 1) && Mapinfo.mapInfoOriginal[curPos.x][curPos.y - 1] != -2) {
+            curPos.y = curPos.x + 1;
+        }
+    }
+
+    // 初始化对方路径每个路径点的价值 价值 = 路径利润 / 路径时间损耗
+    private static void initCntMap() {
+        // 获取敌方的工作台信息
+        int length = Main.fighterStationNum;
+        Station[] stations = Main.fighterStations;
+
+        // 将station路径中的pos全部记录到hash表中
+        for (int i = 0; i < length; i++) {
+            // 计算满载路径下的点,获取路径价值
+            int type = stations[i].type;
+            Map<Point,HashSet<Pos>> fullPos = stations[i].paths.getResSetMap(false);
+            for (Point key : fullPos.keySet()) {
+                HashSet<Pos> posSet = fullPos.get(key);
+                double pathWeight = calcPathMoney(type, posSet.size() / 3);
+                for (Pos pos : posSet) {
+                    // 对每个 Point 对应的 Pos 进行相关操作
+                    if (posCnt.containsKey(pos)) {
+                        posCnt.put(pos, posCnt.get(pos) + pathWeight); // 自增
+                    } else {
+                        posCnt.put(pos, pathWeight); // 初始化值为1
+                    }
                 }
             }
         }
     }
-}
 
     // 初始化攻击的点
     private static void initAttackPoint() {
@@ -138,11 +168,12 @@ public class Attack {
              while (index < sortedList.size()) {
                  posAttack = sortedList.get(index++);
                  if (!posRange.contains(posAttack) &&  Mapinfo.isInMap(posAttack.x, posAttack.y) && Mapinfo.mapInfoOriginal[posAttack.x][posAttack.y] != -2) {
-                     attackPoint[i] = Astar.Pos2Point(posAttack);
-                     add2Posrange(posAttack, posRange, range);
-                     break;
+                    fixPos(posAttack);
+                    attackPoint[i] = Astar.Pos2Point(posAttack);
+                    add2Posrange(posAttack, posRange, range);
+                    break;
                  } 
              }
          }
-     }
+     }  
 }
