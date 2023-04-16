@@ -52,7 +52,7 @@ public class Main {
     public static final HashSet<Integer> testRobot = new HashSet<>();
     public static final HashSet<Station> blockStations = new HashSet<>();   // 附近有敌方机器人的工作站
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
-    public static int[] clockCoef = new int[]{1, 1, 1, 1}; // 碰撞旋转系数
+    public static int[] clockCoef = new int[]{0,0,0,0}; // 碰撞旋转系数
 
     public static void main(String[] args) throws FileNotFoundException {
 
@@ -75,6 +75,8 @@ public class Main {
     // 核心代码，分析如何运动
     private static void handleFrame() {
 
+        clearClockCoef();
+
         // 先计算每个机器人的参数，后面好用
         for (int i = 0; i < robotNum; i++) {
             if (!testRobot.contains(i)) continue;
@@ -93,6 +95,13 @@ public class Main {
                 handleArrive(i);
             }
             robots[i].rush();
+        }
+    }
+
+    private static void clearClockCoef() {
+        // 把旋转系数清空
+        for (int i = 0; i < 4; i++) {
+            clockCoef[i] = 0;
         }
     }
 
@@ -411,48 +420,6 @@ public class Main {
 
     // 选择最有价值的生产流水线投入生产，明确一条流水线有哪些节点
     private static void initWaterFlow() {
-        for (Zone zone : zoneMap.values()) {
-            if (zone.stationsMap.containsKey(7)){
-                // 最多开2条流水线
-                ArrayList<Station> sts = zone.stationsMap.get(7);
-                if(sts.size() == 1){
-                    WaterFlow flow = new WaterFlow(sts.get(0),zone);
-                    flow.assignRobot(4);//分配4个
-                    waterFlows.add(flow);
-                }else {
-                    Collections.sort(sts);
-                    for (int i=0;i<2;i++){
-                        WaterFlow flow = new WaterFlow(sts.get(i),zone);
-                        flow.assignRobot(2);    // 每条流水线两个机器人   todo 可尝试更换策略
-                        waterFlows.add(flow);
-                    }
-                }
-//                for (Station st : sts) {
-//                    printLog("id" + st.id + " value fps" + st.cycleAvgValue);
-//                }
-//                printLog(sts);
-
-            }else {
-                // 最多选择4条流水线
-                ArrayList<Station> sts = zone.getStations();
-                Collections.sort(sts);
-//                for (int i = 0; i < sts.size(); i++) {
-//                    printLog(sts.get(i)+ ":" + sts.get(i).cycleAvgValue);
-//                }
-                for (int i = 0; i < zone.robots.size(); i++) {
-                    if (sts.size() > i && sts.get(i).cycleAvgValue>0){    // 没有那么多工作站，不分了
-                        WaterFlow flow = new WaterFlow(sts.get(i),zone);
-                        flow.assignRobot(1);    // 一个机器人负责一个
-                        waterFlows.add(flow);
-                    }
-                }
-            }
-        }
-//        printLog(waterFlows);
-    }
-
-    // 选择最有价值的生产流水线投入生产，明确一条流水线有哪些节点
-    private static void initWaterFlow2() {
         for (Zone zone : zoneMap.values()) {
             if (zone.stationsMap.containsKey(7)){
                 // 最多开2条流水线

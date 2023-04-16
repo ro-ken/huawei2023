@@ -22,7 +22,7 @@ public class Route{
 
     public Point vector;    //两点的向量
     public Point speed;     // 速度向量
-    double clockwise = 0;    // 1为正向，-1为反向 ，0 不动
+    int clockwise = 0;    // 1为正向，-1为反向 ，0 不动
 
     double printLineSpeed;
     double printTurnSpeed;
@@ -52,11 +52,11 @@ public class Route{
 
     public Point avoidWallPoint;    // 避免与墙体碰撞的临时点
     public double avoidWallPointSpeed = 3.5;    // 判断与墙体会发生碰撞，去往临时点的最大速度
-    public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行避让操作
+    public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行安全点避让
+    public static double notAvoidRobotMinDis2 = 2;    // 与终点还有多少距离不进行普通避让
     public static final double predictWillBumpMinDis = 10;    // 预测是否会发生碰撞的距离，不用改
     public static int minPosNum = 12;    // 预测是否会发生碰撞的点的个数，一个点0.5m左右 todo 重要参数
-
-    public static int wideDis = 5;   //  *0.5
+    public static int wideDis = 5;   //  *0.5       // 路宽度检测距离，超过这个宽度才进行避让
     ArrayList<Integer> unsafeRobotIds;
     Robot willBumpRobot;
     public int unsafeLevel;     //当前不安全级别  (1-3)
@@ -441,9 +441,6 @@ public class Route{
         // 总体思想，前方物体在越靠近中心，速度越小，转向越大
         // 若有前方多个物体，速度按最靠中心的，转向选择最近的计算
 
-        double speedCoef = 1;
-        double rotateCoef = 1;
-
         if (unsafeRobotIds.size() == 0) return;
         Robot oth = Main.robots[unsafeRobotIds.get(0)];     // 获取需要避让的机器人
 
@@ -454,16 +451,33 @@ public class Route{
             printLineSpeed = Math.max(3,oth.route.speed.norm());
             printTurnSpeed = 0;
         }else {
+
             Point posVec = robot.pos.calcVector(oth.pos);
-            double angle = speed.calcDeltaAngle(posVec);
+            double angle = vector.calcDeltaAngle(posVec);
             double cos = speed.calcDeltaCos(posVec);
             double dis = robot.pos.calcDistance(oth.pos);
-            rotateCoef = cos;
-            // 不能处理，方向斜碰撞情况 \/
-            clockwise = calcAvoidBumpClockwise(speed,posVec);
 
-            printLineSpeed = robot.maxSpeed - 3 * cos;  // 最小速度 3
-            printTurnSpeed = Robot.maxRotate * clockwise * cos / 2;
+
+            boolean f1 = oth.route.vector.norm() < notAvoidRobotMinDis2;
+            boolean f2 = dis < notAvoidRobotMinDis2;
+            boolean f3 = angle < Robot.pi/6;
+//            boolean f4 = speed.norm() <= 2;
+
+            if (f1 && f2 && f3){
+                // 对面到达终点，我们里得很近，角度也较小，需要后退避让
+                printTurnSpeed = 0;
+                printLineSpeed = -1;
+            }else {
+                // 不能处理，方向斜碰撞情况 \/
+                if (Main.clockCoef[oth.id] != 0){
+                    clockwise = Main.clockCoef[oth.id]; // 我们的旋转方向一定要和对面的相同
+                }else {
+                    clockwise = calcAvoidBumpClockwise(speed,posVec);
+                }
+                Main.clockCoef[robot.id] = clockwise;
+                printLineSpeed = robot.maxSpeed - 3 * cos;  // 最小速度 3
+                printTurnSpeed = Robot.maxRotate * clockwise * cos / 2;
+            }
         }
     }
 
@@ -486,7 +500,7 @@ public class Route{
         unsafeLevel = 0;    // 先置为安全状态
 
         // 如果快到终点，不考虑与机器人的碰撞
-        if (vector.norm() > 3){
+        if (vector.norm() > notAvoidRobotMinDis2){
             if (!robot.tmpSafeMode){        // 暂时不考虑两个loser相遇的情况
 
                 // 如果不是这个模式，需要检测和其他机器人是否碰撞
@@ -531,7 +545,7 @@ public class Route{
                 double angle = vector.calcDeltaAngle(oth.route.vector);
                 if (angle > Robot.pi) continue;
                 double dis = robot.pos.calcDistance(oth.pos);
-                if (oth.route.posSet.contains(Astar.Point2Pos(robot.pos)) || dis < 1.5) {
+                if (oth.route.posSet.contains(Astar.Point2Pos(robot.pos)) || dis < 2.5) {
                     // 一宽一窄，距离较近才避让
                     if (dis < predictWillBumpMinDis && dis < minDis) {
                         minDis = dis;
@@ -668,7 +682,7 @@ public class Route{
         return null;
     }
 
-    private void setTmpSafeMode2() {
+    public void setTmpSafeMode2() {
         // 判断两辆车，应该让谁避让
         Robot other = willBumpRobot;
 

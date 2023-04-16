@@ -50,14 +50,6 @@ public class Astar {
                 }
             }
         }
-
-        for (int i = startI; i <= endI; i++) {
-            for (int j = startJ; j <= endJ; j++) {
-                System.out.print(maps[i][j]);
-                System.out.print(",");
-            }
-            System.out.println();
-        }
     }
 
     // 将机器人的位置当作障碍物进行锁定

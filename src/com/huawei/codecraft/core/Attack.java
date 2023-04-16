@@ -46,7 +46,10 @@ public class Attack {
     }
 
     public static void addRobot(Robot robot, Point target,AttackType tp){
-        robot.earn = false; // 不是赚钱模式
+        if (target == null){
+            Main.printLog("target is null");
+            return;
+        }
         Attack attack = new Attack(robot,target,tp);
         Attack.robots.add(robot);
         // 计算路线

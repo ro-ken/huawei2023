@@ -70,7 +70,6 @@ public class Robot {
     public int lastDisFps = 0; // 越来越远 经过了几帧
 
     public double blockFps = 0;    // 目前阻塞的帧数
-    public boolean earn = true;    // 是否是赚钱机器人，否则就是去干扰的
     
     //下面参数可调
     public static double minDis = 0.1; // 判定离临时点多近算到达
@@ -80,11 +79,10 @@ public class Robot {
     public static int cacheFps = 50 * 4;     // 判断是否要送最后一个任务的临界时间 > 0
     public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
     public static int blockJudgeFps = 30 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点,
-    public static int maxWaitBlockFps = 25 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
+    public static int maxWaitBlockFps = 1 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
 
     public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
-    public static double detectWallWideCoef = 1.0 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
-    public static double arriveBPDis = 1.0;     // 其他小车躲避的点
+    public static double detectWallWideCoef = 0.8 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
 
     public static final double pi  = 3.1415926;
     public static final double emptyRadius = 0.45;
@@ -533,17 +531,23 @@ public class Robot {
     private boolean handleAvoidBumpMode() {
         boolean ret = false;
         Point fp = null ;
+        Robot fr = null;
         double minDis = 10000;
         for (Robot oth : zone.robots) {
             if (oth == this) continue;
             double dis = pos.calcDistance(oth.pos);
-            if (dis < 3 && dis<minDis){
+            if (dis < getRadius() + oth.getRadius() + 2 && dis<minDis){
                 minDis = dis;
                 fp = oth.pos;   //选择距离自己最近的机器人
+                fr = oth;
             }
         }
 
         if (fp != null){
+            // 多个机器人卡住了，找一个安全点
+//            route.willBumpRobot = fr;
+//            route.setTmpSafeMode2();
+//            avoidBumpMode = false;
             randomBack(fp);
             ret = true;
         }else {
@@ -711,13 +715,6 @@ public class Robot {
         calcRoute();
     }
 
-    public boolean arriveBasePoint() {
-        Point pre = baseLine.left;
-        boolean arrive =  isArrivePoint(pre,basePoint);
-        Main.printLog("arrive:" + arrive);
-        return arrive;
-    }
-
     public boolean isArrivePoint(Point pre, Point next) {
         double dis1 = pre.calcDistance(next);
         double dis2 = pre.calcDistance(pos);
@@ -777,7 +774,7 @@ public class Robot {
         for (Robot oth : zone.robots) {
             if (oth == this) continue;
             double dis = pos.calcDistance(oth.pos);
-            if (dis < 1.8){
+            if (dis < getRadius() + oth.getRadius() + 0.1){
                 // 若是和机器人堵住了，要远离
                 avoidBumpMode = true;
             }
