@@ -965,27 +965,14 @@ public class Route{
         // 判断自己和另一个机器人谁更弱小，谁让路
         // todo 后面可以修改
 
+//        if (posSet.contains(Astar.Point2Pos(oth.pos)) && !oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
+//            // 对方在我的路线上，我不在对方的路线上,我避让
+//          return robot;
+//        }
+
         if (oth.tmpSafeMode){
             Main.printLog("ccc");
             return robot;   // 对方已经是避让模式，自己避让
-        }
-
-        if (robotIsInRoute(posSet,oth.pos) && !robotIsInRoute(oth.route.posSet,robot.pos)){
-            // 对方在我的路线上，我不在对方的路线上,我避让
-            Main.printLog("aaa");
-            return robot;
-        }
-
-        if (!robotIsInRoute(posSet,oth.pos) && robotIsInRoute(oth.route.posSet,robot.pos)){
-            // 情况相反
-            Main.printLog("bbb");
-            return oth;
-        }
-
-        if (oth.route.next.equals(oth.route.target) && oth.pos.calcDistance(oth.route.next) < notAvoidRobotMinDis){
-            // 首先比较对方是否快到终点，自己避让
-            Main.printLog("ddd");
-            return robot;
         }
 
         if (!robot.losers.isEmpty() && oth.losers.isEmpty()){
@@ -1005,9 +992,42 @@ public class Route{
             Main.printLog("ggg");
             return oth;
         }
-
-        if (robot.carry == 0 && oth.carry > 0){
+        else if (robot.carry == 0 && oth.carry > 0) {
             Main.printLog("hhh");
+            return robot;
+        }
+        else if (robot.carry == 0 && oth.carry == 0) { // 都没货，选择路宽或者路劲的避让
+            return compareSameRobot(oth);
+        }
+        else {
+            return compareSameRobot(oth);
+        }
+    }
+
+    private Robot compareSameRobot(Robot oth) {
+        
+        // 拿 7 对方无理由避让
+        if (oth.carry == 7) {
+            return robot;
+        }
+        else if (robot.carry == 7) {
+            return oth;
+        }
+
+        if (robotIsInRoute(posSet,oth.pos) && !robotIsInRoute(oth.route.posSet,robot.pos)){
+            // 对方在我的路线上，我不在对方的路线上,我避让
+            Main.printLog("aaa");
+            return robot;
+        }
+        if (!robotIsInRoute(posSet,oth.pos) && robotIsInRoute(oth.route.posSet,robot.pos)){
+            // 情况相反
+            Main.printLog("bbb");
+            return oth;
+        }
+        
+        if (oth.route.next.equals(oth.route.target) && oth.pos.calcDistance(oth.route.next) < notAvoidRobotMinDis){
+            // 首先比较对方是否快到终点，自己避让
+            Main.printLog("ddd");
             return robot;
         }
 
@@ -1026,7 +1046,7 @@ public class Route{
             return robot;
         }
     }
-
+    
     private boolean robotIsInRoute(HashSet<Pos> posSet, Point point) {
         // 判断是机器人否在路线上
         //考虑机器人的宽度
