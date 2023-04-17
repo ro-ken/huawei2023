@@ -36,6 +36,7 @@ public class Route{
 
     double stopMinDistance;
     double stopMinAngleDistance;
+    public int birthFps; // 从哪一帧开始创建
 
     public static double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
     public static double verticalSafeDistanceCoef = 1.2;   // 半径乘子，垂直安全系数
@@ -73,6 +74,7 @@ public class Route{
         next = getNextPoint();    // 取出下一个点
         next = getNextPoint();    // 第一个点是自己的位置，不要
         this.posSet = posSet;
+        birthFps = Main.frameID;
     }
 
     private Point getNextPoint() {
@@ -94,6 +96,14 @@ public class Route{
             }
             pathIndex ++;
             return next;
+        }
+    }
+
+    public Point peekNextPoint() {
+        if (pathIndex >= path.size()){
+            return target;
+        }else {
+            return path.get(pathIndex);
         }
     }
 
@@ -402,7 +412,9 @@ public class Route{
             dis += r * 2 + 0.5;     // 计算能过去的宽度
         }
 
-        if (roadIsWide(vector,bp,dis)) {
+        int survival = Main.frameID - birthFps;
+        if (roadIsWide(vector,bp,dis) || survival < 10) {
+            // 不能换路太频繁，最快10s换一次
             printLineSpeed = robot.maxSpeed;  // 路很宽，全速前进
             calcNormalTurnSpeed();
         }else {
@@ -434,7 +446,12 @@ public class Route{
             if (fps2 < fps1){
                 // 新的路代价低，换路
                 robot.route = newRoute;
+                Main.printLog("new road" + newRoute.path);
+                newRoute.calcParamEveryFrame();    // 通用参数
+                newRoute.calcSafePrintSpeed();      // 正常冲
+
             }else {
+                Main.printLog("rushing");
                 // 不然直接冲过去
                 printLineSpeed = robot.maxSpeed;  // 全速前进
                 calcNormalTurnSpeed();
@@ -458,23 +475,6 @@ public class Route{
         }
     }
 
-    private void handleRedEnemy() {
-        // 蓝色防守，红色进攻
-        // 分为在路上和在中点
-        // 如果只有一个红方，无视
-        if (dangerEnemy.size() > 1){
-            // 如果有多于一个红方，而且在终点， 那么加速撞过去
-            if (next == target){
-                handleCloseTerminal();
-                return;
-            }
-            // 如果是在中间，需算一下路的宽度，综合考虑是否绕路
-
-
-        }
-        // 其余部分，正常行驶即可
-        calcSafePrintSpeed();
-    }
     private void handleUnsafeLevel2() {
         // 与其他机器人会发生碰撞
         // 总体思想，前方物体在越靠近中心，速度越小，转向越大
@@ -747,17 +747,16 @@ public class Route{
         return d1 <= d2 ? p1:p2;
     }
 
+    //
     public static Point getNearBumpWall(Line line) {
         // 查看此条线段最近的墙体
         if (posIsWall(line.left)){
-//            Main.printLog("left" + line.left);
             return line.left.fixPoint2Center();
         }
         double offset = line.left.x < line.right.x ? 0.26 : -0.26;  // 刚好是下一个点
         double x = line.left.x;
-//        Main.printLog("x - line.right.x=" + x +"-"+line.right.x);
-        int times = 0;
 
+        int times = 0;
         while (Math.abs(x - line.right.x) >= 0.5){
             if (times > 10){
                 return null;
@@ -788,7 +787,6 @@ public class Route{
 
         double offset = start.y < end.y ? 0.5 : -0.5;
         Point tmp = new Point(start);
-//        Main.printLog("tmp.y - end.y=" + tmp.y +"-"+end.y);
         int times = 0;
 
         while (Math.abs(tmp.y - end.y)>=0.5){
@@ -966,11 +964,6 @@ public class Route{
     private Robot selectWeakRobot(Robot oth) {
         // 判断自己和另一个机器人谁更弱小，谁让路
         // todo 后面可以修改
-
-//        if (posSet.contains(Astar.Point2Pos(oth.pos)) && !oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
-//            // 对方在我的路线上，我不在对方的路线上,我避让
-//          return robot;
-//        }
 
         if (oth.tmpSafeMode){
             Main.printLog("ccc");
@@ -1163,16 +1156,6 @@ public class Route{
         return flag1 || flag2;
     }
 
-    private int calcMinWide(Robot oth) {
-        // 返回最小宽度，及空点的个数
-        if (robot.carry == 0 && oth.carry == 0){
-            return 4;
-        }else {
-            // todo 两个载物的，5格容易撞，后期可改成6格
-            return 5;
-        }
-    }
-
     private boolean canBump() {
         boolean safe = true;
         isEmergency = false;
@@ -1223,31 +1206,17 @@ public class Route{
         return !safe;
     }
 
-    // 有很多机器人去这个工作站，我不是最近的一个
-    private boolean selfNotClosest() {
-        boolean flag = false;
-        for (int i = 0; i < 4; i++) {
-            if (i!=robot.id){
-                Route r = Main.robots[i].route;
-                if (r == null || !r.target.equals(target)) continue;
-                if (i>robot.id){
-                    // 前面距离算过了，后面距离还没算
-                    r.calcVector();
-                }
-                flag = true;
-                if (realDistance < r.realDistance) return false;
-            }
-        }
-        return flag;
-    }
-
     // 是否到达下一个点
     public boolean arriveNext() {
         if (pathIndex-2<0) return false;
         // 如果机器人到了目标点的前方，也算过了
-
+        // 如果目光能看到下一个点也算过了
+        if (next == target) return false;
+//        Point next2 = peekNextPoint();
+//        Point wall = getNearBumpWall(new Line(robot.pos,next2));
+//        if (wall == null) return true;  // 中间没墙
         Point pre = path.get(pathIndex-2);
-        return robot.isArrivePoint(pre,next);
+        return robot.isArrivePoint(pre, this.next);
     }
 
 

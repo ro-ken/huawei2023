@@ -19,6 +19,8 @@ public class Main {
     private static final Scanner inStream = new Scanner(System.in);
     private static final PrintStream outStream = new PrintStream(new BufferedOutputStream(System.out));
     private static PrintStream log = null;
+    private static PrintStream bluelog = null;
+    private static PrintStream redlog = null;
     private static PrintStream path = null;
     public static int frameID=0;
 //    public static MyThread thread;
@@ -66,6 +68,8 @@ public class Main {
                 path = new PrintStream("./4.txt");
             }
             log = new PrintStream("./log.txt");
+            redlog = new PrintStream("./redlog.txt");
+            bluelog = new PrintStream("./bluelog.txt");
             System.setOut(log);//把创建的打印输出流赋给系统。即系统下次向 ps输出
         }
 
@@ -259,20 +263,23 @@ public class Main {
         // 是否要考虑不同区域
         if (Main.mapSeq == 1){
             if (isBlue){
-                Attack.addRobot(robots[0],Main.stationsRed[12].pos);
+//                Attack.addRobot(robots[0],Main.stationsRed[12].pos);
+                Attack.addRobot(robots[0]);
             }else {
-                Attack.addRobot(robots[0],Main.stationsBlue[12].pos);
+//                Attack.addRobot(robots[0],Main.stationsBlue[12].pos);
+                Attack.addRobot(robots[0]);
             }
         }
 
         if (Main.mapSeq == 2){
             if (Main.isBlue){
-                Attack.addRobot(robots[0],Main.stationsRed[8].pos);
+//                Attack.addRobot(robots[0],Main.stationsRed[8].pos);
+                Attack.addRobot(robots[0]);
             }else {
-//                Attack.addRobot(robots[0],Attack.attackPoint[0]);
-//                Attack.addRobot(robots[1],Attack.attackPoint[1]);
-                Attack.addRobot(robots[0],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+2));
-                Attack.addRobot(robots[1],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+1));
+                Attack.addRobot(robots[0]);
+                Attack.addRobot(robots[1]);
+//                Attack.addRobot(robots[0],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+2));
+//                Attack.addRobot(robots[1],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+1));
             }
         }
     }
@@ -302,20 +309,6 @@ public class Main {
         Mapinfo.init(wallMap);
         mapinfo = new Mapinfo();
         mapinfo.setZone(zoneMap);
-        // for (int i = 0; i < 100; i++) {
-        //     String data = new String();
-        //     for (int j = 0; j < 100; j++) {
-        //         if (Mapinfo.mapInfoOriginal[i][j] == -2) {
-        //             data += '#';
-        //         }
-        //         else {
-        //             data += '.';
-        //         }
-        //     }
-        //     printLog(data);
-        // }
-//        printLog(mapinfo);
-//        printLog(zoneMap);
     }
 
     private static void initStationMap(){
@@ -569,8 +562,13 @@ public class Main {
         outStream.printf("%d\n", frameID);
     }
     public static void printLog(Object log){
-        if (test && !isBlue){
+        if (test){
             System.out.println(log);
+            if (isBlue){
+                bluelog.println(log);
+            }else {
+                redlog.println(log);
+            }
         }
     }
 }

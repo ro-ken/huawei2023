@@ -1001,7 +1001,7 @@ public class Robot {
             }
         }
         if (enemy.size() >0){
-            Main.printLog(rps);
+            Main.printLog(enemy);
 
             for (Robot robot : zone.robots) {
                 Main.printLog(robot);
@@ -1017,6 +1017,7 @@ public class Robot {
 
     private boolean isFriend(Point point) {
         // 该点是否是自己人
+
         for (Robot robot : zone.robots) {
             if (robot.pos.closeTo(point)){
                 return true;    //是友军
