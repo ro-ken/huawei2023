@@ -167,8 +167,6 @@ public class Main {
         }
     }
 
-
-
     private static void calcParam(int i) {
         if (robots[i].nextStation == null && robots[i].attack == null){
 //            if (!robots[i].earn) {
@@ -242,8 +240,6 @@ public class Main {
         initZone2();
         initAttack();
 
-//        initWaterFlow();    // 初始化流水线
-
         if (writePath && test){
             for (int i = 0; i < stationNum; i++) {
                 path.println("{station " + i + ":empty Path:" + stations[i].paths.emptyPathMap + "}");
@@ -263,23 +259,23 @@ public class Main {
         // 是否要考虑不同区域
         if (Main.mapSeq == 1){
             if (isBlue){
-//                Attack.addRobot(robots[0],Main.stationsRed[12].pos);
-                Attack.addRobot(robots[0]);
+                Attack.addRobot(robots[0],Main.stationsRed[12].pos);
+//                Attack.addRobot(robots[0]);
             }else {
-//                Attack.addRobot(robots[0],Main.stationsBlue[12].pos);
-                Attack.addRobot(robots[0]);
+                Attack.addRobot(robots[0],Main.stationsBlue[12].pos);
+//                Attack.addRobot(robots[0]);
             }
         }
 
         if (Main.mapSeq == 2){
             if (Main.isBlue){
-//                Attack.addRobot(robots[0],Main.stationsRed[8].pos);
-                Attack.addRobot(robots[0]);
+                Attack.addRobot(robots[0],Main.stationsRed[8].pos);
+//                Attack.addRobot(robots[0]);
             }else {
-                Attack.addRobot(robots[0]);
-                Attack.addRobot(robots[1]);
-//                Attack.addRobot(robots[0],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+2));
-//                Attack.addRobot(robots[1],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+1));
+//                Attack.addRobot(robots[0]);
+//                Attack.addRobot(robots[1]);
+                Attack.addRobot(robots[0],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+2));
+                Attack.addRobot(robots[1],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+1));
             }
         }
     }

@@ -726,9 +726,9 @@ public class Route{
         // 若有墙，返回最近的墙体，若无墙，返回空
         if (vector.x == 0) return null;
 
-        Point belowP = getNearBumpWall(robot.belowLine);
-        Point midP = getNearBumpWall(robot.midLine);
-        Point topP = getNearBumpWall(robot.topLine);
+        Point belowP = robot.belowLine.getNearBumpWall();
+        Point midP = robot.midLine.getNearBumpWall();
+        Point topP = robot.topLine.getNearBumpWall();
         Point wall = selectClosestPoint(belowP,midP);
 
         wall = selectClosestPoint(wall,topP);
@@ -747,65 +747,65 @@ public class Route{
         return d1 <= d2 ? p1:p2;
     }
 
-    //
-    public static Point getNearBumpWall(Line line) {
-        // 查看此条线段最近的墙体
-        if (posIsWall(line.left)){
-            return line.left.fixPoint2Center();
-        }
-        double offset = line.left.x < line.right.x ? 0.26 : -0.26;  // 刚好是下一个点
-        double x = line.left.x;
+//    //
+//    public static Point getNearBumpWall(Line line) {
+//        // 查看此条线段最近的墙体
+//        if (posIsWall(line.left)){
+//            return line.left.fixPoint2Center();
+//        }
+//        double offset = line.left.x < line.right.x ? 0.26 : -0.26;  // 刚好是下一个点
+//        double x = line.left.x;
+//
+//        int times = 0;
+//        while (Math.abs(x - line.right.x) >= 0.5){
+//            if (times > 10){
+//                return null;
+//            }else {
+//                times ++;
+//            }
+//
+//            Point wall = getWallByX(x,line);
+//            if (wall != null) return wall;
+//            x =Point.fixAxis2Center(x)+offset;
+//
+//        }
+//        return null;
+//    }
 
-        int times = 0;
-        while (Math.abs(x - line.right.x) >= 0.5){
-            if (times > 10){
-                return null;
-            }else {
-                times ++;
-            }
+//    // 找出直线在x方格内所有的最近的墙
+//    public static Point getWallByX(double x, Line line) {
+//        double offset = line.left.x < line.right.x ? 0.24 : -0.24;
+//        Point start = line.getFixPoint(x);
+//        Point end = line.getFixPoint(start.x + offset);
+//        Point wall = getWallBy2Point(start,end);
+//        return wall;
+//    }
 
-            Point wall = getWallByX(x,line);
-            if (wall != null) return wall;
-            x =Point.fixAxis2Center(x)+offset;
-
-        }
-        return null;
-    }
-
-    // 找出直线在x方格内所有的最近的墙
-    public static Point getWallByX(double x, Line line) {
-        double offset = line.left.x < line.right.x ? 0.24 : -0.24;
-        Point start = line.getFixPoint(x);
-        Point end = line.getFixPoint(start.x + offset);
-        Point wall = getWallBy2Point(start,end);
-        return wall;
-    }
-
-    public static Point getWallBy2Point(Point start, Point end) {
-        // 两个点的x都是相同的，判断夹住的point
-        if (start.equals(end) && posIsWall(start)) return start;
-
-        double offset = start.y < end.y ? 0.5 : -0.5;
-        Point tmp = new Point(start);
-        int times = 0;
-
-        while (Math.abs(tmp.y - end.y)>=0.5){
-            if (posIsWall(tmp)){
-                return tmp;
-            }
-
-            if (times > 10){
-                return null;
-            }else {
-                times ++;
-            }
-
-            tmp.y +=offset;
-        }
-        // 前面没判断结尾
-        if (posIsWall(end)) return end;
-        return null;
-    }
+//    public static Point getWallBy2Point(Point start, Point end) {
+//        // 两个点的x都是相同的，判断夹住的point
+//        if (start.equals(end) && posIsWall(start)) return start;
+//
+//        double offset = start.y < end.y ? 0.5 : -0.5;
+//        Point tmp = new Point(start);
+//        int times = 0;
+//
+//        while (Math.abs(tmp.y - end.y)>=0.5){
+//            if (posIsWall(tmp)){
+//                return tmp;
+//            }
+//
+//            if (times > 10){
+//                return null;
+//            }else {
+//                times ++;
+//            }
+//
+//            tmp.y +=offset;
+//        }
+//        // 前面没判断结尾
+//        if (posIsWall(end)) return end;
+//        return null;
+//    }
 
     public void setTmpSafeMode2() {
         // 判断两辆车，应该让谁避让
@@ -1213,7 +1213,9 @@ public class Route{
         // 如果目光能看到下一个点也算过了
         if (next == target) return false;
 //        Point next2 = peekNextPoint();
-//        Point wall = getNearBumpWall(new Line(robot.pos,next2));
+//        Line line = new Line(robot.pos,next2);
+//        Point wall = line.getNearBumpWall();
+//        Main.printLog("pos:"+robot.pos + " next "+next2 + " wall: " + wall);
 //        if (wall == null) return true;  // 中间没墙
         Point pre = path.get(pathIndex-2);
         return robot.isArrivePoint(pre, this.next);

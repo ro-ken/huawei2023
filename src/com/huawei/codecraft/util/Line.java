@@ -107,5 +107,69 @@ public Point getPointDis2src(double dis) {
         Point p = Point.fixPoint2Center(x,y);
         return p;
     }
+
+    public Point getNearBumpWall() {
+        // 查看此条线段最近的墙体
+        if (posIsWall(left)){
+            return left.fixPoint2Center();
+        }
+        double offset = left.x < right.x ? 0.26 : -0.26;  // 刚好是下一个点
+        double x = left.x;
+
+        int times = 0;
+        while (Math.abs(x - right.x) >= 0.5){
+            if (times > 10){
+                return null;
+            }else {
+                times ++;
+            }
+
+            Point wall = getWallByX(x);
+            if (wall != null) return wall;
+            x =Point.fixAxis2Center(x)+offset;
+
+        }
+        return null;
+    }
+
+    public static boolean posIsWall(Point point) {
+        return point.isWall();//posIsWall(point.x,point.y);
+    }
+
+    // 找出直线在x方格内所有的最近的墙
+    public Point getWallByX(double x) {
+        double offset = left.x < right.x ? 0.24 : -0.24;
+        Point start = getFixPoint(x);
+        Point end = getFixPoint(start.x + offset);
+        Point wall = getWallBy2Point(start,end);
+        return wall;
+    }
+
+    public static Point getWallBy2Point(Point start, Point end) {
+        // 两个点的x都是相同的，判断夹住的point
+        if (start.equals(end) && posIsWall(start)) return start;
+
+        double offset = start.y < end.y ? 0.5 : -0.5;
+        Point tmp = new Point(start);
+        int times = 0;
+
+        while (Math.abs(tmp.y - end.y)>=0.5){
+            if (posIsWall(tmp)){
+                return tmp;
+            }
+
+            if (times > 10){
+                return null;
+            }else {
+                times ++;
+            }
+
+            tmp.y +=offset;
+        }
+        // 前面没判断结尾
+        if (posIsWall(end)) return end;
+        return null;
+    }
+
 }
 

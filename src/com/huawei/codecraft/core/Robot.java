@@ -703,7 +703,7 @@ public class Robot {
     private boolean lineNoWall(Point src, Point dest) {
         // 判断两点连线没有墙体
         Line line = new Line(src,dest);
-        Point wall = Route.getNearBumpWall(line);
+        Point wall = line.getNearBumpWall();
         return wall == null;
     }
 
@@ -974,7 +974,7 @@ public class Robot {
             // 先遍历每个不正常的工作台，如果该机器人能看到，先恢复正常
             Line line = new Line(pos,st.pos);
             // 判断直线中间是否有墙
-            Point wall = Route.getNearBumpWall(line);
+            Point wall = line.getNearBumpWall();
             if (wall == null){
                 resets.add(st);
                 st.place = StationStatus.EMPTY;
