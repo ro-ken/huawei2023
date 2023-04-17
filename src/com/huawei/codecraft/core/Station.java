@@ -226,14 +226,27 @@ public class Station implements Comparable{
         
     // 没有可用返回 null
     public Station chooseAvailableNextStation() {
+
+        Station res = null;
+        double minFps = 100000;
+
         for(Pair pair : canSellStations){
             Station oth = pair.getKey();
             if (oth.canBuy(type) && oth.place != StationStatus.BLOCK){
-                availNextStation = oth;
-                return oth;
+
+                double fps = pair.value;
+                if (oth.place == StationStatus.CANBUMP){   // 周围有机器人，加上权重
+                    fps += oth.type== 7?Robot.destBumpCost:Robot.dest456BumpCost;
+                }
+                if (fps < minFps){
+                    minFps = fps;
+                    res = oth;
+                }
             }
         }
-        return null;
+
+        availNextStation = res;
+        return res;
     }
 
     // 4567工作台使用
@@ -470,6 +483,27 @@ public class Station implements Comparable{
             i+=bookRawNum[tp];
         }
         return i;
+    }
+
+    public void changeStatus(RadarPoint rp) {
+        // 周围有敌方机器人，要改变状态
+        // 每个st改标志位
+        Point point = rp.getPoint();
+        if (!pos.inCorner()){
+            // 不在墙角，如果有多个机器人比较近，认为不可撞开
+            place = StationStatus.CANBUMP;  // 先设为可撞开
+            for (RadarPoint rp1 : Main.curEnemys) {
+                if (rp == rp1) continue;
+                double dis = rp1.getPoint().calcDistance(point);
+                if (dis < 3){
+                    // 有两个机器人较近，变为阻塞
+                    place = StationStatus.BLOCK;
+                }
+            }
+        }else {
+            // 如果在角落，就认为是不可撞开的
+            place = StationStatus.BLOCK;
+        }
     }
 }
 

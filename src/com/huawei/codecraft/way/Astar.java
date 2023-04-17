@@ -54,17 +54,23 @@ public class Astar {
 
     // 将机器人的位置当作障碍物进行锁定
     // todo：暂时直接封禁一圈，因为前面的东西拿东西突然变大，也会对路径产生影响
-    public void blockRobots(int id) {
-        for (int i = 0; i < Main.robots.length; i++) {
-            if (i == id) {
-                continue;
-            }
-            // 拿了东西直接把周围一圈围住
-            Pos position = Point2Pos(Main.robots[i].pos);
-            for (int j = 0; j < dirX.length; j++) {
-                int x = position.x + dirX[j];
-                int y = position.y + dirY[j];
+    public void blockPoints(HashSet<Point> pointSet) {
+        if (pointSet == null){
+            return;
+        }
+
+        for (Point p : pointSet) {
+            // 直接将机器人周围一圈封禁掉
+            Pos position = Point2Pos(p);
+            if (Mapinfo.isInMap(position.x, position.y))  {
                 board.getMsg(position).isOK = 2;
+            }
+            for (int i = 0; i < dirX.length; i++) {
+                int x = position.x + dirX[i];
+                int y = position.y + dirY[i];
+                if (Mapinfo.isInMap(x, y)) {
+                    board.getMsg(new Pos(x, y)).isOK = 2;
+                }
             }
         }
     }
@@ -111,23 +117,6 @@ public class Astar {
         return new Pair(k, b);
     }
 
-    public static ArrayList<Point> getPath(boolean isEmpty,Point src, Point dest){
-        double dis = src.calcDistance(dest);
-        if (dis < 1.0){
-            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())){
-                ArrayList<Point> res = new ArrayList<>();
-                res.add(src);
-                res.add(dest);
-                return res;
-            }
-        }
-
-        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-        Astar ast = new Astar(fixMap,src,dest);
-        ast.search();
-        return ast.getResult(!isEmpty);
-    }
-
     // 计算两点多长，返回点的个数
     public static int calcDis(boolean isEmpty,Point src, Point dest){
         double dis = src.calcDistance(dest);
@@ -166,15 +155,6 @@ public class Astar {
     }
 
 
-//    public static Point getSafePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1){
-//
-//        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-//        Astar ast = new Astar(fixMap,src,dest);
-//
-//        Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
-//        return sp;
-//    }
-
     public static Point getSafePoint2(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1,Point midPoint){
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
@@ -184,15 +164,6 @@ public class Astar {
         Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
         return sp;
     }
-
-//    public static Point getSafePointAndBasePoint(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1){
-//
-//        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-//        Astar ast = new Astar(fixMap,src,dest);
-//
-//        Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
-//        return sp;
-//    }
 
     public static ArrayList<Point> getPathAndResult(boolean isEmpty,Point src, Point dest,Set<Pos> posSet){
         double dis = src.calcDistance(dest);
@@ -212,6 +183,27 @@ public class Astar {
 //        posSet.addAll(ast.resultList);
         return ast.getResult(!isEmpty);
     }
+
+    public static ArrayList<Point> getPathBlockRobots(boolean isEmpty,Point src, Point dest,Set<Pos> posSet,HashSet<Point> robots){
+        double dis = src.calcDistance(dest);
+        if (dis < 1.0){
+            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())){
+                ArrayList<Point> res = new ArrayList<>();
+                res.add(src);
+                res.add(dest);
+                return res;
+            }
+        }
+
+        int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
+        Astar ast = new Astar(fixMap,src,dest);
+        ast.blockPoints(robots);    // 先封锁机器人
+        ast.search();
+        resultToPosSet(ast.resultList,posSet);
+//        posSet.addAll(ast.resultList);
+        return ast.getResult(!isEmpty);
+    }
+
 
     private static void resultToPosSet(ArrayList<Pos> resultList, Set<Pos> posSet) {
         // 把结果保存到posSet里面，加上下左右点

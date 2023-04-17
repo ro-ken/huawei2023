@@ -78,7 +78,7 @@ public class Robot {
     public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
     public static int cacheFps = 50 * 4;     // 判断是否要送最后一个任务的临界时间 > 0
     public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
-    public static int blockJudgeFps = 30 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点,
+    public static int blockJudgeFps = 50 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点,
     public static int maxWaitBlockFps = 1 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
 
     public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
@@ -100,6 +100,14 @@ public class Robot {
     public HashSet<Robot> losers = new HashSet<>(); // 要避让我的点
     public Route route;
     public static int step = 2;//计算雷达扫描出360//step个点的坐标
+
+    public static int srcBumpCost = 50 * 3;  // 寻找卖家，有敌方机器人计算时间要加上代价 fps
+    public static int destBumpCost = 50 * 6;  // 终点是789 寻找买家，有敌方机器人计算时间要加上代价 fps
+    public static int dest456BumpCost = 50 * 5;  // 终点是456 寻找买家，有敌方机器人计算时间要加上代价 fps
+    public static int redEnemyCost = 50 * 2;  // 红方作为障碍物的代价
+    public static int blueEnemyCost = 50 * 4;  // 蓝方作为障碍物的代价
+
+
 
     public Robot(int stationId, double x, double y, int robotId) {
 
@@ -270,6 +278,22 @@ public class Robot {
             route = new Route(nextStation.pos,this,path,pos1);
         }
     }
+
+    public Route calcRouteFromNowBlockRobot(HashSet<Point> robots) {
+        // 计算从自身到目的地位置的路由，封住敌人位置
+        if (nextStation != null){
+            HashSet<Pos> posSet = new HashSet<>();
+            ArrayList<Point> path = nextStation.paths.getPathBlockRobot(carry == 0,pos,posSet,robots);   // 第一次，计算初始化的路径
+            if (path.size() == 0){
+                return null;
+            }
+            path = Path.reversePath(path);
+
+            return new Route(nextStation.pos,this,path,posSet);
+        }
+        return null;
+    }
+
 
     public void recoveryPath() {
 
@@ -481,10 +505,11 @@ public class Robot {
             return;
         }
 
-        if (Main.blockStations.contains(nextStation)){
+        if (nextStation.place == StationStatus.BLOCK){
             // 家被占了，考虑是换工作站还是撞开
             Main.printLog("blockStations " + Main.blockStations);
-            fixOccupied();
+            //
+            fixStationBlocked();
         }
 
         if (losers.size()>0){
@@ -557,7 +582,7 @@ public class Robot {
         return ret;
     }
 
-    private void fixOccupied() {
+    public void fixStationBlocked() {
 
         Main.printLog("Occupied" + nextStation);
 
@@ -742,6 +767,7 @@ public class Robot {
     public boolean blockDetect() {
         // todo 后面判断是否周围有墙或者机器人
         // 阻塞检测，在某个点阻塞了多少帧，重新设置路径
+        // todo 要加上和敌方机器人相遇阻塞的情况
 
         if (tmpSafeMode && inSafePlace){
             blockFps ++;
@@ -942,46 +968,7 @@ public class Robot {
         }
     }
 
-//    public void attack() {
-//        // 机器人攻击策略
-//        if (Main.mapSeq == 1){
-//            // 图1
-//            if (Main.isBlue){
-//                nextStation = Main.stationsRed[12];
-//                if (route == null){
-//                    calcRoute();
-//                }
-//            }else {
-//                nextStation = Main.stationsBlue[12];
-//                if (route == null){
-//                    calcRoute();
-//                }
-//            }
-//
-//        }else {
-//            //图2
-//            if (Main.isBlue){
-//                nextStation = Main.stationsRed[8];
-//                if (route == null){
-//                    calcRoute();
-//                }
-//
-//            }else {
-//                nextStation = Main.stationsBlue[6];
-//                if (route == null){
-//                    calcRoute();
-//                }
-////                nextStation = Main.stationsBlue[8];
-////                if (route == null){
-////                    calcRoute();
-////                }
-//            }
-//        }
-//        Main.printLog(nextStation);
-//        route.rush();
-//    }
-
-    public void handleEnemy() {
+    public HashSet<RadarPoint> handleEnemy() {
         HashSet<Station> resets = new HashSet<>();
         for(Station st:Main.blockStations){
             // 先遍历每个不正常的工作台，如果该机器人能看到，先恢复正常
@@ -997,25 +984,7 @@ public class Robot {
         enemy = getTrueEnemy();
         Main.printLog("blue = " + Main.isBlue + " pos = "+pos);
         Main.printLog("enemy" + enemy);
-        for (RadarPoint rp : enemy) {
-            Point point = rp.getPoint();
-            ArrayList<Station> nearStations = point.getNearStations();
-            for (Station st : nearStations) {
-                // 每个st改标志位
-                if (st.pos.inCorner()){
-                    // 在角落，撞不开，变阻塞
-                    st.place = StationStatus.BLOCK;
-//                    st.place = StationStatus.EMPTY;
-                }else {
-                    // 如果不在角落，就认为值可以撞开的
-                    st.place = StationStatus.CANBUMP;
-//                    st.place = StationStatus.EMPTY;
-                }
-                if (st.place != StationStatus.EMPTY){
-                    Main.blockStations.add(st);
-                }
-            }
-        }
+        return enemy;
     }
 
     private HashSet<RadarPoint> getTrueEnemy() {

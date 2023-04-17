@@ -1,6 +1,7 @@
 package com.huawei.codecraft.util;
 
 import com.huawei.codecraft.Main;
+import com.huawei.codecraft.core.Robot;
 import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Pos;
 
@@ -77,6 +78,11 @@ public class Path {
             return path;
         }
     }
+
+    public ArrayList<Point> getPathBlockRobot(boolean isEmpty, Point dest, HashSet<Pos> set,HashSet<Point> robots) {
+        return Astar.getPathBlockRobots(isEmpty, src, dest,set,robots);
+    }
+
     // 翻转路径
     public static ArrayList<Point> reversePath(ArrayList<Point> path) {
         ArrayList<Point> res = new ArrayList<>();

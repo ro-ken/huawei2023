@@ -147,10 +147,9 @@ public class WaterFlow {
 
         for (ArrayList<Station> list : zone.stationsMap.values()) {
             for (Station station : list) {
-//                    if (station.type == 7) continue;
                 if (station.leftTime == -1 || (station.bookPro && station.type>3)) continue;
                 double dis = station.pos.calcDistance(robot.pos);
-                double time1 = robot.calcFpsToPlace(dis);         // todo 时间要改
+                double time1 = robot.calcFpsToPlace(dis);
                 double time = Math.max(time1,station.leftTime);
                 if (time < shortest){
                     // 卖方有货，卖方有位置

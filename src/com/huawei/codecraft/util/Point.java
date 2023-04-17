@@ -267,7 +267,23 @@ public class Point{
     }
 
     public boolean inCorner() {
-        return false;
+        // 判断工作站是否和墙靠得很近，
+        // 一个机器人占了以后能否撞开
+        boolean fx = false;
+        boolean fy = false;
+        int step = 2;   // 判断
+        for (int i = -step; i <= step; i++) {
+            Point nx = new Point(x+i,y);
+            Point ny = new Point(x,y+i);
+            if (nx.isWall()){
+                fx = true;
+            }
+            if (ny.isWall()){
+                fy = true;
+            }
+        }
+        // 判断墙角是前后有墙 并且左右有墙
+        return fx && fy;
     }
 
     public boolean closeTo(Point point) {

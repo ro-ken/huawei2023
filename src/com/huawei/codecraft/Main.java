@@ -6,7 +6,10 @@ import java.io.PrintStream;
 import java.util.*;
 
 import com.huawei.codecraft.core.*;
+import com.huawei.codecraft.util.LimitedQueue;
 import com.huawei.codecraft.util.Point;
+import com.huawei.codecraft.util.RadarPoint;
+import com.huawei.codecraft.util.StationStatus;
 import com.huawei.codecraft.way.Mapinfo;
 import com.huawei.codecraft.way.Pos;
 
@@ -53,6 +56,8 @@ public class Main {
     public static final HashSet<Station> blockStations = new HashSet<>();   // 附近有敌方机器人的工作站
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
     public static int[] clockCoef = new int[]{0,0,0,0}; // 碰撞旋转系数
+    public static Queue<HashSet<RadarPoint>> enemysQueue = new LimitedQueue<>(10);    // 保存前10帧敌方机器人的位置
+    public static HashSet<RadarPoint> curEnemys = new HashSet<>();    // 记录当前帧机器人的位置
 
     public static void main(String[] args) throws FileNotFoundException {
 
@@ -76,6 +81,7 @@ public class Main {
     private static void handleFrame() {
 
         clearClockCoef();
+        getCurEnemys();
 
         // 先计算每个机器人的参数，后面好用
         for (int i = 0; i < robotNum; i++) {
@@ -95,6 +101,27 @@ public class Main {
                 handleArrive(i);
             }
             robots[i].rush();
+        }
+    }
+
+    private static void getCurEnemys() {
+        // 获取当前敌方机器人位置
+        curEnemys = new HashSet<>();
+        for (int i = 0; i < robotNum; i++) {
+            curEnemys.addAll(robots[i].handleEnemy());
+        }
+        enemysQueue.add(curEnemys);
+
+        for (RadarPoint rp : curEnemys) {
+            Point point = rp.getPoint();
+            ArrayList<Station> nearStations = point.getNearStations();
+            for (Station st : nearStations) {
+                st.changeStatus(rp);
+//                st.place = StationStatus.EMPTY
+                if (st.place != StationStatus.EMPTY){
+                    Main.blockStations.add(st);
+                }
+            }
         }
     }
 
@@ -166,8 +193,6 @@ public class Main {
         if (robots[i].route.arriveNext()){
             robots[i].route.updateNext();
         }
-
-        robots[i].handleEnemy();
 
         robots[i].route.calcParamEveryFrame();    // 通用参数
         robots[i].calcMoveEquation();     //  运动方程
@@ -544,39 +569,8 @@ public class Main {
         outStream.printf("%d\n", frameID);
     }
     public static void printLog(Object log){
-        if (test){
+        if (test && !isBlue){
             System.out.println(log);
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

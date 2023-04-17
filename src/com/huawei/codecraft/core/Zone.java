@@ -141,12 +141,15 @@ public class Zone {
 
             for (Station s:Main.stationsMap.get(ty)){
 
-                if (s.place != StationStatus.EMPTY) continue;
-
+                if (s.place == StationStatus.BLOCK) continue;       // 阻塞不能送
                 // 第一段空载，第二段满载
-                double t1 = s.pathToFps(true,robot.pos); // 若寻路算法高效，需换成robot的pos todo 若时间慢，后面可以换成机器人所在工作台的pos
+                double t1 = s.pathToFps(true,robot.pos); // 若寻路算法高效，需换成robot的pos
                 double t2 = s.pathToFps(false,dest.pos);
                 double t = t1 + t2;
+                if (s.place == StationStatus.CANBUMP){      // 已改
+                    t += Robot.srcBumpCost;    // 加上代价
+                }
+
                 if (t < minTime){
                     minTime = t;
                     st = s;
@@ -192,17 +195,30 @@ public class Zone {
     }
 
     private Station newTaskLast(int taskId, Station target) {
+        Station res = null;
+        double minFps = 100000;
         PriorityQueue<Pair> pairs = target.canBuyStationsMap.get(taskId);
         for (Pair p :pairs){
             // 选择当前没有被占用,并且可以生产的station
             Station st = p.key;
+            if (st.place == StationStatus.BLOCK) continue;
             // 后一项保证前面运算的货物能生产，原料格能够空出来,
             // 为了防止堵死情况，可以再加个判断，pairs.size() == 1
             if (st.getBookRawNum()<2 && (st.proStatus==0 || st.leftTime == -1)){
-                return st;
+
+                double fps = p.value;
+                if (st.place == StationStatus.CANBUMP){      // 已改
+                    // 周围有机器人，加上权重
+                    fps += Robot.dest456BumpCost;
+                }
+                if (fps < minFps){
+                    minFps = fps;
+                    res = st;
+                }
+
             }
         }
-        return null;
+        return res;
     }
 
     private Station selectSlowestStation(Station target) {
@@ -246,28 +262,27 @@ public class Zone {
     // 从target选一个能用的new task
     private Station newTask(int taskId,Station target) {
 
+        Station res = null;
+        double minFps = 100000;
+
         PriorityQueue<Pair> pairs = target.canBuyStationsMap.get(taskId);
-//        if (taskId == 6){
-//            Main.printLog(pairs);
-//            Main.printLog(pairs);
-//        }
         for (Pair p :pairs){
             // 选择当前没有被占用,并且可以生产的station
             Station st = p.key;
-//            if (taskId == 6){
-//                Main.printLog("1" + st.haveEmptyPosition());
-//                Main.printLog("1-2" + st.canBuy(2));
-//                Main.printLog("1-2-1" + st.positionIsFull(2) );
-//                Main.printLog("1-2-2" + st.bookRow[2]);
-//                Main.printLog("1-3" + st.canBuy(3));
-//                Main.printLog("2" + (st.place == StationStatus.EMPTY));
-//            }
+
             // 选择没有被阻塞的工作站
-            if(st.haveEmptyPosition() && st.place == StationStatus.EMPTY){  // todo 后期可调整
-                return st;
+            if(!st.haveEmptyPosition() || st.place == StationStatus.BLOCK) continue;
+            double fps = p.value;
+            if (st.place == StationStatus.CANBUMP){      // 已改
+                // 周围有机器人，加上权重
+                fps += Robot.dest456BumpCost;
+            }
+            if (fps < minFps){
+                minFps = fps;
+                res = st;
             }
         }
-        return null;
+        return res;
     }
 
     private int fairSelectTask(ArrayList<Integer> tasks,Station target) {
@@ -360,13 +375,19 @@ public class Zone {
                 double dis = station.pos.calcDistance(robot.pos);
                 double time1 = robot.calcFpsToPlace(dis);
                 double time = Math.max(time1,station.leftTime);
+                if (station.place == StationStatus.CANBUMP){     // 加上权重
+                    time += Robot.srcBumpCost;
+                }
+                Station oth = station.chooseAvailableNextStation();
+                if (oth == null) continue;
+                if (oth.place == StationStatus.CANBUMP){
+                    time += oth.type== 7?Robot.destBumpCost:Robot.dest456BumpCost;
+                }
+
                 if (time < shortest){
                     // 卖方有货，卖方有位置
-                    Station oth = station.chooseAvailableNextStation();
-                    if (oth != null){
-                        shortestStation = station;
-                        shortest = time;
-                    }
+                    shortestStation = station;
+                    shortest = time;
                 }
             }
         }
@@ -375,30 +396,50 @@ public class Zone {
 
     private Station selectAvailableTarget() {
         // 选择可用的 7 号工作站类型
+
+        Station res = null;
+        double maxValue = 0;
+
         for (Station target : targets) {
-            if (target.place == StationStatus.EMPTY){
-                    // todo 后期可把 CANBUMP也加进来
-                return target;  // 没有被堵住
+            if (target.place != StationStatus.BLOCK){   // 已改
+                double value = target.cycleAvgValue;
+                if (target.place == StationStatus.EMPTY){   // 已改
+                    value += 5;     // 若周围没有机器人 权重 +5
+                }
+                if (value > maxValue){
+                    res = target;
+                    maxValue = value;
+                }
             }
         }
-        return null;
+        return res;
     }
 
     private Station selectBestSellStation(Station now) {
         // 456 -> 79 , 7 -> 89
         // 选择一个最佳的售卖工作站
-//        Station res = null;
+        Station res = null;
+        double minFps = 100000;
+
         for (Pair pair : now.canSellStations) {
             Station target = pair.key;
-            if (target.place == StationStatus.EMPTY){
+            if (target.place != StationStatus.BLOCK){     // 已改
                 // 选空的点
                 if (target.canBuy(now.type)){
-                    return target;
+                    double fps = pair.value;
+                    if (target.place == StationStatus.CANBUMP){      // 已改
+                        // 周围有机器人，加上权重
+                        fps += Robot.destBumpCost;
+                    }
+                    if (fps < minFps){
+                        minFps = fps;
+                        res = target;
+                    }
                 }
             }
         }
 
-        return null;
+        return res;
     }
 
     // 合成算法 购买原料 合成task station
@@ -421,18 +462,23 @@ public class Zone {
             // 时间小于等于0 ，表明未生产，将会一直阻塞
             if (!dest.canBuy(ty)) continue;
 
+
             for (Station s: Main.stationsMap.get(ty)){
-                if (s.place != StationStatus.EMPTY) continue;
+                if (s.place == StationStatus.BLOCK) continue;       // 阻塞不能送
                 // 第一段空载，第二段满载
-                double t1 = s.pathToFps(true,robot.pos); // 若寻路算法高效，需换成robot的pos todo 若时间慢，后面可以换成机器人所在工作台的pos
+                double t1 = s.pathToFps(true,robot.pos); // 若寻路算法高效，需换成robot的pos
                 double t2 = s.pathToFps(false,dest.pos);
                 double t = t1 + t2;
+                if (s.place == StationStatus.CANBUMP){       // 已改
+                    t += Robot.srcBumpCost;    // 加上代价
+                }
                 if (t < minTime){
                     minTime = t;
                     st = s;
                 }
             }
         }
+
         return st;
     }
 
