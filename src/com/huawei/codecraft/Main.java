@@ -233,11 +233,10 @@ public class Main {
         initMap();      //  初始化地图
         initZone();     //  初始化区域
 
-        initMapSeq();
-
         initStations();     // 初始化工作站
         initFighterStations(); // 初始化对方工作台的路径，只初始化可以卖的路径 
 
+        initMapSeq();
         initZone2();
         initAttack();
 
@@ -275,7 +274,7 @@ public class Main {
             }
         }
         
-        if (mapSeq == 6){
+        if (mapSeq == 3){
             if (Main.isBlue){
                 Attack.addRobot(robots[0]);
             }else {
