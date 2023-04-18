@@ -622,6 +622,7 @@ public class Main {
     public static void Frame(int frameID){
         outStream.printf("%d\n", frameID);
     }
+
     public static void printLog(Object log){
         if (test){
             System.out.println(log);

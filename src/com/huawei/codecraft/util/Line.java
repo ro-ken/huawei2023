@@ -174,5 +174,28 @@ public Point getPointDis2src(double dis) {
         return null;
     }
 
+    public boolean roadNoWall() {
+        // 这条路没有墙，路的宽度设为 0.7
+        Point wall = getNearBumpWall();
+        if (wall != null) return false;   // 判断直线中间是否有墙
+
+        Line line = new Line(new Point(left.x,left.y+0.4),new Point(right.x,right.y+0.4));
+        wall = line.getNearBumpWall();
+        if (wall != null) return false;
+
+        line = new Line(new Point(left.x,left.y-0.4),new Point(right.x,right.y-0.4));
+        wall = line.getNearBumpWall();
+        if (wall != null) return false;
+
+        line = new Line(new Point(left.x,left.y+0.7),new Point(right.x,right.y+0.7));
+        wall = line.getNearBumpWall();
+        if (wall != null) return false;
+
+        line = new Line(new Point(left.x,left.y-0.7),new Point(right.x,right.y-0.7));
+        wall = line.getNearBumpWall();
+        if (wall != null) return false;
+
+        return true;
+    }
 }
 

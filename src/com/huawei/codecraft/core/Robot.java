@@ -618,6 +618,12 @@ public class Robot {
         releaseDest();
         // 更改目的地
         nextStation = destStation = dest;
+        // 占用资源
+        if (destStation.type <= 7)  {   // 8,9 不需要预定
+            destStation.bookRow[srcStation.type] = true;
+            destStation.bookRawNum[srcStation.type] ++;
+        }
+        destStation.bookNum++;       //解除预定
         calcRouteFromNow();
     }
 
@@ -727,9 +733,9 @@ public class Robot {
         }
 
         src.bookNum ++;
-        if (dest.type <= 6 && waterFlow != null){
-            waterFlow.halfComp.put(dest.type,waterFlow.halfComp.get(dest.type) +1);    // 原料数 +1
-        }
+//        if (dest.type <= 6 && waterFlow != null){
+//            waterFlow.halfComp.put(dest.type,waterFlow.halfComp.get(dest.type) +1);    // 原料数 +1
+//        }
 
         calcRoute();
     }
@@ -1009,10 +1015,12 @@ public class Robot {
         HashSet<Station> resets = new HashSet<>();
         for(Station st:Main.blockStations){
             // 先遍历每个不正常的工作台，如果该机器人能看到，先恢复正常
+            double dis = pos.calcDistance(st.pos);
+            if (dis > 10) continue;  // 距离太长，中间可能有阻挡
             Line line = new Line(pos,st.pos);
-            // 判断直线中间是否有墙
-            Point wall = line.getNearBumpWall();
-            if (wall == null){
+            if (line.roadNoWall()){
+                // 视野通畅，不会有机器人卡着
+                // 都没有墙，那么也不会挡着机器人
                 resets.add(st);
                 st.place = StationStatus.EMPTY;
             }
