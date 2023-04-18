@@ -982,13 +982,25 @@ public class Robot {
                 }
             }
             if (attack.status == AttackStatus.WAIT){
+                if (Main.frameID - attack.arriveFrame > Attack.maxWaitFps){
+                    attack.changeTarget();
+                }
                 route.gotoTarget();     // 等待模式，一直堵在目标点
             }
         }else {
             Main.printLog("find enemy" + tar);
+
+            if (attack.attackType == AttackType.RUSH){
+                double dis = route.target.calcDistance(pos);
+                if (dis>Attack.maxFarToTarget){
+                    // 这种模式超过一定距离就回去
+                    route.gotoTarget();
+                    return;
+                }
+            }
+
             // 有敌人，攻击敌人
             attack.status = AttackStatus.ATTACK;    // 切换为攻击模式
-
             route.bumpEnemy(tar);
         }
     }

@@ -274,6 +274,8 @@ public class Main {
             }else {
                 Attack.addRobot(robots[0]);
                 Attack.addRobot(robots[1],1);
+//                Attack.addRobot(robots[2],2);
+//                Attack.addRobot(robots[3],3);
 //                Attack.addRobot(robots[0],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+2));
 //                Attack.addRobot(robots[1],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+1));
             }
