@@ -310,6 +310,21 @@ public class Mapinfo {
         }
     }
 
+    public static void printMapFull() {
+        for (int i = 0; i < row; i++) {
+            String data = new String();
+            for (int j = 0; j < col; j++) {
+                if (mapInfoFull[i][j] == 1) {
+                    data += "#";
+                }
+                else {
+                    data += '.';
+                }
+            }
+            Main.printLog(data);
+        }
+    }
+
     public static void printMapOriginal() {
         for (int i = 0; i < row; i++) {
             String data = new String();

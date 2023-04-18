@@ -8,6 +8,7 @@ import java.util.*;
 
 // 寻路算法主要实现
 public class Astar {
+    public static int narrowPathCount = 0;
     static int[] bits = {20, 18, 12, 10};   // 用于判断斜边是否可以通过，按照上下左右是否有障碍物进行位运算
     static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
     static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
@@ -154,6 +155,52 @@ public class Astar {
         return ast.resultList.size();
     }
 
+    private boolean isNarrowWay(Pos curPos) {
+        // 路超过6就算宽
+        int lenX = 0, lenY = 0;
+        int x = curPos.x , y = curPos.y;
+        // 计算横向的宽度
+        while (lenX < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
+            lenX++;
+            y--;
+        }
+        y = curPos.y + 1;
+        while (lenX < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
+            lenX++;
+            y++;
+        }
+        // 计算纵向宽度
+        while (lenY < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
+            lenY++;
+            x--;
+        }
+        x = curPos.x + 1;
+        while (lenY < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
+            lenY++;
+            x++;
+        }
+        int len = Math.min(lenX, lenY);
+        if (len <= 5) {
+            return true;
+        }
+        return false;    
+    }
+
+    private void countNarrowPath() {
+        // 连续15格路径宽度低于5，判定为狭窄路径
+        int total = 0;
+        for (Pos pathPos : resultList) {
+            if (isNarrowWay(pathPos)) {
+                total++;
+            }
+            else {
+                total = 0;
+            }
+            if (total >= 15) {
+                narrowPathCount++;
+            }
+        }
+    }
 
     public static Point getSafePoint2(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1,Point midPoint){
 
@@ -179,6 +226,9 @@ public class Astar {
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
         Astar ast = new Astar(fixMap,src,dest);
         ast.search();
+        if (Main.mapSeq == 0) {
+            ast.countNarrowPath();
+        }
         resultToPosSet(ast.resultList,posSet);
 //        posSet.addAll(ast.resultList);
         return ast.getResult(!isEmpty);
@@ -639,7 +689,6 @@ public class Astar {
                     index++;
                 }
             }
-
 
             // 每次重新排序，选择最小的 F 作为下一次的探索节点,使用lambda进行重排序，加负号就是从大到小排序
             Comparator<Pos> comparator = Comparator.comparingInt(openList -> board.getMsg(openList).getF());

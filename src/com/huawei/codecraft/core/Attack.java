@@ -151,7 +151,7 @@ public class Attack {
             lenY++;
             x--;
         }
-        y = curPos.x + 1;
+        x = curPos.x + 1;
         while (lenY < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
             lenY++;
             x++;

@@ -10,6 +10,7 @@ import com.huawei.codecraft.util.LimitedQueue;
 import com.huawei.codecraft.util.Point;
 import com.huawei.codecraft.util.RadarPoint;
 import com.huawei.codecraft.util.StationStatus;
+import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Mapinfo;
 import com.huawei.codecraft.way.Pos;
 
@@ -266,7 +267,7 @@ public class Main {
             initMapSeq2();
         }
 
-        if (mapSeq == 1){
+        if (mapSeq == 5){
             if (isBlue){
                 Attack.addRobot(robots[0]);
             }else {
@@ -274,7 +275,7 @@ public class Main {
             }
         }
         
-        if (mapSeq == 3){
+        if (mapSeq == 6){
             if (Main.isBlue){
                 Attack.addRobot(robots[0]);
             }else {
@@ -328,16 +329,21 @@ public class Main {
 
         if (fighterStationNum == 0 || stationNum == 0){
             mapSeq = 4;     // 蓝方无工作台
-        }else if (zoneMap.size()>=2){
+        }
+        else if (zoneMap.size()>=2){
             mapSeq = 2;      // 两个区域是2号
-        }else {
-            if (Main.stationsBlue[0] != null){
-                if (Main.stationsBlue[0].type == 3){
-                    mapSeq = 1;
-                } else if (Main.stationsBlue[0].type == 1) {
-                    mapSeq = 3;
-                }
-            }
+        }
+        else if (Main.stationsBlue[0].type == 3 && Main.stationsBlue[1].type == 3 && Main.stationsBlue[2].type == 7) {
+            mapSeq = 5;
+        }
+        else if (Main.stationsBlue[0].type == 1 && Main.stationsBlue[1].type == 2 && Main.stationsBlue[2].type == 4) {
+            mapSeq = 6;
+        }
+        else if (Astar.narrowPathCount >= 5) {
+            mapSeq = 3;
+        }
+        else {
+            mapSeq = 1;
         }
 //        mapSeq = processZoneInfo();
     }
