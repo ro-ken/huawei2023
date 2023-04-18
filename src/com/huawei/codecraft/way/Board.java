@@ -45,7 +45,9 @@ public class Board {
         for (int i = 0; i < dirX.length; i++) {
             int x = startPostion.x + dirX[i];
             int y = startPostion.y + dirY[i];
-            maps[x][y].isOK = 0; // 打开起点
+            if (Mapinfo.isInMap(x, y)) {
+                maps[x][y].isOK = 0; // 打开起点
+            }
         }
     }
 
