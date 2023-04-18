@@ -1,5 +1,8 @@
 package com.huawei.codecraft.util;
 
+import com.huawei.codecraft.Main;
+
+import java.util.HashSet;
 import java.util.Objects;
 
 /**
@@ -13,15 +16,14 @@ import java.util.Objects;
  */
 public class RadarPoint {
     public double x,y;
+    private final Point p;
     public int isFull; //0表示空载 1表示载物
-
-    public RadarPoint() {
-    }
 
     public RadarPoint(double x, double y, int isFull) {
         this.x = x;
         this.y = y;
         this.isFull = isFull;
+        p = new Point(x,y);
     }
 
     public double getX() {
@@ -62,7 +64,7 @@ public class RadarPoint {
     }
 
     public Point getPoint(){
-        return new Point(x,y);
+        return p;
     }
 
     @Override
@@ -72,5 +74,38 @@ public class RadarPoint {
                 y +
                 "), full=" + isFull +
                 '}';
+    }
+
+    public boolean isCloseToMe(Point pos) {
+        // 分析敌人的运动轨迹，是否靠近我
+
+        LimitedQueue<HashSet<RadarPoint>>.Node currentNode = Main.enemysQueue.last;
+//        Main.enemysQueue.reversePrint();
+        Point last = getPoint();    // 获取上一个点
+        while (currentNode != null) {
+            HashSet<RadarPoint> set = currentNode.value;
+            // 逆序遍历所有
+            Point cur = getCloestPoint(set,last);
+
+            if (cur == null) return false;  // 没找到上一帧数据，应该是刚出现
+            if (cur.calcDistance(pos) < last.calcDistance(pos)){
+                return false;
+            }
+            last = cur;
+            currentNode = currentNode.prev;
+        }
+
+        return true;    // 每一帧都在靠近，返回true
+    }
+
+    private Point getCloestPoint(HashSet<RadarPoint> set, Point last) {
+        // 返回当前距离last最近的点
+        for (RadarPoint radarPoint : set) {
+            Point tp = radarPoint.getPoint();
+            if (tp.calcDistance(last) < 0.3) {
+                return tp;
+            }
+        }
+        return null;
     }
 }

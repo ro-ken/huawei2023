@@ -1,5 +1,7 @@
 package com.huawei.codecraft.util;
 
+import com.huawei.codecraft.core.Robot;
+
 /**
  * @Author: ro_kin
  * @Data:2023/3/17 21:52
@@ -107,6 +109,7 @@ public Point getPointDis2src(double dis) {
         Point p = Point.fixPoint2Center(x,y);
         return p;
     }
+    
 
     public Point getNearBumpWall() {
         // 查看此条线段最近的墙体

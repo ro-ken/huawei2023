@@ -58,7 +58,7 @@ public class Main {
     public static final HashSet<Station> blockStations = new HashSet<>();   // 附近有敌方机器人的工作站
     public static ArrayList<WaterFlow> waterFlows = new ArrayList<>();  // 生产流水线
     public static int[] clockCoef = new int[]{0,0,0,0}; // 碰撞旋转系数
-    public static Queue<HashSet<RadarPoint>> enemysQueue = new LimitedQueue<>(10);    // 保存前10帧敌方机器人的位置
+    public static LimitedQueue<HashSet<RadarPoint>> enemysQueue = new LimitedQueue<>(5);    // 保存前10帧敌方机器人的位置
     public static HashSet<RadarPoint> curEnemys = new HashSet<>();    // 记录当前帧机器人的位置
 
     public static void main(String[] args) throws FileNotFoundException {
@@ -259,23 +259,23 @@ public class Main {
         // 是否要考虑不同区域
         if (Main.mapSeq == 1){
             if (isBlue){
-                Attack.addRobot(robots[0],Main.stationsRed[12].pos);
-//                Attack.addRobot(robots[0]);
+//                Attack.addRobot(robots[0],Main.stationsRed[12].pos);
+                Attack.addRobot(robots[0]);
             }else {
-                Attack.addRobot(robots[0],Main.stationsBlue[12].pos);
-//                Attack.addRobot(robots[0]);
+//                Attack.addRobot(robots[0],Main.stationsBlue[12].pos);
+                Attack.addRobot(robots[0]);
             }
         }
         
         if (Main.mapSeq == 3){
             if (Main.isBlue){
-                Attack.addRobot(robots[0],Main.stationsRed[8].pos);
-//                Attack.addRobot(robots[0]);
+//                Attack.addRobot(robots[0],Main.stationsRed[8].pos);
+                Attack.addRobot(robots[0]);
             }else {
-//                Attack.addRobot(robots[0]);
-//                Attack.addRobot(robots[1]);
-                Attack.addRobot(robots[0],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+2));
-                Attack.addRobot(robots[1],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+1));
+                Attack.addRobot(robots[0]);
+                Attack.addRobot(robots[1],1);
+//                Attack.addRobot(robots[0],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+2));
+//                Attack.addRobot(robots[1],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+1));
             }
         }
     }

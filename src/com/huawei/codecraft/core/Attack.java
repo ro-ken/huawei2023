@@ -2,10 +2,7 @@ package com.huawei.codecraft.core;
 
 import java.util.*;
 import com.huawei.codecraft.Main;
-import com.huawei.codecraft.util.AttackType;
-import com.huawei.codecraft.util.Path;
-import com.huawei.codecraft.util.Point;
-import com.huawei.codecraft.util.Goods;
+import com.huawei.codecraft.util.*;
 import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Mapinfo;
 import com.huawei.codecraft.way.Pos;
@@ -13,7 +10,11 @@ import com.huawei.codecraft.way.Pos;
 // 攻击类
 public class Attack {
     // 下面是全局静态属性
-    private static double attackRange = 2.5;               // 设定攻击距离，机器人在这个点攻击多远的距离
+    public static double attackRange = 2.5;               // 设定攻击距离，机器人在这个点攻击多远的距离
+    public static double smallRange = 3;               // 小圈无差别撞击
+    public static double bigRange = 6;               // 大圈撞击迎面的敌人
+    public static double maxFarToTarget = 10;               // 最多跟踪多远的距离，超过就回到目标点,图4可调大
+    public static int maxWaitFps = 50 * 5;     // 最多等多久，就换地方
     static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
     static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
     public static Point[] attackPoint = new Point[4];   // 记录需要攻击的点,最多 4 个
@@ -23,6 +24,10 @@ public class Attack {
     //下面是对象属性
     public Point target;        // 目标点
     public AttackType attackType;       // 攻击类型
+    public AttackStatus status = AttackStatus.ROAD;     // 机器人的状态
+    public int arriveFrame;     // 到达这个点的 帧序号
+
+
     public Path paths;
     public Robot robot;
 
@@ -42,9 +47,12 @@ public class Attack {
     public static void addRobot(Robot robot){
         addRobot(robot,attackPoint[0]);     // 默认进攻第一个点，后期可调整
     }
+    public static void addRobot(Robot robot,int i){
+        addRobot(robot,attackPoint[i]);     // 默认进攻第一个点，后期可调整
+    }
 
     public static void addRobot(Robot robot, Point target){
-        addRobot(robot,target,AttackType.BLOCK);    // 默认调用阻塞模式
+        addRobot(robot,target,AttackType.RUSH);    // 默认调用通用攻击模式
     }
 
     public static void addRobot(Robot robot, Point target,AttackType tp){
@@ -74,11 +82,43 @@ public class Attack {
         }
     }
 
+    public Point getAttackEnemy() {
+        // 返回一个 最需要攻击的机器人位置，如果没有，返回null
+        // 有两个圈，只要进了小圈就撞击
+        // 如果介于小圈和大圈之间，那么只有对面迎面走来是才撞击
+        // 敌人范围在大圈以外，忽视
+        if (robot.enemy.size() == 0){
+            return null;
+        }
+
+        double minDis = 10;
+        Point res = null;
+        for (RadarPoint radarPoint : robot.enemy) {
+            Point tp = radarPoint.getPoint();
+            double dis = robot.pos.calcDistance(tp);
+            if (dis>bigRange){
+                continue;
+            }
+            if (dis>smallRange){
+                Main.printLog("in big range");
+                if (!radarPoint.isCloseToMe(robot.pos)){
+                    continue;   // 远离我的不考虑
+                }
+            }
+            // 选择最近的点攻击
+            if (dis < minDis){
+                minDis = dis;
+                res = tp;
+            }
+        }
+        return res;
+    }
+
     public void calcRouteFromNow() {
         // 计算从自身到目的地位置的路由
 
-        ArrayList<Point> path = paths.getPath(robot.carry == 0,robot.pos);   // 第一次，计算初始化的路径
-        HashSet<Pos> pos1 = paths.getResSet(robot.carry == 0,robot.pos);
+        ArrayList<Point> path = paths.getPath(robot.carry == 0,robot.pos);   // 获取路径
+        HashSet<Pos> pos1 = paths.getResSet(robot.carry == 0,robot.pos);     // 获取结果
         path = Path.reversePath(path);
         robot.route = new Route(target,robot,path,pos1);
     }

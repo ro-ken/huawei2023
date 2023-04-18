@@ -370,7 +370,7 @@ public class Route{
     }
 
 
-    public void attackBlock() {
+    public void gotoTarget() {
         // 阻塞攻击模式，到目的地就行
 
         calcSafeLevel();    // 先计算安全级别
@@ -389,6 +389,7 @@ public class Route{
 
         Main.Forward(robot.id,printLineSpeed);
         Main.Rotate(robot.id,printTurnSpeed);
+        deletePos();  // 已过的点要删除，防止发生误判
     }
 
     private void handleUnsafeLevel3() {
@@ -469,9 +470,7 @@ public class Route{
         }else {
             // 加速撞击，把目的地设的更远一些就行
             // todo 后期加上权重逻辑，如果是7，判断是否换工作台
-            Line line = new Line(robot.pos,target);
-            Point tmp = line.getPointDis2dest(2.0);
-            gotoTmpPlace(tmp);
+            bumpTarget(target);
         }
     }
 
@@ -747,66 +746,6 @@ public class Route{
         return d1 <= d2 ? p1:p2;
     }
 
-//    //
-//    public static Point getNearBumpWall(Line line) {
-//        // 查看此条线段最近的墙体
-//        if (posIsWall(line.left)){
-//            return line.left.fixPoint2Center();
-//        }
-//        double offset = line.left.x < line.right.x ? 0.26 : -0.26;  // 刚好是下一个点
-//        double x = line.left.x;
-//
-//        int times = 0;
-//        while (Math.abs(x - line.right.x) >= 0.5){
-//            if (times > 10){
-//                return null;
-//            }else {
-//                times ++;
-//            }
-//
-//            Point wall = getWallByX(x,line);
-//            if (wall != null) return wall;
-//            x =Point.fixAxis2Center(x)+offset;
-//
-//        }
-//        return null;
-//    }
-
-//    // 找出直线在x方格内所有的最近的墙
-//    public static Point getWallByX(double x, Line line) {
-//        double offset = line.left.x < line.right.x ? 0.24 : -0.24;
-//        Point start = line.getFixPoint(x);
-//        Point end = line.getFixPoint(start.x + offset);
-//        Point wall = getWallBy2Point(start,end);
-//        return wall;
-//    }
-
-//    public static Point getWallBy2Point(Point start, Point end) {
-//        // 两个点的x都是相同的，判断夹住的point
-//        if (start.equals(end) && posIsWall(start)) return start;
-//
-//        double offset = start.y < end.y ? 0.5 : -0.5;
-//        Point tmp = new Point(start);
-//        int times = 0;
-//
-//        while (Math.abs(tmp.y - end.y)>=0.5){
-//            if (posIsWall(tmp)){
-//                return tmp;
-//            }
-//
-//            if (times > 10){
-//                return null;
-//            }else {
-//                times ++;
-//            }
-//
-//            tmp.y +=offset;
-//        }
-//        // 前面没判断结尾
-//        if (posIsWall(end)) return end;
-//        return null;
-//    }
-
     public void setTmpSafeMode2() {
         // 判断两辆车，应该让谁避让
         Robot other = willBumpRobot;
@@ -965,35 +904,25 @@ public class Route{
         // 判断自己和另一个机器人谁更弱小，谁让路
         // todo 后面可以修改
 
-//        if (posSet.contains(Astar.Point2Pos(oth.pos)) && !oth.route.posSet.contains(Astar.Point2Pos(robot.pos))){
-//            // 对方在我的路线上，我不在对方的路线上,我避让
-//          return robot;
-//        }
-
         if (oth.tmpSafeMode){
-            Main.printLog("ccc");
             return robot;   // 对方已经是避让模式，自己避让
         }
 
         if (!robot.losers.isEmpty() && oth.losers.isEmpty()){
             // 自己是winner,对方不是，自己优先级高
-            Main.printLog("eee");
             return oth;
         }
 
         if (robot.losers.isEmpty() && !oth.losers.isEmpty()){
             // 对方是winner,对方优先级高
-            Main.printLog("fff");
             return robot;
         }
 
         // 没货的避让
         if (robot.carry > 0 && oth.carry == 0){
-            Main.printLog("ggg");
             return oth;
         }
         else if (robot.carry == 0 && oth.carry > 0) {
-            Main.printLog("hhh");
             return robot;
         }
         else if (robot.carry == 0 && oth.carry == 0) { // 都没货，选择路宽或者路劲的避让
@@ -1257,5 +1186,20 @@ public class Route{
             }
         }
 
+    }
+
+    public void bumpTarget(Point tar) {
+        bumpTarget(tar,2);
+    }
+    public void bumpTarget(Point tar,double dis) {
+        Line line = new Line(robot.pos,tar);
+        Point tmp = line.getPointDis2dest(dis); // 目标点设在 对方后面，这样不会减速
+        gotoTmpPlace(tmp);
+    }
+
+    public void bumpEnemy(Point tar) {
+        bumpTarget(tar);  // 直接冲向敌人
+        Main.Forward(robot.id,printLineSpeed);
+        Main.Rotate(robot.id,printTurnSpeed);
     }
 }

@@ -256,28 +256,11 @@ public class Robot {
                 boolean isEmpty = nextStation == srcStation;
                 path = lastStation.paths.getPath(isEmpty,nextStation.pos);
                 pos1 = lastStation.paths.getResSet(isEmpty,nextStation.pos);
-//                path = nextStation.paths.getPath(isEmpty,lastStation.pos);
             }
-//            Main.printLog(path);
-//            Main.printLog(pos1);
             route = new Route(nextStation.pos,this,path,pos1);
         }
     }
 
-    public void calcRouteFromNow() {
-        // 计算从自身到目的地位置的路由
-
-        if (nextStation != null){
-
-            ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);   // 第一次，计算初始化的路径
-            HashSet<Pos> pos1 = nextStation.paths.getResSet(carry == 0,pos);
-            path = Path.reversePath(path);
-
-//            Main.printLog(path);
-//            Main.printLog(pos1);
-            route = new Route(nextStation.pos,this,path,pos1);
-        }
-    }
 
     public Route calcRouteFromNowBlockRobot(HashSet<Point> robots) {
         // 计算从自身到目的地位置的路由，封住敌人位置
@@ -297,19 +280,30 @@ public class Robot {
 
     public void recoveryPath() {
 
+        if (attack != null){
+            // 如果是攻击模式发生阻塞
+            attack.calcRouteFromNow();  // 重新计算路线
+            Main.printLog(pos + ":attack robot recovery path");
+            return;
+        }
         clearWinner();
         // 重新寻找新路径
-        if (nextStation == null || nextStation.paths == null) return;
-        ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);
-        HashSet<Pos> pos1 = nextStation.paths.getResSet(carry==0,pos);
-        path = Path.reversePath(path);
-        route = new Route(nextStation.pos,this,path,pos1);
+        calcRouteFromNow();
         route.calcParamEveryFrame();    // 通用参数
         calcMoveEquation();     //  运动方程
-        Main.printLog(pos + ":recovery path"+path);
+        Main.printLog(pos + ":recovery path"+route.path);
     }
+    public void calcRouteFromNow() {
+        // 计算从自身到目的地位置的路由
 
+        if (nextStation == null || nextStation.paths == null) return;
+        ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);   // 第一次，计算初始化的路径
+        HashSet<Pos> pos1 = nextStation.paths.getResSet(carry == 0,pos);
+        path = Path.reversePath(path);
 
+        route = new Route(nextStation.pos,this,path,pos1);
+
+    }
 
     public void calcTmpRoute(Point sp, Robot winRobot) {
 
@@ -586,7 +580,7 @@ public class Robot {
 
         Main.printLog("Occupied" + nextStation);
 
-        if (carry == 0){
+        if (nextStation == srcStation){
             // 若是源被占
             // 先释放资源
             releaseSrc();
@@ -598,7 +592,8 @@ public class Robot {
             Station dest = null;
             int minFps = 10000000;
             for (Station st : zone.stationsMap.get(nextStation.type)) {
-                if (st.place == StationStatus.EMPTY && st.canBuy(carry)){
+                if (st.place == StationStatus.EMPTY && st.canBuy(srcStation.type)){
+                    // todo
                     int fps = st.pathToFps(false,pos);  // 计算到自己的距离
                     if(fps < minFps){
                         minFps = fps;
@@ -610,7 +605,7 @@ public class Robot {
             if (dest != null){
                 changeNextStation(dest);
             }else {
-                // 没有其他源了，如果可以撞，直接撞
+                // todo 没有其他源了，如果可以撞，直接撞
                 // 考虑是否丢弃，会亏钱
                 Main.printLog("no available next station");
             }
@@ -713,7 +708,6 @@ public class Robot {
             zone.scheduler(this);
         }else {
             waterFlow.scheduler(this);
-//            taskIsOK();
         }
 
     }
@@ -960,11 +954,42 @@ public class Robot {
     public void attack(){
         if (attack.attackType == AttackType.BLOCK){
             // 直接去目标点就可以了
-            route.attackBlock();
-            route.deletePos();  // 以走过的点要删除，防止发生误判
-        }else {
-            // todo 其他攻击类型策略
+            route.gotoTarget();    // 这里要判断与机器人的碰撞情况
+            return;
+        }
 
+        // 判断周围有无敌人，获取需要攻击的敌人位置
+        Point tar = attack.getAttackEnemy();
+        if (tar == null){
+            // 没有敌人，去到目标点
+            if (attack.status == AttackStatus.ATTACK){
+                // 上一次是攻击模式，可能走了很远了，需要重新寻路
+                attack.calcRouteFromNow();
+                // 切换状态
+                attack.status = AttackStatus.ROAD;
+                route.calcParamEveryFrame();    // 通用参数
+                calcMoveEquation();     //  运动方程
+            }
+            if (attack.status == AttackStatus.ROAD){
+                // 如果是在路上，要判断是否到达
+                if (pos.calcDistance(attack.target)<0.3){
+                    // 切换为等待姿态
+                    attack.status = AttackStatus.WAIT;
+                    attack.arriveFrame = Main.frameID;
+                }else {
+                    // 没有达到，就继续前进
+                    route.gotoTarget();
+                }
+            }
+            if (attack.status == AttackStatus.WAIT){
+                route.gotoTarget();     // 等待模式，一直堵在目标点
+            }
+        }else {
+            Main.printLog("find enemy" + tar);
+            // 有敌人，攻击敌人
+            attack.status = AttackStatus.ATTACK;    // 切换为攻击模式
+
+            route.bumpEnemy(tar);
         }
     }
 
