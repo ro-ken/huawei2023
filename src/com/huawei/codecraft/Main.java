@@ -266,8 +266,8 @@ public class Main {
 //                Attack.addRobot(robots[0]);
             }
         }
-
-        if (Main.mapSeq == 2){
+        
+        if (Main.mapSeq == 3){
             if (Main.isBlue){
                 Attack.addRobot(robots[0],Main.stationsRed[8].pos);
 //                Attack.addRobot(robots[0]);
@@ -282,16 +282,13 @@ public class Main {
 
     private static void initMapSeq() {
 
-        if (Main.stationsBlue[0] == null || Main.stationsRed[0] == null) {
-            mapSeq = 3;
-            return;
-        }
-
+        mapSeq = processZoneInfo();
         if (Main.stationsBlue[0].type == 3){
             mapSeq = 1;
         } else if (Main.stationsBlue[0].type == 1) {
-            mapSeq = 2;
+            mapSeq = 3;
         }
+        
     }
 
     private static void initZone2() {
@@ -487,6 +484,23 @@ public class Main {
 //        printLog(waterFlows);
     }
 
+    // 根据得到的 ZoneInfo 判断地图和工作台 
+    private static int processZoneInfo() {
+        for (Map.Entry<Integer, Zone> entry : zoneMap.entrySet()) {
+            Zone zone = entry.getValue();
+
+            // 蓝色方，并且对方的工作台数量不为0
+            if ((isBlue && zone.robots.size() == 1 && zone.stationsMap.size() != 0) || (!isBlue && zone.robots.size() == 1) && zone.stationsMap.size() == 0) {
+                Attack.addRobot(zone.robots.get(0));
+                return 2;
+            }
+            // 如果连通的机器人数量为4，而且工作台数量为0
+            if ((isBlue && zone.robots.size() == 4 && zone.stationsMap.size() == 0) || (!isBlue &&  zone.robots.size() == 4 && zone.fighterStationsMap.size() == 0)) {
+                return 4;
+            }
+        }
+        return -1;
+    }
 
     private static void readUtilOK() {
         String line;
