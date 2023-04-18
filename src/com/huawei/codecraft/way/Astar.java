@@ -27,7 +27,7 @@ public class Astar {
     public Astar(int[][] mapinfo, Point startPoint, Point endPoint) {
         this.startPosition = Point2Pos(startPoint);
         this.targetPosition = Point2Pos(endPoint);
-        board = new Board(mapinfo, targetPosition);
+        board = new Board(mapinfo, startPosition, targetPosition);
         openList = new ArrayList<Pos>();
         // openList = new PriorityQueue<>((pos1, pos2)->Integer.compare(board.getMsg(pos1).getF(), board.getMsg(pos2).getF()));
         resultList = new ArrayList<Pos>();

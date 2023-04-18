@@ -4,18 +4,21 @@ package com.huawei.codecraft.way;
 public class Board {
     public static int row = 0;
     public static int col = 0;
+    private static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
+    private static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
     public Msg[][] maps;                    // 记录此次寻路的地图，使用空间换取时间策略
     public Pos targetPostion;               // 终点位置的坐标，开始将 point 转为 pos传入
     public static int StraightCost = 10;    // 直边代价
     public static int HypotenuseCost = 14;  // 斜边代价
 
 
-    public Board(int[][] mapInfo, Pos targetPostion) {
+    public Board(int[][] mapInfo, Pos startPostion, Pos targetPostion) {
         row = mapInfo.length;
         col = mapInfo[0].length;
         maps = new Msg[row][col];
         this.targetPostion = targetPostion;
         initMsg(mapInfo);
+        openStartPos(startPostion);
         maps[targetPostion.x][targetPostion.y].isOK = 0; // 终点设置为可探索，防止出现错误
     }
 
@@ -35,6 +38,15 @@ public class Board {
     // 获取每个点的信息
     public Msg getMsg(Pos posotion) {
         return maps[posotion.x][posotion.y];
+    }
+    
+    // 将起点周围一圈打开
+    private void openStartPos(Pos startPostion) {
+        for (int i = 0; i < dirX.length; i++) {
+            int x = startPostion.x + dirX[i];
+            int y = startPostion.y + dirY[i];
+            maps[x][y].isOK = 0; // 打开起点
+        }
     }
 
     public void printBoard() {

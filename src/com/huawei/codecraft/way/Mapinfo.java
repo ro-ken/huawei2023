@@ -141,10 +141,10 @@ public class Mapinfo {
             if (isInMap(x, y + 2) && mapinfo[x][y + 2] == -2) {
                 blockPos(x, y + 1);
             }
-            else if (isInMap(x - 1, y + 2) && mapinfo[x - 1][y + 2] == -2) {
+            else if (isInMap(x - 1, y + 2) && mapinfo[x - 1][y + 2] == -2 && mapinfo[x - 1][y + 1] != -2) {
                 blockPos(x, y + 1);
             }
-            else if (isInMap(x + 1, y + 2) && mapinfo[x + 1][y + 2] == -2) {
+            else if (isInMap(x + 1, y + 2) && mapinfo[x + 1][y + 2] == -2 && mapinfo[x + 1][y + 1] != -2) {
                 blockPos(x, y + 1);
             }
         }
@@ -153,10 +153,10 @@ public class Mapinfo {
             if (isInMap(x + 2, y) && mapinfo[x + 2][y] == -2) {
                 blockPos(x + 1, y);
             }
-            else if (isInMap(x + 2, y - 1) && mapinfo[x + 2][y - 1] == -2) {
+            else if (isInMap(x + 2, y - 1) && mapinfo[x + 2][y - 1] == -2 && mapinfo[x + 1][y - 1] != -2) {
                 blockPos(x + 1, y);
             }
-            else if (isInMap(x + 2, y + 1) && mapinfo[x + 2][y + 1] == -2) {
+            else if (isInMap(x + 2, y + 1) && mapinfo[x + 2][y + 1] == -2 && mapinfo[x + 1][y + 1] != -2) {
                 blockPos(x + 1, y);
             }
         }
@@ -310,62 +310,62 @@ public class Mapinfo {
         }
     }
 
-    public void printMapFull() {
+    public static void printMapOriginal() {
         for (int i = 0; i < row; i++) {
             String data = new String();
             for (int j = 0; j < col; j++) {
-                if (mapInfoFull[i][j] == 0) {
-                    data += " ";
+                if (mapInfoOriginal[i][j] == -2) {
+                    data += "#";
                 }
                 else {
-                    data += String.valueOf(mapInfoFull[i][j]);
+                    data += '.';
                 }
             }
-            System.out.println(data);
+            Main.printLog(data);
         }
     }
 
-        // 给station 和 robot 划分区域
-        public void setZone(Map<Integer, Zone> zoneMap){
-            getConnectedArea(Main.robotPos);
-            for (int zoneId : robotId.keySet()) {
-                Zone zone = null;
-                if (!zoneMap.containsKey(zoneId)){
-                    // 没有先创建
-                    zone = new Zone(zoneId);
-                    zoneMap.put(zoneId,zone);
-                }else {
-                    zone = zoneMap.get(zoneId);
-                }
-                // 分别把，机器人和station 加到zone里面去
-                for (int rid : robotId.get(zoneId)) {
-                    zone.robots.add(Main.robots[rid]);
-                    Main.robots[rid].zone = zone;
-                }
-    
-                for (int sid : stationId.get(zoneId)) {
-                    Station st = Main.stations[sid];
-                    if (!zone.stationsMap.containsKey(st.type)){
-                        ArrayList<Station> list = new ArrayList<>();
-                        list.add(st);
-                        zone.stationsMap.put(st.type,list);
-                    }else {
-                        zone.stationsMap.get(st.type).add(st);
-                    }
-                    st.zone = zone;
-                }
+    // 给station 和 robot 划分区域
+    public void setZone(Map<Integer, Zone> zoneMap){
+        getConnectedArea(Main.robotPos);
+        for (int zoneId : robotId.keySet()) {
+            Zone zone = null;
+            if (!zoneMap.containsKey(zoneId)){
+                // 没有先创建
+                zone = new Zone(zoneId);
+                zoneMap.put(zoneId,zone);
+            }else {
+                zone = zoneMap.get(zoneId);
+            }
+            // 分别把，机器人和station 加到zone里面去
+            for (int rid : robotId.get(zoneId)) {
+                zone.robots.add(Main.robots[rid]);
+                Main.robots[rid].zone = zone;
+            }
 
-                for (int fSid : fighterStationId.get(zoneId)) {
-                    Station st = Main.fighterStations[fSid - Main.fighterStationNumStart];
-                    if (!zone.fighterStationsMap.containsKey(st.type)){
-                        ArrayList<Station> list = new ArrayList<>();
-                        list.add(st);
-                        zone.fighterStationsMap.put(st.type,list);
-                    }else {
-                        zone.fighterStationsMap.get(st.type).add(st);
-                    }
-                    st.zone = zone;
+            for (int sid : stationId.get(zoneId)) {
+                Station st = Main.stations[sid];
+                if (!zone.stationsMap.containsKey(st.type)){
+                    ArrayList<Station> list = new ArrayList<>();
+                    list.add(st);
+                    zone.stationsMap.put(st.type,list);
+                }else {
+                    zone.stationsMap.get(st.type).add(st);
                 }
+                st.zone = zone;
+            }
+
+            for (int fSid : fighterStationId.get(zoneId)) {
+                Station st = Main.fighterStations[fSid - Main.fighterStationNumStart];
+                if (!zone.fighterStationsMap.containsKey(st.type)){
+                    ArrayList<Station> list = new ArrayList<>();
+                    list.add(st);
+                    zone.fighterStationsMap.put(st.type,list);
+                }else {
+                    zone.fighterStationsMap.get(st.type).add(st);
+                }
+                st.zone = zone;
             }
         }
+    }
 }
