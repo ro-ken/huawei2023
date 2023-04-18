@@ -254,43 +254,92 @@ public class Main {
     private static void initAttack() {
         Attack.init();      // 初始化攻击类
 
-        // 初始化机器人
-        // todo 判断机器人个数，应该如何分配
-        // 是否要考虑不同区域
-        if (Main.mapSeq == 1){
+        if (mapSeq == 0){
+            initMapSeq0();  // 通用攻击策略
+        }
+
+        if (mapSeq == 4){
+            initMapSeq4();
+        }
+
+        if (mapSeq == 2){
+            initMapSeq2();
+        }
+
+        if (mapSeq == 1){
             if (isBlue){
-//                Attack.addRobot(robots[0],Main.stationsRed[12].pos);
                 Attack.addRobot(robots[0]);
             }else {
-//                Attack.addRobot(robots[0],Main.stationsBlue[12].pos);
                 Attack.addRobot(robots[0]);
             }
         }
         
-        if (Main.mapSeq == 3){
+        if (mapSeq == 3){
             if (Main.isBlue){
-//                Attack.addRobot(robots[0],Main.stationsRed[8].pos);
                 Attack.addRobot(robots[0]);
             }else {
                 Attack.addRobot(robots[0]);
                 Attack.addRobot(robots[1],1);
-//                Attack.addRobot(robots[2],2);
-//                Attack.addRobot(robots[3],3);
-//                Attack.addRobot(robots[0],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+2));
-//                Attack.addRobot(robots[1],new Point(Main.stationsBlue[6].pos.x,Main.stationsBlue[6].pos.y+1));
             }
+        }
+    }
+
+    private static void initMapSeq0() {
+        if (isBlue){
+            Attack.addRobot(robots[0]);
+        }else {
+            Attack.addRobot(robots[0]);
+        }
+    }
+
+    private static void initMapSeq2() {
+        // 没有工作台的机器人负责干扰
+        Robot robot = null;
+        for (Zone zone : zoneMap.values()) {
+            if (zone.robots.size() == 1){
+                // 获取唯一的一个机器人
+                robot = zone.robots.get(0);
+                break;
+            }
+        }
+        if (robot != null){
+            if (isBlue){
+                Attack.addRobot(robot,0);
+            }else {
+                Attack.addRobot(robot,0);
+            }
+        }
+    }
+
+    private static void initMapSeq4() {
+        if (isBlue){
+            // 蓝方负责干扰
+            Attack.addRobot(robots[0],0);
+            Attack.addRobot(robots[1],1);
+            Attack.addRobot(robots[2],2);
+            Attack.addRobot(robots[3],3);
+
+        }else {
+            // 红方负责送货，不干扰
         }
     }
 
     private static void initMapSeq() {
 
-        mapSeq = processZoneInfo();
-        if (Main.stationsBlue[0].type == 3){
-            mapSeq = 1;
-        } else if (Main.stationsBlue[0].type == 1) {
-            mapSeq = 3;
+        if (fighterStationNum == 0 || stationNum == 0){
+            mapSeq = 4;     // 蓝方无工作台
+        }else if (zoneMap.size()>=2){
+            mapSeq = 2;      // 两个区域是2号
+        }else {
+            if (Main.stationsBlue[0] != null){
+                if (Main.stationsBlue[0].type == 3){
+                    mapSeq = 1;
+                } else if (Main.stationsBlue[0].type == 1) {
+                    mapSeq = 3;
+                }
+            }
         }
-        
+//        mapSeq = processZoneInfo();
     }
 
     private static void initZone2() {
