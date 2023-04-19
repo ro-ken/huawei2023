@@ -565,6 +565,8 @@ public class Robot {
             // 若是源被占
             // 先释放资源
             releaseSrc();
+            releaseDest();
+            destStation.bookNum ++; // 前面释放多减了一个
             lastStation = nextStation = srcStation = destStation = null;
 //            zone.scheduler(this);     //todo 可尝试放开
             // 解除关系，等待调度
@@ -603,6 +605,10 @@ public class Robot {
         if (destStation.type <= 7)  {   // 8,9 不需要预定
             destStation.bookRow[srcStation.type] = true;
             destStation.bookRawNum[srcStation.type] ++;
+
+            if (destStation.type == 6 && srcStation.type == 3){
+                Main.printLog("change book 6 : 3 num" + destStation.bookRawNum[srcStation.type] + " flag="+destStation.bookRow[srcStation.type]);
+            }
         }
         destStation.bookNum++;       //解除预定
         calcRouteFromNow();
@@ -711,6 +717,9 @@ public class Robot {
         if (destStation.type <= 7)  {   // 8,9 不需要预定
             destStation.bookRow[srcStation.type] = true;
             destStation.bookRawNum[srcStation.type] ++;
+            if (destStation.type == 6 && srcStation.type == 3){
+                Main.printLog("norm book 6 : 3 num" + destStation.bookRawNum[srcStation.type] + " flag="+destStation.bookRow[srcStation.type]);
+            }
         }
 
         src.bookNum ++;
@@ -1089,6 +1098,10 @@ public class Robot {
         if (destStation.bookRawNum[srcStation.type] == 0){
             // 没人占用在释放锁
             destStation.bookRow[srcStation.type] = false;   //解除预定
+        }
+        if (destStation.type == 6 && srcStation.type == 3){
+            Main.printLog("release 6 : 3 num" + destStation.bookRawNum[srcStation.type] + " flag="+destStation.bookRow[srcStation.type]);
+
         }
 
         destStation.bookNum--;       //解除预定

@@ -308,17 +308,6 @@ public class Zone {
         // 若只有一个，有多个最小值，按照距离远的搬运，防止出现等待的情况
         // 若有2个以上，价值高的先搬运
         if (min == 1){
-//            double max = 0;
-//            int maxId = 0;
-//            for (int tp : list) {
-//
-//                double fps = Objects.requireNonNull(target.canBuyStationsMap.get(tp).peek()).value;
-//                if (fps > max){
-//                    max = fps;
-//                    maxId = tp;
-//                }
-//            }
-//            return maxId;
 
             if (list.size() == 3){
                 return 6;
