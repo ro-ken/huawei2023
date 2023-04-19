@@ -1291,6 +1291,14 @@ public class Route{
     public void handleBlockByEnemy() {
         // 处理被敌人堵住的情况
         // 周围有敌人，考虑随机摇晃，把自己晃出去
+        double minDis = 2;
+        Point enemy = null;
+        for (RadarPoint curEnemy : robot.enemy) {
+            //
+//            robot.pos.calcDistance(curEnemy)
+
+        }
+
 
     }
 }

@@ -746,6 +746,10 @@ public class Robot {
         // 阻塞检测，在某个点阻塞了多少帧，重新设置路径
         // todo 要加上和敌方机器人相遇阻塞的情况
 
+//        if (blockEnemy != null){
+//            return false;
+//        }
+
         if (tmpSafeMode && inSafePlace){
             blockFps ++;
             if (blockFps > maxWaitBlockFps){
@@ -807,7 +811,7 @@ public class Robot {
             }
         }else {
             // 周围没有自己军队，也没有敌人，被墙困住
-            blockByWall = true;
+            recoveryPath();
         }
 
     }
