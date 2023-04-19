@@ -274,12 +274,11 @@ public class Main {
             }
         }
         
-        if (mapSeq == 3){
+        if (mapSeq == 6){
             if (Main.isBlue){
                 Attack.addRobot(robots[0]);
             }else {
                 Attack.addRobot(robots[0]);
-                Attack.addRobot(robots[1],1);
             }
         }
     }
@@ -360,6 +359,7 @@ public class Main {
         Mapinfo.init(wallMap);
         mapinfo = new Mapinfo();
         mapinfo.setZone(zoneMap);
+        Mapinfo.printMapOriginal();
     }
 
     private static void initStationMap(){

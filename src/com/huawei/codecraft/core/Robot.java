@@ -84,7 +84,7 @@ public class Robot {
     public static int maxWaitBlockFps = 50 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
 
     public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
-    public static double detectWallWideCoef = 0.8 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
+    public static double detectWallWideCoef = 1.0;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
 
     public static final double pi  = 3.1415926;
     public static final double emptyRadius = 0.45;
