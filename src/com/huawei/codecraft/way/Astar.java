@@ -376,23 +376,8 @@ public class Astar {
             openList.remove(curPos);
             // 上下左右四个方向探索
             // 开始从上下左右依次加入节点
-            if (carry) {
-                if (getFullGrid(curPos, pos1)) {
-                    return Pos2Point(curPos);
-                }
-            }
-            else {
-                int flag = getEmptyGrid(curPos, pos1);
-                if (flag >= 0) {
-                    Point p = Pos2Point(curPos);
-                    switch (flag) {
-                        case 0 : p.x -= 0.25; p.y += 0.25;break;
-                        case 1 : p.x += 0.25; p.y += 0.25;break;
-                        case 2 : p.x -= 0.25; p.y -= 0.25;break;
-                        case 3 : p.x += 0.25; p.y -= 0.25;break;
-                    }
-                    return p;
-                }
+            if (getFullGrid(curPos, pos1)) {
+                return Pos2Point(curPos);
             }
             for (int i = 0; i < dirX.length / 2; i++) {
                 int x = curPos.x + dirX[i];

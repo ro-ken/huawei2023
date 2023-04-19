@@ -12,13 +12,12 @@ public class Board {
     public static int HypotenuseCost = 14;  // 斜边代价
 
 
-    public Board(int[][] mapInfo, Pos startPostion, Pos targetPostion) {
+    public Board(int[][] mapInfo, Pos targetPostion) {
         row = mapInfo.length;
         col = mapInfo[0].length;
         maps = new Msg[row][col];
         this.targetPostion = targetPostion;
         initMsg(mapInfo);
-        openStartPos(startPostion);
         maps[targetPostion.x][targetPostion.y].isOK = 0; // 终点设置为可探索，防止出现错误
     }
 
