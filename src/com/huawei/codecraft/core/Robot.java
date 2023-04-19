@@ -816,6 +816,8 @@ public class Robot {
 
     }
 
+
+
     public Point selectTmpSafePoint(Point dest, HashSet<Pos> posSet, Point midPoint) {
 //        Main.printLog(midPoint);
         Point sp = Astar.getSafePoint2(carry == 0, pos, dest, posSet,midPoint);
