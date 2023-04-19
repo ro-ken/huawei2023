@@ -343,7 +343,7 @@ public class Main {
         else {
             mapSeq = 1;
         }
-//        mapSeq = processZoneInfo();
+
         Main.printLog("mapSeq:" + mapSeq);
 
     }
