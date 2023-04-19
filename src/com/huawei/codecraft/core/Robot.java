@@ -15,7 +15,7 @@ import java.util.Random;
  * @Description: TODO
  */
 public class Robot {
-//    public static final double angleSpeedOffset = 0.1 ; //(rad)最大误差 0.003
+    //    public static final double angleSpeedOffset = 0.1 ; //(rad)最大误差 0.003
     public static double emptyA;     //加速度,19.6487587,刹车距离 = 36/2a = 0.916, 刹车时间 = 6/a = 0.30536s  fps = 15.26
     public static double fullA;     //加速度,14.164733,刹车距离 = 36/2a = 1.27,刹车时间 = 6/a = 0.4236     fps =  21.18
 
@@ -72,7 +72,7 @@ public class Robot {
     public int lastDisFps = 0; // 越来越远 经过了几帧
 
     public double blockFps = 0;    // 目前阻塞的帧数
-    
+
     //下面参数可调
     public static double minDis = 0.1; // 判定离临时点多近算到达
     public static int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
@@ -84,7 +84,7 @@ public class Robot {
     public static int maxWaitBlockFps = 50 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
 
     public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
-    public static double detectWallWideCoef = 1.0;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
+    public static double detectWallWideCoef = 1.0 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
 
     public static final double pi  = 3.1415926;
     public static final double emptyRadius = 0.45;
@@ -183,7 +183,7 @@ public class Robot {
         }
         return res;
     }
-    
+
     // 计算最快到达需要多久
     public int calcFpsToPlace(double dis) {
         double time = 0;
@@ -392,8 +392,8 @@ public class Robot {
         return carry > 0? fullMinAngle:emptyMinAngle;
     }
 
-     // 通过当前速度减速到0 的最小距离
-     public double getMinDistanceByCurSpeed() {
+    // 通过当前速度减速到0 的最小距离
+    public double getMinDistanceByCurSpeed() {
         double a = getAcceleration();
         double v2 = Math.pow(lineVx,2) + Math.pow(lineVy,2);
         double x = v2/(2*a);
@@ -492,7 +492,11 @@ public class Robot {
         if (blockEnemy!=null){
             // 被其他机器人堵死了，要逃离
             Main.printLog("blocked ");
-            route.handleBlockByEnemy();
+            boolean flee = route.handleBlockByEnemy();
+            if (!flee){
+                // 没有逃离，继续，逃离了正常走
+                return;
+            }
         }
 
         if (avoidBumpMode){
@@ -694,7 +698,7 @@ public class Robot {
         }
 
     }
-    
+
     public void setSrcDest(Station src, Station dest) {
         if (src == null || dest == null) return;
 

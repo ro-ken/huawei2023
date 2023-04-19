@@ -8,7 +8,6 @@ import com.huawei.codecraft.way.Pos;
 import java.util.ArrayList;
 import java.util.HashSet;
 
-import static com.huawei.codecraft.core.Robot.minDis;
 import static com.huawei.codecraft.core.Robot.pi;
 
 // 运动过程描述
@@ -37,6 +36,8 @@ public class Route{
     double stopMinDistance;
     double stopMinAngleDistance;
     public int birthFps; // 从哪一帧开始创建
+    public Point fleeVec;    // 逃离的方向
+    public int fleepFps;    // 在这个方向走了多久
 
     public static double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
     public static double verticalSafeDistanceCoef = 1.2;   // 半径乘子，垂直安全系数
@@ -60,6 +61,7 @@ public class Route{
     public static final double predictWillBumpMinDis = 10;    // 预测是否会发生碰撞的距离，不用改
     public static int minPosNum = 12;    // 预测是否会发生碰撞的点的个数，一个点0.5m左右 todo 重要参数
     public static int wideDis = 5;   //  *0.5       // 路宽度检测距离，超过这个宽度才进行避让
+
     ArrayList<Integer> unsafeRobotIds;
     Robot willBumpRobot;
     public int unsafeLevel;     //当前不安全级别  (1-3)
@@ -440,7 +442,7 @@ public class Route{
                 // todo 可对7 单独考虑
                 if (minDis < 1.5){
                     // 两个机器人靠的很近，需要远离
-                    fleeEnemy(closestRp);
+                    fleeEnemy(closestRp.getPoint());
                     return;
                 }
 
@@ -453,7 +455,7 @@ public class Route{
         if (!Main.isBlue){
             if (minDis < 1.5){
                 // 两个机器人靠的很近，需要远离
-                fleeEnemy(closestRp);
+                fleeEnemy(closestRp.getPoint());
                 return;
             }
         }
@@ -511,9 +513,9 @@ public class Route{
         }
     }
 
-    private void fleeEnemy(RadarPoint rp) {
+    private void fleeEnemy(Point point) {
         // 离对方太近，逃离
-        Point point = rp.getPoint();
+//        Point point = rp.getPoint();
         Point vec = robot.pos.calcVector(point);
         Line line = new Line(robot.pos,next);
         Point[] points = Point.getPoints(vec, robot.pos, 1.5);
@@ -528,7 +530,7 @@ public class Route{
         boolean wall0 = points[0].nearWall2();
         boolean wall1 = points[1].nearWall2();
 
-        Main.printLog("handle enemy:" + rp);
+        Main.printLog("handle enemy:" + point);
         if (!wall0){
             tp = points[0];
         }else if (!wall1){
@@ -542,6 +544,62 @@ public class Route{
         Main.printLog("tp:" + tp + "tp2:" + tp);
         bumpTarget(tp);
 
+    }
+
+    private void fleeBlockEnemy(Point point) {
+        // 被对方卡死，逃离
+
+        Point vec = robot.pos.calcVector(point);
+        Point[] vecs = Point.calc2vec(vec, pi / 2.2);
+
+        Point tarVec = vecs[0]; // 要传动的方向
+        ArrayList<Point> walls = robot.pos.getNearWall();       // 得到机器人靠近的墙体，最多2个
+        Main.printLog("walls" + walls);
+
+        if (fleeVec == null || fleepFps > 8){
+            if (walls.size() == 0){
+                fleeEnemy(point);   // 周围没有墙
+                return;
+            }else if (walls.size() == 1){
+                Point wall = walls.get(0);
+                Point wall2posVec = wall.calcVector(robot.pos);
+                double ang0 = wall2posVec.calcDeltaAngle(vecs[0]);
+                double ang1 = wall2posVec.calcDeltaAngle(vecs[1]);
+                // 与墙向量夹角小的走
+                if (ang1 < ang0){
+                    tarVec = vecs[1];
+                }
+            }else {
+                // 周围有很多墙
+//                if (Main.isBlue){
+//                    // 如果是蓝方，直接正面顶开
+//                    tarVec = vec;
+//                }else {
+                    // 选择在两个墙之间的向量，一定是小的那个
+                    Point wall0 = walls.get(0);
+                    Point wall1 = walls.get(1);
+                    Point wall2posVec0 = wall0.calcVector(robot.pos);
+                    Point wall2posVec1 = wall1.calcVector(robot.pos);
+                    double ang0 = vecs[0].calcDeltaAngle(wall2posVec0) + vecs[0].calcDeltaAngle(wall2posVec1);
+                    double ang1 = vecs[1].calcDeltaAngle(wall2posVec0) + vecs[1].calcDeltaAngle(wall2posVec1);
+                    if (ang1 < ang0){
+                        //
+                        tarVec = vecs[1];
+                    }
+
+            }
+            // 方向不能换台频繁
+            fleeVec = tarVec;
+            fleepFps = 0;
+        }else {
+            fleepFps ++;
+        }
+
+        Point tp = new Point(robot.pos.x + fleeVec.x,robot.pos.y + fleeVec.y);
+
+        Main.printLog("walls:" + walls);
+        Main.printLog("tp:" + tp);
+        bumpTarget(tp);
     }
 
     private void handleCloseTerminal() {
@@ -1288,18 +1346,34 @@ public class Route{
         Main.Rotate(robot.id,printTurnSpeed);
     }
 
-    public void handleBlockByEnemy() {
+    public boolean handleBlockByEnemy() {
         // 处理被敌人堵住的情况
         // 周围有敌人，考虑随机摇晃，把自己晃出去
         double minDis = 2;
         Point enemy = null;
         for (RadarPoint curEnemy : robot.enemy) {
             //
-//            robot.pos.calcDistance(curEnemy)
+            Point vec = robot.pos.calcVector(curEnemy.getPoint());
+            if (vector.calcDeltaAngle(vec) > pi/2.2){
+                continue;
+            }
 
+            double dis = robot.pos.calcDistance(curEnemy.getPoint());
+            if (dis < minDis){
+                minDis = dis;
+                enemy = curEnemy.getPoint();
+            }
         }
-
-
+        if (enemy == null){
+            robot.blockEnemy = null;
+            robot.recoveryPath();
+            return true;
+        }else {
+            fleeBlockEnemy(enemy);
+            Main.Forward(robot.id,printLineSpeed);
+            Main.Rotate(robot.id,printTurnSpeed);
+            return false;
+        }
     }
 }
 
