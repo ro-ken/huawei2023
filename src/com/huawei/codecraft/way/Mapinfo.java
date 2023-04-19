@@ -275,21 +275,26 @@ public class Mapinfo {
     public  static void initMapFull(int[][] mapinfo) {
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < col; j++) {
-                mapInfoOri[i][j] = mapinfo[i][j];   // 初始化原始的地图
-                if (mapinfo[i][j] == -2) {   // 有障碍包住点周围的 8 个方向
+                // 墙壁最开始的一圈封禁
+                if (i == 0 || j == 0 || i == row - 1 || j == col - 1) {
                     mapInfoFull[i][j] = 1;
-                    int[] rangeX = {i - 1, i + 1};
-                    int[] rangeY = {j - 1, j + 1};
-                    // 左右
-                    for (int y : rangeY) {
-                        if (isInMap(i, y) ) {
-                            mapInfoFull[i][y] = 1;
+                }
+                else {
+                    if (mapinfo[i][j] == -2) {   // 有障碍包住点周围的 8 个方向
+                        mapInfoFull[i][j] = 1;
+                        int[] rangeX = {i - 1, i + 1};
+                        int[] rangeY = {j - 1, j + 1};
+                        // 左右
+                        for (int y : rangeY) {
+                            if (isInMap(i, y) ) {
+                                mapInfoFull[i][y] = 1;
+                            }
                         }
-                    }
-                    // 上下
-                    for (int x : rangeX) {
-                        if (isInMap(x, j)) {
-                            mapInfoFull[x][j] = 1;
+                        // 上下
+                        for (int x : rangeX) {
+                            if (isInMap(x, j)) {
+                                mapInfoFull[x][j] = 1;
+                            }
                         }
                     }
                 }

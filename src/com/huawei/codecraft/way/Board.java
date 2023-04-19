@@ -18,7 +18,7 @@ public class Board {
         maps = new Msg[row][col];
         this.targetPostion = targetPostion;
         initMsg(mapInfo);
-        openStartPos(startPostion);
+        // openStartPos(startPostion);
         maps[targetPostion.x][targetPostion.y].isOK = 0; // 终点设置为可探索，防止出现错误
     }
 
