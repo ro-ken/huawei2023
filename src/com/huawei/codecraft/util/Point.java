@@ -77,9 +77,9 @@ public class Point{
         Pos pos = Astar.Point2Pos(this);
         // 周围2格有墙就算
         int[] off = new int[]{0,1,-1,2,-2};
-        for (int i = 0; i < off.length; i++) {
-            for (int j = 0; j < off.length; j++) {
-                if (posIsWall(pos.x + off[i], pos.y + off[i])){
+        for (int j : off) {
+            for (int k : off) {
+                if (posIsWall(pos.x + j, pos.y + k)) {
                     return true;
                 }
             }
@@ -87,9 +87,30 @@ public class Point{
         return false;
     }
 
+    public boolean nearWall2() {
+        Pos pos = Astar.Point2Pos(this);
+        // 周围2格有墙就算
+        int[] off = new int[]{0,1,-1};
+        for (int j : off) {
+            for (int k : off) {
+                if (posIsWall(pos.x + j, pos.y + k)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     private boolean posIsWall(int x, int y) {
         if (x <0 || y<0 || x>99 || y>99) return true;
         return Main.wallMap[x][y] == -2;
+    }
+
+    public static Point getRealWall(int x, int y) {
+        if (x <0 || y<0 || x>99 || y>99) return null;
+        if (Main.wallMap[x][y] == -2){
+            return Astar.Pos2Point(new Pos(x,y));
+        }
+        return null;
     }
 
 
@@ -265,6 +286,41 @@ public class Point{
 
         return stations;
     }
+
+    public static Point[] getPoints(Point vec,Point pos,double distance){
+
+        double x = pos.x;
+        double y = pos.y;
+        double[] direction = new double[]{vec.x,vec.y};   // 方向向量
+        double[] points = new double[4];
+        Point[] p = new Point[2];
+        // 求解过程
+        double tmp = direction[0];
+        direction[0] = -direction[1];
+        direction[1] = tmp;
+        double d = Math.sqrt(direction[0] * direction[0] + direction[1] * direction[1]); // 直线的长度
+        double dx = direction[0] / d; // 直线的单位向量在 x 方向上的分量
+        double dy = direction[1] / d; // 直线的单位向量在 y 方向上的分量
+        points[0] = x + dx * distance; // 求解 point2 在 x 方向上的坐标
+        points[1] = y + dy * distance; // 求解 point2 在 y 方向上的坐标
+
+        direction[0] = -direction[0];
+        direction[1] = -direction[1];
+        dx = direction[0] / d; // 直线的单位向量在 x 方向上的分量
+        dy = direction[1] / d; // 直线的单位向量在 y 方向上的分量
+        points[2] = x + dx * distance; // 求解 point2 在 x 方向上的坐标
+        points[3] = y + dy * distance; // 求解 point2 在 y 方向上的坐标
+        if (points[1]<points[3]){
+            p[0] = new Point(points[2],points[3]);
+            p[1] = new Point(points[0],points[1]);
+        }else{
+            p[0] = new Point(points[0],points[1]);
+            p[1] = new Point(points[2],points[3]);
+        }
+
+        return p;
+    }
+
 
     public boolean inCorner() {
         // 判断工作站是否和墙靠得很近，
