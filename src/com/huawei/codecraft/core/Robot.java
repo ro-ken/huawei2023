@@ -63,6 +63,8 @@ public class Robot {
     public boolean tmpSafeMode = false;    // 是否去临时安全点
     public boolean waitStationMode = false;    // 是否去临时安全点
     public boolean avoidBumpMode = false;   // 与其他机器人阻塞，临时避障模式
+    public RadarPoint blockEnemy = null;    // 被哪个敌人困住了
+    public boolean blockByWall = false;     // 被墙困住了
     public boolean inSafePlace = false;    // 是否到达临时点
 
     public double lastDis = 100000; // 在临时点判断是否距离另外的机器人越来越远
@@ -78,8 +80,8 @@ public class Robot {
     public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
     public static int cacheFps = 50 * 4;     // 判断是否要送最后一个任务的临界时间 > 0
     public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
-    public static int blockJudgeFps = 50 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点,
-    public static int maxWaitBlockFps = 1 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
+    public static int blockJudgeFps = 20 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点,
+    public static int maxWaitBlockFps = 50 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
 
     public static double robotInPointDis = 0.2 ;    // 判断机器人到达某个点的相隔距离
     public static double detectWallWideCoef = 0.8 ;    // 半径乘子，判断从圆心多远的地方发出的射线会经过障碍物  todo 重要参数
@@ -99,7 +101,7 @@ public class Robot {
     public Robot winner;
     public HashSet<Robot> losers = new HashSet<>(); // 要避让我的点
     public Route route;
-    public static int step = 2;//计算雷达扫描出360//step个点的坐标
+    public static int step = 1;//计算雷达扫描出360//step个点的坐标
 
     public static int srcBumpCost = 50 * 3;  // 寻找卖家，有敌方机器人计算时间要加上代价 fps
     public static int destBumpCost = 50 * 6;  // 终点是789 寻找买家，有敌方机器人计算时间要加上代价 fps
@@ -225,8 +227,10 @@ public class Robot {
 
         if (route.vector.x == 0) return;// 不能是垂直的情况，在调用此函数之前事先要做出判断
         double radius = getRadius() * detectWallWideCoef;
-        Point[] src = getPoints(pos.x,pos.y,radius);
-        Point[] dest = getPoints(route.next.x,route.next.y,radius);
+//        Point[] src = getPoints(pos.x,pos.y,radius);
+//        Point[] dest = getPoints(route.next.x,route.next.y,radius);
+        Point[] src = Point.getPoints(route.vector,pos,radius);
+        Point[] dest = Point.getPoints(route.vector,route.next,radius);
         topLine.setValue(src[0],dest[0]);
         belowLine.setValue(src[1],dest[1]);
         midLine.setValue(pos,route.next);
@@ -413,39 +417,6 @@ public class Robot {
         return carry > 0?fullRadius:emptyRadius;
     }
 
-    // 知道点，获取左右两坐标,输出点顺序为先上后下
-    public Point[] getPoints(double x,double y,double distance){
-
-        double[] direction = new double[]{route.vector.x,route.vector.y};   // 方向向量
-        double[] points = new double[4];
-        Point[] p = new Point[2];
-        // 求解过程
-        double tmp = direction[0];
-        direction[0] = -direction[1];
-        direction[1] = tmp;
-        double d = Math.sqrt(direction[0] * direction[0] + direction[1] * direction[1]); // 直线的长度
-        double dx = direction[0] / d; // 直线的单位向量在 x 方向上的分量
-        double dy = direction[1] / d; // 直线的单位向量在 y 方向上的分量
-        points[0] = x + dx * distance; // 求解 point2 在 x 方向上的坐标
-        points[1] = y + dy * distance; // 求解 point2 在 y 方向上的坐标
-
-        direction[0] = -direction[0];
-        direction[1] = -direction[1];
-        dx = direction[0] / d; // 直线的单位向量在 x 方向上的分量
-        dy = direction[1] / d; // 直线的单位向量在 y 方向上的分量
-        points[2] = x + dx * distance; // 求解 point2 在 x 方向上的坐标
-        points[3] = y + dy * distance; // 求解 point2 在 y 方向上的坐标
-        if (points[1]<points[3]){
-            p[0] = new Point(points[2],points[3]);
-            p[1] = new Point(points[0],points[1]);
-        }else{
-            p[0] = new Point(points[0],points[1]);
-            p[1] = new Point(points[2],points[3]);
-        }
-
-        return p;
-    }
-
     // 判断目标点是否到达工作台
     public boolean isArrive() {
         if (StationId == nextStation.id){
@@ -516,6 +487,12 @@ public class Robot {
                     }
                 }
             }
+        }
+
+        if (blockEnemy!=null){
+            // 被其他机器人堵死了，要逃离
+            Main.printLog("blocked ");
+            route.handleBlockByEnemy();
         }
 
         if (avoidBumpMode){
@@ -769,6 +746,10 @@ public class Robot {
         // 阻塞检测，在某个点阻塞了多少帧，重新设置路径
         // todo 要加上和敌方机器人相遇阻塞的情况
 
+//        if (blockEnemy != null){
+//            return false;
+//        }
+
         if (tmpSafeMode && inSafePlace){
             blockFps ++;
             if (blockFps > maxWaitBlockFps){
@@ -785,6 +766,7 @@ public class Robot {
         }else {
             blockFps ++;
         }
+
         if (blockFps >= blockJudgeFps){
             blockFps = 0;   //后面需要重新寻路  不属于临时安全模式
             return true;
@@ -795,6 +777,20 @@ public class Robot {
     public void setNewPath() {
 
         avoidBumpMode = false;
+        blockEnemy = null;
+        blockByWall = false;
+
+        // 先判断附近是否有敌人
+        for (RadarPoint curEnemy : Main.curEnemys) {
+            Point point = curEnemy.getPoint();
+            double dis = pos.calcDistance(point);
+            double radius = curEnemy.isFull == 0?0.45:0.53;
+            if (dis < getRadius() + radius + 0.2){
+                blockEnemy = curEnemy;
+                return;     // 被敌人阻塞，直接返回
+            }
+        }
+
 
         // 判断阻塞是否是和机器人堵住了
         for (Robot oth : zone.robots) {
@@ -813,8 +809,14 @@ public class Robot {
                 Main.printLog(444444);
                 recoveryPath();
             }
+        }else {
+            // 周围没有自己军队，也没有敌人，被墙困住
+            recoveryPath();
         }
+
     }
+
+
 
     public Point selectTmpSafePoint(Point dest, HashSet<Pos> posSet, Point midPoint) {
 //        Main.printLog(midPoint);
@@ -1016,7 +1018,7 @@ public class Robot {
         for(Station st:Main.blockStations){
             // 先遍历每个不正常的工作台，如果该机器人能看到，先恢复正常
             double dis = pos.calcDistance(st.pos);
-            if (dis > 10) continue;  // 距离太长，中间可能有阻挡
+            if (dis > 15) continue;  // 距离太长，中间可能有阻挡
             Line line = new Line(pos,st.pos);
             if (line.roadNoWall()){
                 // 视野通畅，不会有机器人卡着
@@ -1130,6 +1132,39 @@ public class Robot {
     public void printRoute() {
         Main.printLog("src:"+srcStation +" -> dest:"+destStation);
     }
+
+    public void leaveWall() {
+        // 被墙阻塞，离开墙体
+        Point wall = getNearWall();
+        if (wall == null){
+            blockByWall = false;
+            recoveryPath(); // 离开了墙体，恢复路径
+        }else {
+            Line line = new Line(wall,pos);
+            Point tp = line.getPointDis2dest(2);    // 获取一个远离墙的临时点
+            route.gotoTmpPlace(tp);
+            Main.Forward(id,route.printLineSpeed);
+            Main.Rotate(id,route.printTurnSpeed);
+        }
+
+    }
+
+    private Point getNearWall() {
+        Pos pos1 = Astar.Point2Pos(pos);
+        // 周围2格有墙就算
+        for (int i = -1; i <=1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                if (i != 0 && j != 0) continue;     // 不考虑对角情况
+                Point p = Point.getRealWall(pos1.x + i, pos1.y + j);
+                if (p!= null){
+                    return p;
+                }
+            }
+        }
+        return null;
+    }
+
+
 }
 
 

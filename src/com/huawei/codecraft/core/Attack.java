@@ -13,7 +13,7 @@ public class Attack {
     public static double attackRange = 2.5;               // 设定攻击距离，机器人在这个点攻击多远的距离
     public static double smallRange = 3;               // 小圈无差别撞击
     public static double bigRange = 6;               // 大圈撞击迎面的敌人
-    public static double maxFarToTarget = 6;               // 最多跟踪多远的距离，超过就回到目标点
+    public static double maxFarToTarget = 25;               // 最多跟踪多远的距离，超过就回到目标点
     public static int maxWaitFps = 50 * 5;     // 最多等多久，就换地方
     static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
     static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
@@ -49,6 +49,10 @@ public class Attack {
     }
     public static void addRobot(Robot robot,int i){
         addRobot(robot,attackPoint[i]);     // 默认进攻第一个点，后期可调整
+    }
+
+    public static void addRobot(Robot robot,int i,AttackType ty){
+        addRobot(robot,attackPoint[i],ty);     // 默认进攻第一个点，后期可调整
     }
 
     public static void addRobot(Robot robot, Point target){
@@ -91,20 +95,23 @@ public class Attack {
             return null;
         }
 
-        double minDis = 10;
+        double minDis = 1000;
         Point res = null;
         for (RadarPoint radarPoint : robot.enemy) {
             Point tp = radarPoint.getPoint();
             double dis = robot.pos.calcDistance(tp);
-            if (dis>bigRange){
-                continue;
-            }
-            if (dis>smallRange){
-                Main.printLog("in big range");
-                if (!radarPoint.isCloseToMe(robot.pos)){
-                    continue;   // 远离我的不考虑
+            if (attackType == AttackType.RUSH){
+                if (dis>bigRange){
+                    continue;
+                }
+                if (dis>smallRange){
+                    Main.printLog("in big range");
+                    if (!radarPoint.isCloseToMe(robot.pos)){
+                        continue;   // 远离我的不考虑
+                    }
                 }
             }
+
             // 选择最近的点攻击
             if (dis < minDis){
                 minDis = dis;

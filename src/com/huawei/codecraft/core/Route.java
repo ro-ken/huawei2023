@@ -192,6 +192,27 @@ public class Route{
         }else {
             printTurnSpeed = 0;
         }
+    }
+
+    private void calcTurnSpeedAvoidEnemy(RadarPoint rp) {
+        if (rp == null){
+            calcNormalTurnSpeed();
+            // 大于一定距离，不考虑
+            return;
+        }
+        Point point = rp.getPoint();
+        if (robot.pos.calcDistance(robot.pos) > 3){
+            calcNormalTurnSpeed();
+            // 大于一定距离，不考虑
+            return;
+        }
+
+        Point posVec = robot.pos.calcVector(point);
+        double cos = speed.calcDeltaCos(posVec);
+        // 不能处理，方向斜碰撞情况 \/
+        clockwise = calcAvoidBumpClockwise(speed,posVec);
+        //计算角速度
+        printTurnSpeed = Robot.maxRotate * clockwise * cos * 0.5;
 
     }
 
@@ -349,6 +370,8 @@ public class Route{
 
         calcSafeLevel2();    // 先计算安全级别
 
+        Main.printLog("unsafe level" + unsafeLevel);
+
         if (unsafeLevel == 0){
             calcSafePrintSpeed();   // 计算安全速度
 
@@ -393,7 +416,21 @@ public class Route{
     }
 
     private void handleUnsafeLevel3() {
-        
+
+        double dis = robot.getRadius()*2 + 0.5;
+        Point bp = dangerEnemy.get(0).getPoint();
+        RadarPoint closestRp = null;
+        double minDis = 10000;
+        for (RadarPoint radarPoint : dangerEnemy) {
+            double r = radarPoint.isFull==0?0.45:0.53;
+            dis += r * 2 + 0.5;     // 计算能过去的宽度
+            double dis1 = robot.pos.calcDistance(radarPoint.getPoint());
+            if (dis1 < minDis){
+                minDis = dis1;
+                closestRp = radarPoint;
+            }
+        }
+
         if (next == target){
             if (Main.isBlue && dangerEnemy.size()<=1){
                 // 蓝方终点有一个红方，正常买卖就行
@@ -401,23 +438,35 @@ public class Route{
             }else {
                 // 其他情况，要加速一下
                 // todo 可对7 单独考虑
+                if (minDis < 1.5){
+                    // 两个机器人靠的很近，需要远离
+                    fleeEnemy(closestRp);
+                    return;
+                }
+
                 handleCloseTerminal();
             }
             return;
         }
 
-        double dis = robot.getRadius()*2 + 0.5;
-        Point bp = dangerEnemy.get(0).getPoint();
-        for (RadarPoint radarPoint : dangerEnemy) {
-            double r = radarPoint.isFull==0?0.45:0.53;
-            dis += r * 2 + 0.5;     // 计算能过去的宽度
+
+        if (!Main.isBlue){
+            if (minDis < 1.5){
+                // 两个机器人靠的很近，需要远离
+                fleeEnemy(closestRp);
+                return;
+            }
         }
 
         int survival = Main.frameID - birthFps;
         if (roadIsWide(vector,bp,dis) || survival < 10) {
+
             // 不能换路太频繁，最快10s换一次
             printLineSpeed = robot.maxSpeed;  // 路很宽，全速前进
             calcNormalTurnSpeed();
+//            calcTurnSpeedAvoidEnemy(closestRp);     // 避让一下敌人
+
+
         }else {
             // 路不宽，考虑换路的代价
             Main.printLog("road have enemys");
@@ -432,6 +481,7 @@ public class Route{
                 // 最大速度撞击
                 printLineSpeed = robot.maxSpeed;  // 全速前进
                 calcNormalTurnSpeed();
+//                calcTurnSpeedAvoidEnemy(closestRp);
                 return;
             }
             if (enemys.size() >=3 || (!Main.isBlue && enemys.size() == 2)){
@@ -456,8 +506,42 @@ public class Route{
                 // 不然直接冲过去
                 printLineSpeed = robot.maxSpeed;  // 全速前进
                 calcNormalTurnSpeed();
+//                calcTurnSpeedAvoidEnemy(closestRp);
             }
         }
+    }
+
+    private void fleeEnemy(RadarPoint rp) {
+        // 离对方太近，逃离
+        Point point = rp.getPoint();
+        Point vec = robot.pos.calcVector(point);
+        Line line = new Line(robot.pos,next);
+        Point[] points = Point.getPoints(vec, robot.pos, 1.5);
+        Point vec2 = robot.pos.calcVector(points[0]);
+        if (vector.calcDeltaAngle(vec2) > pi/2){
+            Point t = points[1];
+            points[1] = points[0];
+            points[0] = t;  // 默认优先考虑 0
+        }
+
+        Point tp = null;
+        boolean wall0 = points[0].nearWall2();
+        boolean wall1 = points[1].nearWall2();
+
+        Main.printLog("handle enemy:" + rp);
+        if (!wall0){
+            tp = points[0];
+        }else if (!wall1){
+            tp = points[1];
+        }else{
+            // 两边都是墙
+            tp = points[0]; // 还是优先选择这边
+        }
+        Main.printLog("wall0" + wall0 + " wall1 :" + wall1);
+        Main.printLog("p0" + points[0] + " p1 :" + points[1]);
+        Main.printLog("tp:" + tp + "tp2:" + tp);
+        bumpTarget(tp);
+
     }
 
     private void handleCloseTerminal() {
@@ -526,7 +610,7 @@ public class Route{
         }
     }
 
-    private void gotoTmpPlace(Point tmp) {
+    public void gotoTmpPlace(Point tmp) {
         // 当前帧取临时地点
         // 与墙体会碰撞
         Point t = next;
@@ -622,8 +706,9 @@ public class Route{
             double angle = vector.calcDeltaAngle(posVec);
             double dis2tar = robot.pos.calcDistance(target);
             if (dis2tar < posVec.norm()) continue;  // 不考虑比目标远的点
-            if (angle >= pi / 2.5) continue;      // 不考虑在后方的敌人
+            if (angle >= pi / 2) continue;      // 不考虑在后方的敌人
             double dis = robot.pos.calcDistance(cur);
+            if (dis > 5) continue;  // 距离太远，不考虑
             if (dis<2 || dis<3 && angle < pi/3 || angle < pi/4){
                 // 在上述情况下认为对我是有威胁的
 //                    enemys.add(rp);
@@ -1163,7 +1248,7 @@ public class Route{
         if (next == target) return false;
 //        Point next2 = peekNextPoint();
 //        Line line = new Line(robot.pos,next2);
-//        Point wall = line.getNearBumpWall();
+//        if (line.roadNoWall()) return true;
 //        Main.printLog("pos:"+robot.pos + " next "+next2 + " wall: " + wall);
 //        if (wall == null) return true;  // 中间没墙
         Point pre = path.get(pathIndex-2);
@@ -1202,4 +1287,19 @@ public class Route{
         Main.Forward(robot.id,printLineSpeed);
         Main.Rotate(robot.id,printTurnSpeed);
     }
+
+    public void handleBlockByEnemy() {
+        // 处理被敌人堵住的情况
+        // 周围有敌人，考虑随机摇晃，把自己晃出去
+        double minDis = 2;
+        Point enemy = null;
+        for (RadarPoint curEnemy : robot.enemy) {
+            //
+//            robot.pos.calcDistance(curEnemy)
+
+        }
+
+
+    }
 }
+

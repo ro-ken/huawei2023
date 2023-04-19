@@ -6,10 +6,7 @@ import java.io.PrintStream;
 import java.util.*;
 
 import com.huawei.codecraft.core.*;
-import com.huawei.codecraft.util.LimitedQueue;
-import com.huawei.codecraft.util.Point;
-import com.huawei.codecraft.util.RadarPoint;
-import com.huawei.codecraft.util.StationStatus;
+import com.huawei.codecraft.util.*;
 import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Mapinfo;
 import com.huawei.codecraft.way.Pos;
@@ -96,6 +93,11 @@ public class Main {
 
         for (int i = 0; i < robotNum; i++) {
             if (!testRobot.contains(i)) continue;
+//            if (robots[i].blockByWall){
+//                robots[i].leaveWall();
+//                continue;   // 被墙阻塞，先远离
+//            }
+
             if (robots[i].attack != null){
                 robots[i].attack();
                 continue;
@@ -170,9 +172,7 @@ public class Main {
 
     private static void calcParam(int i) {
         if (robots[i].nextStation == null && robots[i].attack == null){
-//            if (!robots[i].earn) {
-//                return;
-//            }
+
             robots[i].selectBestStation();
             Main.printLog("blockStations " + blockStations);
             robots[i].printRoute();
@@ -314,10 +314,10 @@ public class Main {
     private static void initMapSeq4() {
         if (isBlue){
             // 蓝方负责干扰
-            Attack.addRobot(robots[0],0);
-            Attack.addRobot(robots[1],1);
-            Attack.addRobot(robots[2],2);
-            Attack.addRobot(robots[3],3);
+            Attack.addRobot(robots[0],0, AttackType.FOLLOWING);
+            Attack.addRobot(robots[1],1,AttackType.FOLLOWING);
+            Attack.addRobot(robots[2],2,AttackType.FOLLOWING);
+            Attack.addRobot(robots[3],3,AttackType.FOLLOWING);
 
         }else {
             // 红方负责送货，不干扰
@@ -345,6 +345,8 @@ public class Main {
             mapSeq = 1;
         }
 //        mapSeq = processZoneInfo();
+        Main.printLog("mapSeq:" + mapSeq);
+
     }
 
     private static void initZone2() {

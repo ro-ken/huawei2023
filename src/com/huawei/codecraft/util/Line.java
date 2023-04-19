@@ -1,5 +1,6 @@
 package com.huawei.codecraft.util;
 
+import com.huawei.codecraft.Main;
 import com.huawei.codecraft.core.Robot;
 
 /**
@@ -54,6 +55,16 @@ public Point getPointDis2src(double dis) {
 
     return res;
 }
+
+    public double calc2PointDis(Point p){
+        // 计算这条直线到点的距离
+        // d = |Ax0 + By0 + C|/sqrt(A^2 + B^2);
+        double A = getK();
+        double B = -1;
+        double C = getB(A);
+        double dis = Math.abs(A*p.x + B*p.y + C) / Math.sqrt(A*A+B*B);
+        return dis;
+    }
 
     public Point vector() {
         return left.calcVector(right);
