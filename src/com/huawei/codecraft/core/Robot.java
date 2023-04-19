@@ -78,7 +78,7 @@ public class Robot {
     public static int minLastDisFps = 5; // 越来越远 经过了多少帧，小车开始走
     public static double maxSpeedCoef = 1.5;
     public static double stationSafeDisCoef = 2;    // 工作站的安全距离距离系数
-    public static int cacheFps = 50 * 4;     // 判断是否要送最后一个任务的临界时间 > 0
+    public static int cacheFps = 50 * 3;     // 判断是否要送最后一个任务的临界时间 > 0
     public static double blockJudgeSpeed = 0.5 ;    // 判断机器人是否阻塞的最小速度
     public static int blockJudgeFps = 20 ;    // 则阻塞速度的fps超过多少判断为阻塞 ，上面speed调大了这个参数也要调大一点,
     public static int maxWaitBlockFps = 50 ;    // 等待超过多长时间目标机器人没有来，就自行解封  todo 重要参数
@@ -336,7 +336,15 @@ public class Robot {
 
     // 买入的商品是否有时间售出
     public boolean canBugJudge() {
-        int needFPS = calcFpsToPlace(srcStation.pos.calcDistance(destStation.pos));
+        int needFPS = srcStation.pathToFps(false,destStation.pos);
+        int leftFps = Main.duration - Main.frameID - cacheFps;   // 1s误差,后期可调整
+        return leftFps > needFPS;
+    }
+
+    public boolean canBugJudge2() {
+        int needFPS1 = srcStation.pathToFps(false,destStation.pos);
+        int needFPS2 = srcStation.pathToFps(true,pos);
+        int needFPS = needFPS1 + needFPS2;
         int leftFps = Main.duration - Main.frameID - cacheFps;   // 1s误差,后期可调整
         return leftFps > needFPS;
     }
@@ -978,9 +986,15 @@ public class Robot {
             route.gotoTarget();    // 这里要判断与机器人的碰撞情况
             return;
         }
+        Point tar = null;
+        if (Main.mapSeq == 4){
+            // 图4 单独判断，对机器人分组攻击
+            tar = attack.getAttackEnemy2();
+        }else {
+            // 判断周围有无敌人，获取需要攻击的敌人位置
+            tar = attack.getAttackEnemy();
+        }
 
-        // 判断周围有无敌人，获取需要攻击的敌人位置
-        Point tar = attack.getAttackEnemy();
         if (tar == null){
             // 没有敌人，去到目标点
             if (attack.status == AttackStatus.ATTACK){

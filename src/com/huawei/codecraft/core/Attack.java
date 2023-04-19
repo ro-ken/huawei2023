@@ -23,6 +23,7 @@ public class Attack {
 
     //下面是对象属性
     public Point target;        // 目标点
+    public static Map<Point,Integer> curTargets = new HashMap<>();     // 当前追踪的目标,以及其被占用的个数
     public AttackType attackType;       // 攻击类型
     public AttackStatus status = AttackStatus.ROAD;     // 机器人的状态
     public int arriveFrame;     // 到达这个点的 帧序号
@@ -118,6 +119,56 @@ public class Attack {
                 res = tp;
             }
         }
+        return res;
+    }
+
+    public Point getAttackEnemy2() {
+        // 图4 单独判断
+        if (robot.enemy.size() == 0){
+            return null;
+        }
+
+        double minDis = 1000;
+        Point res = null;
+        for (RadarPoint radarPoint : Main.curEnemys) {
+            Point tp = radarPoint.getPoint();
+            if (Attack.curTargets.containsKey(tp)){
+                if (Attack.curTargets.get(tp) >= 2){
+                    continue;   // 超过2个就不追了，划不来
+                }
+            }
+
+            double dis = robot.pos.calcDistance(tp);
+            // 选择最近的点攻击
+            if (dis < minDis){
+                minDis = dis;
+                res = tp;
+            }
+        }
+//        if (res == null){
+//            // 没有找到敌人
+//            minDis = 1000;
+//
+//            for (Point point : Attack.curTargets.keySet()) {
+//                Integer i = Attack.curTargets.get(point);
+//                if (i == 1){
+//                    double dis = point.calcDistance(robot.pos);
+//                    if (dis < minDis){
+//                        minDis = dis;
+//                        res = point;
+//                    }
+//                }
+//            }
+//        }
+        if (res != null){
+            if (!Attack.curTargets.containsKey(res)){
+                // 不包含,创建
+                Attack.curTargets.put(res,1);
+            }else {
+                Attack.curTargets.put(res,2);
+            }
+        }
+
         return res;
     }
 

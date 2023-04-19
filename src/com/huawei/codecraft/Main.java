@@ -45,6 +45,7 @@ public class Main {
     public static final int fighterStationNumStart = 50;
     public static final int duration = 4 * 60 * 50;     // 比赛时长
     public static final int JudgeDuration = duration - 30 * 50;    //最后20s需判断买入的商品能否卖出
+    public static final int AttackJudgeDuration = duration - 10 * 50;    //最后20s需判断买入的商品能否卖出
     public static final int fps = 50;
     public static final boolean test = true;    // 是否可写入
     public static final boolean writePath = false;    // 是否可写入
@@ -114,6 +115,7 @@ public class Main {
     private static void getCurEnemys() {
         // 获取当前敌方机器人位置
         curEnemys = new HashSet<>();
+        Attack.curTargets.clear();  // 回合开始先清除
         for (int i = 0; i < robotNum; i++) {
             curEnemys.addAll(robots[i].handleEnemy());
         }
@@ -176,6 +178,15 @@ public class Main {
             robots[i].selectBestStation();
             Main.printLog("blockStations " + blockStations);
             robots[i].printRoute();
+
+            // 判断是否够一个来回
+            if (frameID > JudgeDuration && robots[i].nextStation != null){
+                if (!robots[i].canBugJudge2()){
+                    Attack.addRobot(robots[i]);
+                    return;
+                }
+            }
+
         }
         if (robots[i].nextStation == null && robots[i].attack == null){
             robots[i].goToEmptyPlace();
@@ -205,8 +216,10 @@ public class Main {
     private static void handleArrive(int i) {
         // 有物品就买，没有就等待,逐帧判断
         if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){
+
             if (frameID > JudgeDuration){
                 if (!robots[i].canBugJudge()){
+                    Attack.addRobot(robots[i]);
                     return;
                 }
             }
@@ -222,6 +235,7 @@ public class Main {
             robots[i].destStation.setPosition(robots[i].srcStation.type);       // 卖了以后对应物品空格置1
             printLog("sell");
             robots[i].changeTarget();
+
         }else {
             robots[i].waitStationMode = true;
         }
@@ -258,10 +272,12 @@ public class Main {
             initMapSeq0();  // 通用攻击策略
         }
 
+        // 4/0
         if (mapSeq == 4){
             initMapSeq4();
         }
 
+        // 1/3
         if (mapSeq == 2){
             initMapSeq2();
         }

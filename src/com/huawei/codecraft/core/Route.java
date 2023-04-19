@@ -453,7 +453,7 @@ public class Route{
 
 
         if (!Main.isBlue){
-            if (minDis < 1.5){
+            if (minDis < 2){
                 // 两个机器人靠的很近，需要远离
                 fleeEnemy(closestRp.getPoint());
                 return;
