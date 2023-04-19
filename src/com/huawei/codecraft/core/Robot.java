@@ -72,6 +72,7 @@ public class Robot {
     public int lastDisFps = 0; // 越来越远 经过了几帧
 
     public double blockFps = 0;    // 目前阻塞的帧数
+    public double leaveFps = 0;    // 目前阻塞的帧数
 
     //下面参数可调
     public static double minDis = 0.1; // 判定离临时点多近算到达
@@ -824,6 +825,8 @@ public class Robot {
         }
 
         if (!avoidBumpMode){
+            blockByWall = true;     // 没有其他机器人，被墙困住了
+            leaveFps = 0;
             if (tmpSafeMode){
                 calcTmpRoute(route.target,winner);
             }else {
@@ -832,7 +835,7 @@ public class Robot {
             }
         }else {
             // 周围没有自己军队，也没有敌人，被墙困住
-            recoveryPath();
+//            recoveryPath();
         }
 
     }
@@ -1165,13 +1168,16 @@ public class Robot {
     }
 
     public void leaveWall() {
+
         // 被墙阻塞，离开墙体
-        Point wall = getNearWall();
-        if (wall == null){
+        Point emptyPlace = getEmptyPlace();
+        if (leaveFps >=8 ){
             blockByWall = false;
+            leaveFps = 0;
             recoveryPath(); // 离开了墙体，恢复路径
         }else {
-            Line line = new Line(wall,pos);
+            leaveFps ++;
+            Line line = new Line(pos,emptyPlace);
             Point tp = line.getPointDis2dest(2);    // 获取一个远离墙的临时点
             route.gotoTmpPlace(tp);
             Main.Forward(id,route.printLineSpeed);
@@ -1180,18 +1186,28 @@ public class Robot {
 
     }
 
-    private Point getNearWall() {
-        Pos pos1 = Astar.Point2Pos(pos);
-        // 周围2格有墙就算
-        for (int i = -1; i <=1; i++) {
-            for (int j = -1; j <= 1; j++) {
-                if (i != 0 && j != 0) continue;     // 不考虑对角情况
-                Point p = Point.getRealWall(pos1.x + i, pos1.y + j);
-                if (p!= null){
-                    return p;
-                }
-            }
+
+    private Point getEmptyPlace() {
+        // 这是被卡在墙角的情况
+        // 寻找应该去的点
+        // 如果四面空旷，返回null
+
+        if (!Point.posIsWall(pos.x + 2,pos.y)){
+            return new Point(pos.x+2,pos.y);
         }
+
+        if (!Point.posIsWall(pos.x,pos.y-2)){
+            return new Point(pos.x,pos.y-2);
+        }
+
+        if (!Point.posIsWall(pos.x - 2,pos.y)){
+            return new Point(pos.x - 2,pos.y);
+        }
+
+        if (!Point.posIsWall(pos.x ,pos.y + 2)){
+            return new Point(pos.x ,pos.y + 2);
+        }
+
         return null;
     }
 

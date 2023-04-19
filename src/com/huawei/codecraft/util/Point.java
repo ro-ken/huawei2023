@@ -100,7 +100,7 @@ public class Point{
         }
         return false;
     }
-    private boolean posIsWall(int x, int y) {
+    public boolean posIsWall(int x, int y) {
         if (x <0 || y<0 || x>99 || y>99) return true;
         return Main.wallMap[x][y] == -2;
     }
