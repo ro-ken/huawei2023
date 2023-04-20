@@ -210,6 +210,7 @@ public class Attack {
             lenX++;
             y++;
         }
+        y = curPos.y;
         // 计算纵向宽度
         while (lenY < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
             lenY++;

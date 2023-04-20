@@ -388,10 +388,40 @@ public class Route{
         }else if (unsafeLevel == 3){
             // 前方路径有敌人
             handleUnsafeLevel3();
+        }else if (unsafeLevel == 4) {
+            // 前面有敌人，需要换路
+            Main.printLog("level 4");
+            boolean changeRoute = handleUnsafeLevel4();
+            if (changeRoute){
+                return;
+            }
         }
 
         Main.Forward(robot.id,printLineSpeed);
         Main.Rotate(robot.id,printTurnSpeed);
+    }
+
+    private boolean handleUnsafeLevel4() {
+        HashSet<Point> enemys = new HashSet<>();
+        enemys.add(willBumpRobot.pos);
+        for (RadarPoint curEnemy : Main.curEnemys) {
+            enemys.add(curEnemy.getPoint());    // 把敌人都当路封了
+        }
+        Route newRoute = robot.calcRouteFromNowBlockRobot(enemys);
+        if (newRoute == null){
+            // 没找到
+            Main.printLog("did not find other road");
+            // 最大速度撞击
+            printLineSpeed = robot.maxSpeed;  // 全速前进
+            calcNormalTurnSpeed();
+            return false;
+        }else {
+            robot.route = newRoute;
+            Main.printLog("new road" + newRoute.path);
+            newRoute.calcParamEveryFrame();    // 通用参数
+            newRoute.calcSafePrintSpeed();      // 正常冲
+            return true;
+        }
     }
 
 
@@ -756,7 +786,7 @@ public class Route{
         }
     }
 
-    // 计算当前的安全级别 0:安全，1：有墙，2有机器人
+    // 计算当前的安全级别 0:安全，1：有墙，2有机器人,3有敌人，
     private void calcSafeLevel2() {
 
         unsafeLevel = 0;    // 先置为安全状态
@@ -870,6 +900,9 @@ public class Route{
                 }
             }
         }
+
+        // 判断要避让的机器人周围是否人多，需要进行换路
+
         return willBumpRobot != null;
     }
 
@@ -932,6 +965,18 @@ public class Route{
     }
 
     public void setTmpSafeMode2() {
+
+        // 要避让的时候，需要判断对方周围是否有敌人
+        // 有敌人，需要绕路，防止一直等待
+        for (RadarPoint curEnemy : Main.curEnemys) {
+            Point point = curEnemy.getPoint();
+            if (willBumpRobot.pos.calcDistance(point) < 2){
+                unsafeLevel = 4;
+                return;
+            }
+        }
+
+
         // 判断两辆车，应该让谁避让
         Robot other = willBumpRobot;
 
