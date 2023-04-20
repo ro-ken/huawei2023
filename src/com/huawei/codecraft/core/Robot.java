@@ -298,6 +298,25 @@ public class Robot {
         calcMoveEquation();     //  运动方程
         Main.printLog(pos + ":recovery path"+route.path);
     }
+
+    public boolean recoveryPath2() {
+
+        if (attack != null){
+            // 如果是攻击模式发生阻塞
+            boolean find = attack.calcRouteFromNow();  // 重新计算路线
+            Main.printLog(pos + ":attack robot recovery path");
+            return find;
+        }
+        clearWinner();
+        // 重新寻找新路径
+        boolean find = calcRouteFromNow2();
+        if (!find) return false;
+
+        route.calcParamEveryFrame();    // 通用参数
+        calcMoveEquation();     //  运动方程
+        Main.printLog(pos + ":recovery path"+route.path);
+        return true;
+    }
     public void calcRouteFromNow() {
         // 计算从自身到目的地位置的路由
 
@@ -306,9 +325,32 @@ public class Robot {
         HashSet<Pos> pos1 = nextStation.paths.getResSet(carry == 0,pos);
         path = Path.reversePath(path);
 
+        if(path.size() == 0){
+            Main.printLog("path is null");
+        }
+
         route = new Route(nextStation.pos,this,path,pos1);
 
     }
+
+    public boolean calcRouteFromNow2() {
+        // 计算从自身到目的地位置的路由
+
+        if (nextStation == null || nextStation.paths == null) return false;
+        ArrayList<Point> path = nextStation.paths.getPath(carry == 0,pos);   // 第一次，计算初始化的路径
+        HashSet<Pos> pos1 = nextStation.paths.getResSet(carry == 0,pos);
+
+        if(path.size() == 0){
+            Main.printLog("path is null");
+            // 为找到路由
+            return false;
+        }
+
+        path = Path.reversePath(path);
+        route = new Route(nextStation.pos,this,path,pos1);
+        return true;
+    }
+
 
     public void calcTmpRoute(Point sp, Robot winRobot) {
 
@@ -825,13 +867,15 @@ public class Robot {
         }
 
         if (!avoidBumpMode){
-            blockByWall = true;     // 没有其他机器人，被墙困住了
-            leaveFps = 0;
             if (tmpSafeMode){
                 calcTmpRoute(route.target,winner);
             }else {
                 Main.printLog(444444);
-                recoveryPath();
+                boolean find = recoveryPath2();
+                if (!find){
+                    blockByWall = true; // 没有找到路径，被墙困住了
+                    leaveFps = 0;
+                }
             }
         }else {
             // 周围没有自己军队，也没有敌人，被墙困住
@@ -1169,20 +1213,31 @@ public class Robot {
 
     public void leaveWall() {
 
-        // 被墙阻塞，离开墙体
-        Point emptyPlace = getEmptyPlace();
-        if (leaveFps >=8 ){
-            blockByWall = false;
-            leaveFps = 0;
-            recoveryPath(); // 离开了墙体，恢复路径
+        Main.printLog(444444);
+        boolean find = recoveryPath2();
+        if (find){
+            blockByWall = false; // 找到了路径，恢复状态
         }else {
-            leaveFps ++;
-            Line line = new Line(pos,emptyPlace);
-            Point tp = line.getPointDis2dest(2);    // 获取一个远离墙的临时点
-            route.gotoTmpPlace(tp);
-            Main.Forward(id,route.printLineSpeed);
-            Main.Rotate(id,route.printTurnSpeed);
+            // 后退
+            Main.printLog("did not find path backing");
+            Main.Forward(id,-2);
+            Main.Rotate(id,0);
         }
+
+//        // 被墙阻塞，离开墙体
+//        Point emptyPlace = getEmptyPlace();
+//        if (leaveFps >=8 ){
+//            blockByWall = false;
+//            leaveFps = 0;
+//            recoveryPath(); // 离开了墙体，恢复路径
+//        }else {
+//            leaveFps ++;
+//            Line line = new Line(pos,emptyPlace);
+//            Point tp = line.getPointDis2dest(2);    // 获取一个远离墙的临时点
+//            route.gotoTmpPlace(tp);
+//            Main.Forward(id,route.printLineSpeed);
+//            Main.Rotate(id,route.printTurnSpeed);
+//        }
 
     }
 

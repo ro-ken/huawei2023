@@ -94,6 +94,8 @@ public class Main {
 
         for (int i = 0; i < robotNum; i++) {
             if (!testRobot.contains(i)) continue;
+
+
             if (robots[i].blockByWall){
                 robots[i].leaveWall();
                 continue;   // 被墙阻塞，先远离

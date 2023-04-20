@@ -433,6 +433,10 @@ public class Route{
             }
         }
 
+        // 有时候自己看不清楚，要加上全局信息
+        // 路的宽度也要加上自己机器人的宽度
+        // todo
+
         if (next == target){
             if (Main.isBlue && dangerEnemy.size()<=1){
                 // 蓝方终点有一个红方，正常买卖就行

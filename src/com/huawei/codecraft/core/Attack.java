@@ -172,13 +172,18 @@ public class Attack {
         return res;
     }
 
-    public void calcRouteFromNow() {
+    public boolean calcRouteFromNow() {
         // 计算从自身到目的地位置的路由
 
         ArrayList<Point> path = paths.getPath(robot.carry == 0,robot.pos);   // 获取路径
         HashSet<Pos> pos1 = paths.getResSet(robot.carry == 0,robot.pos);     // 获取结果
         path = Path.reversePath(path);
         robot.route = new Route(target,robot,path,pos1);
+        if (path.size() == 0){
+            return false;
+        }else {
+            return true;
+        }
     }
 
     // 路径权重是根据路径利润算出来的，路径越长，时间收益越少，长度按照
