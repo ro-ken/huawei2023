@@ -1220,10 +1220,16 @@ public class Robot {
         if (find){
             blockByWall = false; // 找到了路径，恢复状态
         }else {
-            // 后退
-            Main.printLog("did not find path backing");
-            Main.Forward(id,-2);
-            Main.Rotate(id,0);
+            if (!Point.isWallBehind(new Point(lineVx, lineVy), pos)) {
+                Main.printLog("did not find path backing");
+                Main.Forward(id,-2);
+                Main.Rotate(id,0);
+            }
+            else {  // 后面有墙 前进
+                Main.printLog("did not find path backing");
+                Main.Forward(id,2);
+                Main.Rotate(id,0);
+            }
         }
 
 //        // 被墙阻塞，离开墙体

@@ -352,6 +352,17 @@ public class Point{
         return posIsWall(x,y);
     }
 
+    public static boolean isWallBehind(Point vec, Point point) {
+        double[] direction = {vec.x, vec.y}; // 方向向量
+        double[] unitDirection = normalize(direction); // 单位向量
+
+        Point p = new Point(point.x + unitDirection[0], point.y + unitDirection[1]);
+        if (notInMap(p.x, p.y) || posIsWall(p.x, p.y)) {
+            return true;
+        }
+        return false;
+    }
+
     public static boolean posIsWall(double x, double y) {
         if (notInMap(x,y)){
             return true;

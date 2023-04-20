@@ -17,7 +17,7 @@ public class Attack {
     public static int maxWaitFps = 50 * 5;     // 最多等多久，就换地方
     static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
     static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
-    public static Point[] attackPoint = new Point[6];   // 记录需要攻击的点,最多 4 个
+    public static Point[] attackPoint = new Point[7];   // 记录需要攻击的点,最多 4 个
     public static HashSet<Robot> robots = new HashSet<>();   // 负责攻击的机器人
     public static Map<Pos, Double> posCnt = new HashMap<>();   // 记录路径pos点的价值
 
@@ -34,7 +34,6 @@ public class Attack {
     public Robot robot;
 
     public static void init(){
-        initCntMap();
         initAttackPoint();
     }
 
@@ -292,37 +291,41 @@ public class Attack {
         }
     }
 
+     // 初始化攻击的点，依次选取每个工作台价值最高的作为攻击点
+     private static void initAttackPoint() {
+        // 获取敌方的工作台信息
+        Map<Integer, ArrayList<Station>>  fighterStationsMap = Main.fighterStationsMap;
+        Station[] fighterStations = Main.fighterStations;
 
-    // 初始化攻击的点
-    private static void initAttackPoint() {
-        // 将Map<Pos, Double> posCnt按照value的从大到小排序
-        List<Map.Entry<Pos, Double>> entryList = new ArrayList<>(posCnt.entrySet());
-        Comparator<Map.Entry<Pos, Double>> comparator = (o1, o2) -> Double.compare(o2.getValue(), o1.getValue());
-        Collections.sort(entryList, comparator);
-
-        // 将排序后的 Pos 存到 ArrayList 中
-        ArrayList<Pos> sortedList = new ArrayList<>();
-        for (Map.Entry<Pos, Double> entry : entryList) {
-            sortedList.add(entry.getKey());
-        }
-
-        int range = (int)(attackRange / 0.5);
-        int index = 0;
-        Pos posAttack = null;
-        HashSet<Pos> posRange = new HashSet<>(); // 记录该点的范围，后续点不在这个范围才能加入到新的点
-        for (int i = 0; i < attackPoint.length; i++) {
-            // 确保得到的点在地图内，而且不会出现数组越界错误
-            while (index < sortedList.size()) {
-                posAttack = sortedList.get(index++);
-                if (!posRange.contains(posAttack) &&  Mapinfo.isInMap(posAttack.x, posAttack.y) && Mapinfo.mapInfoOriginal[posAttack.x][posAttack.y] != -2) {
-                fixPos(posAttack);
-                attackPoint[i] = Astar.Pos2Point(posAttack);
-                add2Posrange(posAttack, posRange, range);
-                break;
-                } 
+        // 遍历 Map
+        for (Map.Entry<Integer, ArrayList<Station>> entry : fighterStationsMap.entrySet()) {
+            int type = entry.getKey();
+            if (type >= 8) {
+                continue;
             }
+            ArrayList<Station> fighterStationsList = entry.getValue();
+            int minPosCnt = 1000000;
+            int minId = -1;
+            // 每个工作台选取一个价值最高的作为攻击对象，价值最高即路径最短
+            for (int i = 0; i < fighterStationsList.size(); i++) {
+                Station station = fighterStationsList.get(i);
+                int id = station.id;
+                int curPosCnt = 0;
+                Map<Point,HashSet<Pos>> fullPos = fighterStations[id].paths.getResSetMap(false);
+                for (Point key : fullPos.keySet()) {
+                    HashSet<Pos> posSet = fullPos.get(key);
+                    curPosCnt += posSet.size();
+                }
+                if (curPosCnt < minPosCnt) {
+                    minPosCnt = curPosCnt;
+                    minId = id;
+                }
+            }
+            // 将该工作台加入到attackPoint
+            attackPoint[fighterStations[minId].type - 1] = fighterStations[minId].pos;
         }
-     }
+        
+    } 
 
     public void changeTarget() {
         // 一段时间没有敌人，换一个攻击点
