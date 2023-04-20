@@ -38,6 +38,9 @@ public class Route{
     public int birthFps; // 从哪一帧开始创建
     public Point fleeVec;    // 逃离的方向
     public int fleepFps;    // 在这个方向走了多久
+    public int fleepTimes;    // 在这个方向尝试了几次
+    public int startTimes;
+    public int endTimes;
 
     public static double emergencyDistanceCoef = 0.7;   // 半径乘子，每个机器人紧急距离，外人不得靠近
     public static double verticalSafeDistanceCoef = 1.2;   // 半径乘子，垂直安全系数
@@ -627,7 +630,6 @@ public class Route{
         Point tarVec = vecs[0]; // 要传动的方向
         ArrayList<Point> walls = robot.pos.getNearWall();       // 得到机器人靠近的墙体，最多2个
         Main.printLog("walls" + walls);
-
         if (fleeVec == null || fleepFps > 8){
             if (walls.size() == 0){
                 fleeEnemy(point);   // 周围没有墙
@@ -667,11 +669,31 @@ public class Route{
             fleepFps ++;
         }
 
-        Point tp = new Point(robot.pos.x + fleeVec.x,robot.pos.y + fleeVec.y);
+        if (fleepTimes <= 3) {
+            Point tp = new Point(robot.pos.x + fleeVec.x,robot.pos.y + fleeVec.y);
 
-        Main.printLog("walls:" + walls);
-        Main.printLog("tp:" + tp);
-        bumpTarget(tp);
+            Main.printLog("walls:" + walls);
+            Main.printLog("tp:" + tp);
+            bumpTarget(tp);
+            fleepTimes++;
+        }
+        else {
+            // 朝着预定方向全速前进,转速时间不能太快
+            if (startTimes <= 8 && endTimes == 8) {
+
+                startTimes++;
+                if (startTimes == 8) {
+                    endTimes = 0;
+                }
+            }
+            else {
+                Main.Forward(robot.id,0);
+                endTimes++;
+                startTimes = 0;
+            }
+            Main.Rotate(robot.id, robot.maxSpeed);
+            // fleepTimes = 0;
+        }
     }
 
     private void handleCloseTerminal() {
