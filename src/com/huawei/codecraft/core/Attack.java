@@ -305,24 +305,42 @@ public class Attack {
             }
             ArrayList<Station> fighterStationsList = entry.getValue();
             int minPosCnt = 1000000;
-            int minId = -1;
+            int chooseId = -1;
+            int maxPathCnt = -1;
             // 每个工作台选取一个价值最高的作为攻击对象，价值最高即路径最短
             for (int i = 0; i < fighterStationsList.size(); i++) {
                 Station station = fighterStationsList.get(i);
                 int id = station.id;
                 int curPosCnt = 0;
+                int curPathCnt = 0;
+
+                // 取size的大小和路径数量两个维度，路径通路越大越好，在路径通路相同的情况下，选择路径数量最少的工作台
                 Map<Point,HashSet<Pos>> fullPos = fighterStations[id].paths.getResSetMap(false);
+                // 计算路径通量
+
+                // 计算路径点的总数量
                 for (Point key : fullPos.keySet()) {
                     HashSet<Pos> posSet = fullPos.get(key);
+                    if (posSet.size() != 0) {
+                        curPathCnt++;
+                    }
                     curPosCnt += posSet.size();
                 }
-                if (curPosCnt < minPosCnt) {
+                // 路径通量优先级大于路径数量
+                if (maxPathCnt < curPathCnt) {
+                    maxPathCnt = curPathCnt;
+                    chooseId = id;
                     minPosCnt = curPosCnt;
-                    minId = id;
+                }
+                else if (maxPathCnt == curPathCnt) {  // 路径通路相等的情况下，比路径长度，短的优先
+                    if (minPosCnt > curPosCnt) {
+                        minPosCnt = curPosCnt;
+                        chooseId = id;
+                    }
                 }
             }
             // 将该工作台加入到attackPoint
-            attackPoint[fighterStations[minId].type - 1] = fighterStations[minId].pos;
+            attackPoint[type - 1] = fighterStations[chooseId].pos;
         }
         
     } 
