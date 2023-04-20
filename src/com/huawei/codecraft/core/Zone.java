@@ -84,6 +84,14 @@ public class Zone {
         }
 
         Station src = null;
+
+        // 1、选择target最慢的任务
+//        src = selectSlowestSrcStation(target);
+//        if (src != null && target.canBuy(src.type)){
+//            robot.setSrcDest(src,target);
+//            return;
+//        }
+
         // 1、选择target最慢的任务
         Station dest = selectSlowestStation(target);
         if (dest != null){
@@ -117,6 +125,46 @@ public class Zone {
             robot.setSrcDest(src,src.availNextStation);
             return;
         }
+    }
+
+    //
+    private Station selectSlowestSrcStation(Station target) {
+        // 如果有456合成好了，可优先考虑卖掉
+        // 选择target 进度最慢的任务
+        ArrayList<Integer> tasks = selectSlowestTask(target);
+        Main.printLog("tasks" + tasks);
+        int taskId = -1;
+        HashSet<Integer> used = new HashSet<>();
+        if (tasks.size() == 1){
+            // 有一个进度最低的，直接选择该任务
+            taskId = tasks.get(0);
+        }else {
+            taskId = fairSelectTask(tasks,target);
+            Main.printLog("taskId" + taskId);
+        }
+        used.add(taskId);
+        Station task = newTask(taskId,target);
+        if (task == null && tasks.size() == 2){
+            // 未分配成功，分配另一个
+            if (tasks.get(0) == taskId){
+                taskId = tasks.get(1);
+            }else {
+                taskId = tasks.get(0);
+            }
+            used.add(taskId);
+            task = newTask(taskId,target);
+        }
+        if (task == null){
+            for (int i = 4; i <=6 ; i++) {
+                if (!used.contains(i)){
+                    task = newTask(i,target);
+                    if (task != null) {
+                        break;  // 找到一个可用的
+                    }
+                }
+            }
+        }
+        return task;
     }
 
     private Station selectClosestSrcToDestLast(Robot robot, Station dest) {
@@ -393,7 +441,7 @@ public class Zone {
             if (target.place != StationStatus.BLOCK){   // 已改
                 double value = target.cycleAvgValue;
                 if (target.place == StationStatus.EMPTY){   // 已改
-                    value += 5;     // 若周围没有机器人 权重 +5
+                    value += 3;     // 若周围没有机器人 权重 +5
                 }
                 if (value > maxValue){
                     res = target;
@@ -409,6 +457,28 @@ public class Zone {
         // 选择一个最佳的售卖工作站
         Station res = null;
         double minFps = 100000;
+
+        double maxValue = 0;
+        if (now.type <=6 && now.type >=4){
+            // 456 优先送7
+            for (Station target : targets) {
+                if (!target.canBuy(now.type) || target.place == StationStatus.BLOCK){
+                    // 不能买 或被占用
+                    continue;
+                }
+                double value = target.cycleAvgValue;
+                if (target.place == StationStatus.EMPTY){   // 已改
+                    value += 3;     // 若周围没有机器人 权重 +5
+                }
+                if (value > maxValue){
+                    res = target;
+                    maxValue = value;
+                }
+            }
+        }
+        if (res != null){
+            return res;
+        }
 
         for (Pair pair : now.canSellStations) {
             Station target = pair.key;
