@@ -371,7 +371,8 @@ public class Main {
         
         if (mapSeq == 6){
             if (Main.isBlue){
-                Attack.addRobot(robots[0]);
+                Attack.addRobot(robots[0],0);
+                Attack.addRobot(robots[1],1);
             }else {
                 Attack.addRobot(robots[0]);
             }

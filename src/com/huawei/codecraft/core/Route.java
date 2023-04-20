@@ -60,7 +60,7 @@ public class Route{
     // 下面是新加参数
 
     public Point avoidWallPoint;    // 避免与墙体碰撞的临时点
-    public double avoidWallPointSpeed = 3.5;    // 判断与墙体会发生碰撞，去往临时点的最大速度
+    public double avoidWallPointSpeed = 4.5;    // 判断与墙体会发生碰撞，去往临时点的最大速度
     public static double notAvoidRobotMinDis = 3.0;    // 与终点还有多少距离不进行安全点避让
     public static double notAvoidRobotMinDis2 = 2;    // 与终点还有多少距离不进行普通避让
     public static final double predictWillBumpMinDis = 10;    // 预测是否会发生碰撞的距离，不用改
@@ -662,7 +662,6 @@ public class Route{
                         //
                         tarVec = vecs[1];
                     }
-
             }
             // 方向不能换台频繁
             fleeVec = tarVec;
@@ -671,9 +670,8 @@ public class Route{
             fleepFps ++;
         }
 
-        if (fleepTimes <= 6) {
+        if (fleepTimes <= 100) {
             Point tp = new Point(robot.pos.x + fleeVec.x,robot.pos.y + fleeVec.y);
-
             Main.printLog("walls:" + walls);
             Main.printLog("tp:" + tp);
             bumpTarget(tp);
@@ -681,20 +679,17 @@ public class Route{
         }
         else {
             // 朝着预定方向全速前进,转速时间不能太快
-            if (startTimes <= 10 && endTimes == 40) {
-                int clockCoef = speed.calcDot(tarVec) < 0 ? -1 : 1;
-                Main.Rotate(robot.id, Robot.maxRotate * clockCoef);
-                // Main.Rotate(robot.id, robot.maxSpeed / 3);
-                Main.printLog("stoppush");
+            if (startTimes <= 8 && endTimes == 32) {
+                int  rotateClockCoef = speed.calcDot(tarVec) < 0 ? -1 : 1;
+                Main.Rotate(robot.id, (Robot.maxRotate * rotateClockCoef) / 2);
                 startTimes++;
-                if (startTimes == 10) {
+                if (startTimes == 8) {
                     endTimes = 0;
                 }
             }
             else {
                 Main.Rotate(robot.id, 0);
                 Main.Forward(robot.id, robot.maxSpeed);
-                Main.printLog("push");
                 endTimes++;
                 startTimes = 0;
             }

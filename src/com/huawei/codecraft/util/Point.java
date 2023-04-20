@@ -443,6 +443,14 @@ public class Point{
                 break;
             }
         }
+        for (int i : steps) {
+            for (int j : steps) {
+                if (posIsWall(pos.x + i, pos.y + j)){
+                    walls.add(Astar.Pos2Point(new Pos(pos.x + i , pos.y+ j)));
+                    break;
+                }
+            }
+        }
         return walls;
     }
 }
