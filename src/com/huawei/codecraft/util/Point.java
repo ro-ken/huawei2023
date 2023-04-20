@@ -356,7 +356,7 @@ public class Point{
         double[] direction = {vec.x, vec.y}; // 方向向量
         double[] unitDirection = normalize(direction); // 单位向量
 
-        Point p = new Point(point.x + unitDirection[0] * 0.5, point.y + unitDirection[1] * 0.5);
+        Point p = new Point(point.x - unitDirection[0] * 0.6, point.y - unitDirection[1] * 0.6);
         if (notInMap(p.x, p.y) || posIsWall(p.x, p.y)) {
             return true;
         }
