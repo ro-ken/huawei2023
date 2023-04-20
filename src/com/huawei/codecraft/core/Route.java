@@ -1391,11 +1391,7 @@ public class Route{
         // 如果机器人到了目标点的前方，也算过了
         // 如果目光能看到下一个点也算过了
         if (next == target) return false;
-//        Point next2 = peekNextPoint();
-//        Line line = new Line(robot.pos,next2);
-//        if (line.roadNoWall()) return true;
-//        Main.printLog("pos:"+robot.pos + " next "+next2 + " wall: " + wall);
-//        if (wall == null) return true;  // 中间没墙
+
         Point pre = path.get(pathIndex-2);
         return robot.isArrivePoint(pre, this.next);
     }
