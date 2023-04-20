@@ -284,6 +284,26 @@ public class Main {
             initMapSeq2();
         }
 
+        // 开阔图
+        if (mapSeq == 1){
+            if (isBlue){
+                Attack.addRobot(robots[0],0);
+                // 蓝方派一个
+            }else {
+                // 红方干活
+            }
+        }
+
+        // 窄图
+        if (mapSeq == 3){
+            if (isBlue){
+                Attack.addRobot(robots[0],0);
+                Attack.addRobot(robots[1],1);
+            }else {
+                Attack.addRobot(robots[0],0);
+            }
+        }
+
         if (mapSeq == 5){
             if (isBlue){
                 Attack.addRobot(robots[0]);

@@ -424,8 +424,8 @@ public class Route{
         RadarPoint closestRp = null;
         double minDis = 10000;
         for (RadarPoint radarPoint : dangerEnemy) {
-            double r = radarPoint.isFull==0?0.45:0.53;
-            dis += r * 2 + 0.5;     // 计算能过去的宽度
+
+//            dis += r * 2 + 0.5;     // 计算能过去的宽度
             double dis1 = robot.pos.calcDistance(radarPoint.getPoint());
             if (dis1 < minDis){
                 minDis = dis1;
@@ -433,6 +433,11 @@ public class Route{
             }
         }
 
+        if (closestRp == null){
+            closestRp =  dangerEnemy.get(0);
+        }
+
+        Point cp = closestRp.getPoint();
         // 有时候自己看不清楚，要加上全局信息
         // 路的宽度也要加上自己机器人的宽度
         // todo
@@ -444,28 +449,61 @@ public class Route{
             }else {
                 // 其他情况，要加速一下
                 // todo 可对7 单独考虑
-                if (minDis < 1.5){
-                    // 两个机器人靠的很近，需要远离
-                    fleeEnemy(closestRp.getPoint());
-                    return;
-                }
+                //
 
+                double dis2next = next.calcDistance(closestRp.getPoint());
+                if (!Main.isBlue && dis2next>2){
+                    // 如果是红方，对面离蓝方目的地较远，适当绕一绕
+                    if (minDis < 1.5){
+                        // 两个机器人靠的很近，需要远离
+                        fleeEnemy(closestRp.getPoint());
+                        return;
+                    }
+                }
+                // 其他情况，全力冲
                 handleCloseTerminal();
             }
             return;
         }
 
+        int all = 2;    // 计算堵住的敌人，首先是自己加上敌人2个
 
-        if (!Main.isBlue){
-            if (minDis < 2){
-                // 两个机器人靠的很近，需要远离
-                fleeEnemy(closestRp.getPoint());
-                return;
+
+        HashSet<Point> enemys = new HashSet<>();
+        for (Robot rob : robot.zone.robots) {
+            if (rob == robot) continue;
+            if (rob.pos.calcDistance(cp) < 2.5){
+                // 距离太近的自己机器人也算进去
+                double r = rob.getRadius();
+                dis += r * 2 + 0.5;     // 计算能过去的宽度
+                all ++;
+                enemys.add(rob.pos);    // 和敌人太近的也封死
             }
         }
 
+        int fighter =1;
+        for (RadarPoint curEnemy : Main.curEnemys) {
+            if (curEnemy.equals(closestRp)) continue;
+            if (curEnemy.getPoint().calcDistance(cp) < 2.5){
+                // 距离太近的自己机器人也算进去
+                double r = curEnemy.isFull==0?0.45:0.53;
+                dis += r * 2 + 0.5;     // 计算能过去的宽度
+                all ++;
+                fighter ++;
+            }
+        }
+
+
         int survival = Main.frameID - birthFps;
-        if (roadIsWide(vector,bp,dis) || survival < 10) {
+        if (roadIsWide(vector,bp,dis) && all<4 || survival < 10) {
+            // 超过4个很挤了
+            if (!Main.isBlue){
+                if (minDis < 2){
+                    // 两个机器人靠的很近，需要远离
+                    fleeEnemy(closestRp.getPoint());
+                    return;
+                }
+            }
 
             // 不能换路太频繁，最快10s换一次
             printLineSpeed = robot.maxSpeed;  // 路很宽，全速前进
@@ -476,7 +514,7 @@ public class Route{
         }else {
             // 路不宽，考虑换路的代价
             Main.printLog("road have enemys");
-            HashSet<Point> enemys = new HashSet<>();
+
             for (RadarPoint curEnemy : Main.curEnemys) {
                 enemys.add(curEnemy.getPoint());    // 把敌人都当路封了
             }
@@ -490,13 +528,13 @@ public class Route{
 //                calcTurnSpeedAvoidEnemy(closestRp);
                 return;
             }
-            if (enemys.size() >=3 || (!Main.isBlue && enemys.size() == 2)){
+            if (all>=4  || fighter >=2 ){
                 robot.route = newRoute; // 敌人太多，直接换路
             }
             int fps1 = calcLeftFps();       // 原本路还剩多少距离
             int fps2 = newRoute.calcLeftFps();  // 新路还剩的距离
             int cost = Main.isBlue?Robot.redEnemyCost:Robot.blueEnemyCost;
-            if (enemys.size()>1){
+            if (fighter>1){
                 cost *= 4;      // 有多个机器人堵路，代价翻倍
             }
             fps1 += cost;
