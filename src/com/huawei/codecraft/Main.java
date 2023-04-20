@@ -107,8 +107,13 @@ public class Main {
             }
 
             if (robots[i].nextStation == null) continue;
-            if (robots[i].isArrive()){
-                handleArrive(i);
+            if (robots[i].route.escapeTimes == Route.maxEscapeTimes) {
+                robots[i].releaseDest();    // 释放dest 资源
+            }
+            else {
+                if (robots[i].isArrive()){
+                    handleArrive(i);
+                }
             }
             robots[i].rush();
         }

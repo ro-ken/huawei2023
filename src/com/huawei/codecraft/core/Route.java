@@ -39,6 +39,8 @@ public class Route{
     public Point fleeVec;    // 逃离的方向
     public int fleepFps;    // 在这个方向走了多久
     public int fleepTimes;    // 在这个方向尝试了几次
+    public double escapeTimes = 0;    // 目前逃脱的次数
+    public static final int maxEscapeTimes = 90;    // 目前逃脱的次数
     public int startTimes;
     public int endTimes;
 
@@ -669,7 +671,7 @@ public class Route{
             fleepFps ++;
         }
 
-        if (fleepTimes <= 3) {
+        if (fleepTimes <= 6) {
             Point tp = new Point(robot.pos.x + fleeVec.x,robot.pos.y + fleeVec.y);
 
             Main.printLog("walls:" + walls);
@@ -679,19 +681,24 @@ public class Route{
         }
         else {
             // 朝着预定方向全速前进,转速时间不能太快
-            if (startTimes <= 8 && endTimes == 8) {
-
+            if (startTimes <= 10 && endTimes == 40) {
+                int clockCoef = speed.calcDot(tarVec) < 0 ? -1 : 1;
+                Main.Rotate(robot.id, Robot.maxRotate * clockCoef);
+                // Main.Rotate(robot.id, robot.maxSpeed / 3);
+                Main.printLog("stoppush");
                 startTimes++;
-                if (startTimes == 8) {
+                if (startTimes == 10) {
                     endTimes = 0;
                 }
             }
             else {
-                Main.Forward(robot.id,0);
+                Main.Rotate(robot.id, 0);
+                Main.Forward(robot.id, robot.maxSpeed);
+                Main.printLog("push");
                 endTimes++;
                 startTimes = 0;
             }
-            Main.Rotate(robot.id, robot.maxSpeed);
+            escapeTimes++;
             // fleepTimes = 0;
         }
     }
