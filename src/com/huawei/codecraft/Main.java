@@ -123,6 +123,33 @@ public class Main {
         }
         enemysQueue.add(curEnemys);
 
+        HashSet<RadarPoint> booked = new HashSet<>();
+
+        for (Robot robot : Attack.robots) {
+            // 判别每个机器人是否已经锁定目标，就不用更换目标了
+            Point curtar = robot.attack.curtar;
+            if (curtar == null) continue;
+
+            boolean lock = false;
+            for (RadarPoint cur : curEnemys) {
+                if (cur.getPoint().calcDistance(curtar) < 0.3){
+                    // 认为两个是同一个点
+                    if (cur.getPoint().calcDistance(robot.pos) < 2){
+                        robot.attack.curtar = cur.getPoint();   // 更新目标
+//                        left.remove(robot);     // 认为追逐比较激烈，继续追
+                        booked.add(cur);
+                        lock = true;    // 锁定目标
+                        break;
+                    }
+                }
+            }
+            if (!lock){
+                // 没有锁定，等待重新分配
+                robot.attack.curtar = null;
+            }
+        }
+
+
         for (RadarPoint rp : curEnemys) {
             Point point = rp.getPoint();
             ArrayList<Station> nearStations = point.getNearStations();
@@ -132,6 +159,30 @@ public class Main {
                 if (st.place != StationStatus.EMPTY){
                     Main.blockStations.add(st);
                 }
+            }
+
+            // 这个点有人预定了，需要换
+            if (booked.contains(rp)) continue;
+
+            double minDis = 1000;
+            Robot tr = null;
+            // 分别计算这个和每个机器人的位置
+            for (Robot robot : Attack.robots) {
+                // 有目标，不参与竞选
+                if (robot.attack.curtar != null) continue;
+
+                if (robot.enemy.contains(rp)){
+                    // 首先是要自己看得到的敌人
+                    double dis = robot.pos.calcDistance(point);
+                    if (dis < minDis){
+                        minDis = dis;
+                        tr = robot;
+                    }
+                }
+            }
+            if (tr != null){
+                // 更新curtar
+                tr.attack.curtar = point;
             }
         }
     }
@@ -182,7 +233,7 @@ public class Main {
             robots[i].printRoute();
 
             // 判断是否够一个来回
-            if (frameID > JudgeDuration && robots[i].nextStation != null){
+            if (frameID > JudgeDuration && robots[i].nextStation != null && mapSeq!=2 && mapSeq != 4){
                 if (!robots[i].canBugJudge2()){
                     Attack.addRobot(robots[i]);
                     return;

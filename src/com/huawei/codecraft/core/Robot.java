@@ -41,7 +41,7 @@ public class Robot {
     public double turn; //朝向 [-pi,pi] 0朝向右，pi/2  朝上
     public Point pos;
     public double[] radar = new double[360]; //雷达信息
-    HashSet<RadarPoint> enemy;
+    public HashSet<RadarPoint> enemy;
 //    public double x, y; //坐标
 
     public Station nextStation;    // null : no target to go
@@ -774,9 +774,6 @@ public class Robot {
         }
 
         src.bookNum ++;
-//        if (dest.type <= 6 && waterFlow != null){
-//            waterFlow.halfComp.put(dest.type,waterFlow.halfComp.get(dest.type) +1);    // 原料数 +1
-//        }
 
         calcRoute();
     }
@@ -1033,16 +1030,19 @@ public class Robot {
             route.gotoTarget();    // 这里要判断与机器人的碰撞情况
             return;
         }
-        Point tar = null;
-        if (Main.mapSeq == 4){
-            // 图4 单独判断，对机器人分组攻击
-            tar = attack.getAttackEnemy2();
-        }else {
-            // 判断周围有无敌人，获取需要攻击的敌人位置
-            tar = attack.getAttackEnemy();
-        }
+        Point tar = attack.curtar;
+
+
+//        if (Main.mapSeq == 4){
+//            // 图4 单独判断，对机器人分组攻击
+//            tar = attack.getAttackEnemy2();
+//        }else {
+//            // 判断周围有无敌人，获取需要攻击的敌人位置
+//            tar = attack.getAttackEnemy();
+//        }
 
         if (tar == null){
+//            attack.curtar = null;
             // 没有敌人，去到目标点
             if (attack.status == AttackStatus.ATTACK){
                 // 上一次是攻击模式，可能走了很远了，需要重新寻路
@@ -1070,6 +1070,8 @@ public class Robot {
                 route.gotoTarget();     // 等待模式，一直堵在目标点
             }
         }else {
+
+//            attack.curtar = tar;
             Main.printLog("find enemy" + tar);
 
             if (attack.attackType == AttackType.RUSH){

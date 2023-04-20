@@ -23,6 +23,7 @@ public class Attack {
 
     //下面是对象属性
     public Point target;        // 目标点
+    public Point curtar;    // 正在追的目标
     public static Map<Point,Integer> curTargets = new HashMap<>();     // 当前追踪的目标,以及其被占用的个数
     public AttackType attackType;       // 攻击类型
     public AttackStatus status = AttackStatus.ROAD;     // 机器人的状态
