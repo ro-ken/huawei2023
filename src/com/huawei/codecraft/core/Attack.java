@@ -18,6 +18,8 @@ public class Attack {
     static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
     static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
     public static Point[] attackPoint = new Point[7];   // 记录需要攻击的点,最多 4 个
+
+
     public static HashSet<Robot> robots = new HashSet<>();   // 负责攻击的机器人
     public static Map<Pos, Double> posCnt = new HashMap<>();   // 记录路径pos点的价值
 
@@ -28,7 +30,7 @@ public class Attack {
     public AttackType attackType;       // 攻击类型
     public AttackStatus status = AttackStatus.ROAD;     // 机器人的状态
     public int arriveFrame;     // 到达这个点的 帧序号
-
+    public int pointSeq = 0;
 
     public Path paths;
     public Robot robot;
@@ -50,6 +52,7 @@ public class Attack {
     }
     public static void addRobot(Robot robot,int i){
         addRobot(robot,attackPoint[i]);     // 默认进攻第一个点，后期可调整
+
     }
 
     public static void addRobot(Robot robot,int i,AttackType ty){
@@ -347,16 +350,22 @@ public class Attack {
 
     public void changeTarget() {
         // 一段时间没有敌人，换一个攻击点
-        Point np = getFitPlace();
-        if (np == null) return;
-        addRobot(robot,np,attackType);  // 延续上一次的攻击类型
+        int seq = getFitPlace();
+        if (attackPoint[seq] == null) return;
+        addRobot(robot,attackPoint[seq],attackType);  // 延续上一次的攻击类型
+        robot.attack.pointSeq = seq;
     }
 
-    private Point getFitPlace() {
+    private int getFitPlace() {
         // 找一个合适的点
         // 找一个没人把手的点
-        for (Point point : attackPoint) {
+        int len = attackPoint.length;
+
+        for (int i = 0; i < len; i++) {
+            int seq = (pointSeq + i) % len;
+            Point point = attackPoint[seq];
             if (point == null) continue;
+
             boolean occupy = false;
             for (Robot rob : robots) {
                 if (rob.attack.target.equals(point)) {
@@ -365,10 +374,24 @@ public class Attack {
                 }
             }
             if (!occupy) {
-                return point;  // 这个点没人占用,就这个点
+                return seq;  // 这个点没人占用,就这个点
             }
         }
-        return null;
+
+//        for (Point point : attackPoint) {
+//            if (point == null) continue;
+//            boolean occupy = false;
+//            for (Robot rob : robots) {
+//                if (rob.attack.target.equals(point)) {
+//                    occupy = true;
+//                    break;
+//                }
+//            }
+//            if (!occupy) {
+//                return point;  // 这个点没人占用,就这个点
+//            }
+//        }
+        return 0;
     }
 
     public static void printPoint() {
