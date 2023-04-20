@@ -113,12 +113,27 @@ public class Attack {
                 }
             }
 
+            if (Attack.curTargets.containsKey(tp)){
+                continue;   // 超过1个就不追了，划不来
+            }
+
             // 选择最近的点攻击
             if (dis < minDis){
                 minDis = dis;
                 res = tp;
             }
         }
+
+
+        if (res != null){
+            if (!Attack.curTargets.containsKey(res)){
+                // 不包含,创建
+                Attack.curTargets.put(res,1);
+            }else {
+                Attack.curTargets.put(res,2);
+            }
+        }
+
         return res;
     }
 
@@ -133,7 +148,7 @@ public class Attack {
         for (RadarPoint radarPoint : Main.curEnemys) {
             Point tp = radarPoint.getPoint();
             if (Attack.curTargets.containsKey(tp)){
-                if (Attack.curTargets.get(tp) >= 2){
+                if (Attack.curTargets.get(tp) >= 1){
                     continue;   // 超过2个就不追了，划不来
                 }
             }
@@ -145,21 +160,7 @@ public class Attack {
                 res = tp;
             }
         }
-//        if (res == null){
-//            // 没有找到敌人
-//            minDis = 1000;
-//
-//            for (Point point : Attack.curTargets.keySet()) {
-//                Integer i = Attack.curTargets.get(point);
-//                if (i == 1){
-//                    double dis = point.calcDistance(robot.pos);
-//                    if (dis < minDis){
-//                        minDis = dis;
-//                        res = point;
-//                    }
-//                }
-//            }
-//        }
+
         if (res != null){
             if (!Attack.curTargets.containsKey(res)){
                 // 不包含,创建
