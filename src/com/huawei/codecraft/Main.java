@@ -132,9 +132,10 @@ public class Main {
 
             boolean lock = false;
             for (RadarPoint cur : curEnemys) {
+                if (booked.contains(cur)) continue; // 被别人预定过了
                 if (cur.getPoint().calcDistance(curtar) < 0.3){
                     // 认为两个是同一个点
-                    if (cur.getPoint().calcDistance(robot.pos) < 2){
+                    if (cur.getPoint().calcDistance(robot.pos) < 1.2){
                         robot.attack.curtar = cur.getPoint();   // 更新目标
 //                        left.remove(robot);     // 认为追逐比较激烈，继续追
                         booked.add(cur);
