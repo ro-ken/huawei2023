@@ -351,7 +351,7 @@ public class Robot {
         return true;
     }
 
-
+    // 计算临时寻路的路由
     public void calcTmpRoute(Point sp, Robot winRobot) {
 
         tmpSafeMode = true;
@@ -384,6 +384,7 @@ public class Robot {
         return leftFps > needFPS;
     }
 
+    // 买入的商品是否有时间售出
     public boolean canBugJudge2() {
         int needFPS1 = srcStation.pathToFps(false,destStation.pos);
         int needFPS2 = srcStation.pathToFps(true,pos);
@@ -416,6 +417,7 @@ public class Robot {
         Main.printLog("next station" + nextStation);
     }
 
+    // 计算fps代价
     public static double f(int x, double maxX, double minRate){
         if (x>=maxX){
             return minRate;
@@ -451,6 +453,7 @@ public class Robot {
         return x;
     }
 
+    // 设置临时避让点
     public void setBase(Line line, Point point) {
         baseLine = new Line(new Point(line.left),new Point(line.right));
         basePoint = new Point(point);
@@ -514,6 +517,7 @@ public class Robot {
         return true;
     }
 
+    // 运动主要实现，往目标点冲刺
     public void rush() {
 
         if (nextStation == null) {
@@ -579,6 +583,7 @@ public class Robot {
         }
     }
 
+    // 进入避免碰撞模式
     private boolean handleAvoidBumpMode() {
         boolean ret = false;
         Point fp = null ;
@@ -608,6 +613,7 @@ public class Robot {
         return ret;
     }
 
+    // 解决station死锁问题，释放工作台资源
     public void fixStationBlocked() {
 
         Main.printLog("Occupied" + nextStation);
@@ -646,6 +652,7 @@ public class Robot {
         }
     }
 
+    // 更换下一个目标
     private void changeNextStation(Station dest) {
         Main.printLog("change next station" + dest);
         // 先释放资源，
@@ -705,6 +712,8 @@ public class Robot {
         Main.Rotate(id,maxRotate * clockwise);
     }
 
+
+    // 判断路径是否已经安全
     private boolean roadIsSafe() {
         // 判断winner已经走过去了
         // 连续 一段时间两车越来越远，说明过了
@@ -756,6 +765,7 @@ public class Robot {
 
     }
 
+    // 设置源工作台3
     public void setSrcDest(Station src, Station dest) {
         if (src == null || dest == null) return;
 
@@ -778,6 +788,7 @@ public class Robot {
         calcRoute();
     }
 
+    // 是否到达了目标带你
     public boolean isArrivePoint(Point pre, Point next) {
         double dis1 = pre.calcDistance(next);
         double dis2 = pre.calcDistance(pos);
@@ -791,7 +802,7 @@ public class Robot {
     }
 
 
-
+    // 使用流水线模式
     private void useWaterFlowChangeMode() {
         // 流水线模式，加一些控制
         Main.printLog("nextStation"+ nextStation);
@@ -802,6 +813,7 @@ public class Robot {
         }
     }
 
+    // 检测机器人是否被阻塞
     public boolean blockDetect() {
         // todo 后面判断是否周围有墙或者机器人
         // 阻塞检测，在某个点阻塞了多少帧，重新设置路径
@@ -835,6 +847,7 @@ public class Robot {
         return false;
     }
 
+    // 设置新的路径
     public void setNewPath() {
 
         avoidBumpMode = false;
@@ -881,8 +894,7 @@ public class Robot {
 
     }
 
-
-
+    // 设置临时路径的避让安全点
     public Point selectTmpSafePoint(Point dest, HashSet<Pos> posSet, Point midPoint) {
 //        Main.printLog(midPoint);
         Point sp = Astar.getSafePoint2(carry == 0, pos, dest, posSet,midPoint);
@@ -897,6 +909,7 @@ public class Robot {
         return sp;
     }
 
+    // 让机器人呆在空闲地方
     public void goToEmptyPlace() {
         // 如果机器人没事干，不要待在工作台边上
         Pos p = Astar.Point2Pos(pos);
@@ -936,6 +949,8 @@ public class Robot {
         Main.Rotate(id,printRotate);
     }
 
+
+    // 设置避让的loser机器人
     public void setWeakRobot(Robot weakRobot) {
         // 设置对方为我的loser机器人
         if (tmpSafeMode){
@@ -975,6 +990,7 @@ public class Robot {
         basePoint = null;
     }
 
+    // 去最近的工作台
     public void goToNearStation() {
         // 工作台有满了，到旁边等待
         Pos p = Astar.Point2Pos(pos);
@@ -1024,6 +1040,7 @@ public class Robot {
         Main.Rotate(id,printRotate);
     }
 
+    // 进攻设定
     public void attack(){
         if (attack.attackType == AttackType.BLOCK){
             // 直接去目标点就可以了
@@ -1089,6 +1106,7 @@ public class Robot {
         }
     }
 
+    // 判断工作台周围是否有敌人
     public HashSet<RadarPoint> handleEnemy() {
         HashSet<Station> resets = new HashSet<>();
         for(Station st:Main.blockStations){
@@ -1110,6 +1128,7 @@ public class Robot {
         return enemy;
     }
 
+    // 获取真正的敌人位置
     private HashSet<RadarPoint> getTrueEnemy() {
         // 可能某些点发生误判，要进行去重
         HashSet<RadarPoint> rps = getRadarPoint();
@@ -1138,6 +1157,7 @@ public class Robot {
         return enemy;
     }
 
+    // 判断点是不是由自己的机器人占领
     private boolean isFriend(Point point) {
         // 该点是否是自己人
 
@@ -1149,12 +1169,14 @@ public class Robot {
         return false;
     }
 
+    // 释放 src 资源
     public void releaseSrc() {
         // 释放 src 资源
         srcStation.bookPro = false;       //解除预定
         srcStation.bookNum--;       //
     }
 
+    // 释放终点工作台的资源
     public void releaseDest() {
         // 释放 dest 资源
         destStation.bookRawNum[srcStation.type] --;
@@ -1169,6 +1191,8 @@ public class Robot {
 
         destStation.bookNum--;       //解除预定
     }
+
+    // 获取雷达的位置
     public HashSet<RadarPoint> getRadarPoint() {
         ArrayList<Point> points = new ArrayList<>();
         ArrayList<Double> radarList = new ArrayList<>();
@@ -1209,10 +1233,13 @@ public class Robot {
         }
         return radarPoints;
     }
+
+    // 打印路径
     public void printRoute() {
         Main.printLog("src:"+srcStation +" -> dest:"+destStation);
     }
 
+    // 远离墙体
     public void leaveWall() {
 
         Main.printLog(444444);
@@ -1249,7 +1276,7 @@ public class Robot {
 
     }
 
-
+    // 获取敌人的位置
     private Point getEmptyPlace() {
         // 这是被卡在墙角的情况
         // 寻找应该去的点

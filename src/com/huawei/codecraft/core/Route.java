@@ -84,6 +84,17 @@ public class Route{
         birthFps = Main.frameID;
     }
 
+    @Override
+    public String toString() {
+        return "Route{" +
+                "clockwise=" + clockwise +
+                ", realA=" + realAngleDistance +
+                ", theoryTurn=" + theoryTurn +
+                ", stopA=" + stopMinAngleDistance +
+                '}';
+    }
+
+    // 获取行进路径的下一个点
     private Point getNextPoint() {
         if (pathIndex == path.size()){
             changeAngle = pi; //最后一个点了，调到最大
@@ -106,6 +117,7 @@ public class Route{
         }
     }
 
+    // 选择下一个点
     public Point peekNextPoint() {
         if (pathIndex >= path.size()){
             return target;
@@ -114,16 +126,7 @@ public class Route{
         }
     }
 
-    @Override
-    public String toString() {
-        return "Route{" +
-                "clockwise=" + clockwise +
-                ", realA=" + realAngleDistance +
-                ", theoryTurn=" + theoryTurn +
-                ", stopA=" + stopMinAngleDistance +
-                '}';
-    }
-
+    // 获取避免碰撞时的旋转因子
     private int calcAvoidBumpClockwise(Point speed,Point posVec) {
         int cw;
         double dot = speed.calcDot(posVec);
@@ -137,6 +140,7 @@ public class Route{
         return cw;
     }
 
+    // 计算旋转因子
     public void calcClockwise() {
         if (theoryTurn>robot.turn && theoryTurn - robot.turn < pi || theoryTurn<robot.turn && robot.turn - theoryTurn > pi){
             clockwise = 1;
@@ -166,6 +170,7 @@ public class Route{
         calcMinDistance();
     }
 
+    // 计算到达安全点的速度
     public void calcSafePrintSpeed() {
 
 
@@ -192,6 +197,7 @@ public class Route{
         calcNormalTurnSpeed();
     }
 
+    // 计算普通行径下的旋转速度
     private void calcNormalTurnSpeed() {
         //计算角速度
         if (stopMinAngleDistance < realAngleDistance){
@@ -201,6 +207,7 @@ public class Route{
         }
     }
 
+    // 计算避让敌人的旋转速度
     private void calcTurnSpeedAvoidEnemy(RadarPoint rp) {
         if (rp == null){
             calcNormalTurnSpeed();
@@ -223,6 +230,7 @@ public class Route{
 
     }
 
+    // 计算理论夹角
     public void calcTheoryTurn() {
         // 计算夹角弧度
         theoryTurn = Math.atan2(vector.y, vector.x);
@@ -231,6 +239,7 @@ public class Route{
 //        Main.printLog("tmp"+tmp+"real"+realAngleDistance);
     }
 
+    // 计算不安全机器人的速度
     private void calcUnsafePrintSpeed() {
         // 紧急情况，和其他机器人靠得很近，逃离
 
@@ -322,7 +331,7 @@ public class Route{
         return safe;
     }
 
-
+    // 处理需要紧急避让的机器人
     private void processEmergEvent() {
         // 先算线速度，夹角小于pi/2 刹车，大于pi/2 全速
         Point speed = new Point(robot.lineVx,robot.lineVy);
@@ -340,6 +349,7 @@ public class Route{
 
     }
 
+    // 处理普通状态下需要避让的机器人
     private void processNormalEvent() {
         // 总体思想，前方物体在越靠近中心，速度越小，转向越大
         // 若有前方多个物体，速度按最靠中心的，转向选择最近的计算
@@ -372,6 +382,7 @@ public class Route{
         printTurnSpeed = Robot.maxRotate * clockwise * rotateCoef;
     }
 
+    // 行路算法的核心实现
     public void rush() {
         // 正常送货模式
 
@@ -406,6 +417,7 @@ public class Route{
         Main.Rotate(robot.id,printTurnSpeed);
     }
 
+    // 处理不安全的状态，周围有敌人
     private boolean handleUnsafeLevel4() {
         HashSet<Point> enemys = new HashSet<>();
         enemys.add(willBumpRobot.pos);
@@ -429,7 +441,7 @@ public class Route{
         }
     }
 
-
+    // 到达目标
     public void gotoTarget() {
         // 阻塞攻击模式，到目的地就行
 
@@ -452,6 +464,7 @@ public class Route{
         deletePos();  // 已过的点要删除，防止发生误判
     }
 
+    // 处理不安全的状态，需要避让自己的机器人
     private void handleUnsafeLevel3() {
 
         double dis = robot.getRadius()*2 + 0.5;
@@ -590,6 +603,7 @@ public class Route{
         }
     }
 
+    // 逃离对方的机器人
     private void fleeEnemy(Point point) {
         // 离对方太近，逃离
 //        Point point = rp.getPoint();
@@ -623,6 +637,7 @@ public class Route{
 
     }
 
+    // 被对方卡住，逃离对方的机器人
     private void fleeBlockEnemy(Point point) {
         // 被对方卡死，逃离
 
@@ -678,26 +693,33 @@ public class Route{
             fleepTimes++;
         }
         else {
+            int  rotateClockCoef = speed.calcDot(tarVec) < 0 ? -1 : 1;
             // 朝着预定方向全速前进,转速时间不能太快
-            if (startTimes <= 8 && endTimes == 32) {
-                int  rotateClockCoef = speed.calcDot(tarVec) < 0 ? -1 : 1;
+            if (startTimes <= 6 && endTimes == 20) {
                 Main.Rotate(robot.id, (Robot.maxRotate * rotateClockCoef) / 2);
                 startTimes++;
-                if (startTimes == 8) {
+                if (startTimes == 6) {
                     endTimes = 0;
                 }
+            }
+            else if (startTimes <= 11 && endTimes == 20){
+                Main.Rotate(robot.id, (Robot.maxRotate * rotateClockCoef * (-1)) / 2);
+                if (startTimes == 11) {
+                    startTimes = 0;
+                }   
+                startTimes++;
             }
             else {
                 Main.Rotate(robot.id, 0);
                 Main.Forward(robot.id, robot.maxSpeed);
                 endTimes++;
-                startTimes = 0;
             }
             escapeTimes++;
             // fleepTimes = 0;
         }
     }
 
+    // 处理被阻塞的工作台
     private void handleCloseTerminal() {
         Main.printLog("terminal");
         if (robot.nextStation == null) return;
@@ -712,6 +734,7 @@ public class Route{
         }
     }
 
+    // 处理宽阔地形下，机器人的避让
     private void handleUnsafeLevel2() {
         // 与其他机器人会发生碰撞
         // 总体思想，前方物体在越靠近中心，速度越小，转向越大
@@ -757,6 +780,7 @@ public class Route{
         }
     }
 
+    // 处理与墙题的避让，不能与墙太近，有碰撞损耗
     private void handleUnsafeLevel1() {
         gotoTmpPlace(avoidWallPoint);
         if (robot.carry > 0){
@@ -764,6 +788,7 @@ public class Route{
         }
     }
 
+    // 去临时的避让点
     public void gotoTmpPlace(Point tmp) {
         // 当前帧取临时地点
         // 与墙体会碰撞
@@ -850,6 +875,7 @@ public class Route{
         }
     }
 
+    // 获取面前的所有敌人
     private ArrayList<RadarPoint> getFrontEnemys() {
         // 获取前方所有敌人
         ArrayList<RadarPoint> enemys = new ArrayList<>();
@@ -892,6 +918,7 @@ public class Route{
         return enemys;
     }
 
+    // 两个机器人是否碰撞
     private boolean willBump() {
 
         // 判断两个机器人是否可能发生碰撞
@@ -961,7 +988,7 @@ public class Route{
         return tmp;
     }
 
-
+    // 前方是否是墙
     private Point frontHasWall() {
         // 判断前面是否有墙挡着
         // 若有墙，返回最近的墙体，若无墙，返回空
@@ -988,6 +1015,7 @@ public class Route{
         return d1 <= d2 ? p1:p2;
     }
 
+    // 设置临时安全点
     public void setTmpSafeMode2() {
 
         // 要避让的时候，需要判断对方周围是否有敌人
@@ -1039,6 +1067,7 @@ public class Route{
         }
     }
 
+    // 打印winner的路径，用于调试
     private void printWinpath(HashSet<Pos> pos1) {
         HashSet<Point> set = new HashSet<>();
         for (Pos pos : pos1) {
@@ -1047,6 +1076,7 @@ public class Route{
         Main.printLog(set);
     }
 
+    // 将按权路径加入hashset，用于避让判断
     private void addSafePointToSet(HashSet<Pos> pos1, Point sp) {
         // 把sp周围九格加入set
         Pos pos = Astar.Point2Pos(sp);
@@ -1059,12 +1089,14 @@ public class Route{
         }
     }
 
+    // 获取直线路径
     private Line getLastPathLine() {
         Point src = path.get(path.size()-2);
         Point dest = path.get(path.size()-1);
         return new Line(src,dest);
     }
 
+    // 检测安全点
     private Point detectSafePoint(Point src, Point dest) {
         Point sp = null;
         // 每次向前探测1.0米
@@ -1095,6 +1127,7 @@ public class Route{
         return sp;
     }
 
+    // 选取水平向量上的点
     private Point pickVerPoint(Point bp) {
 
         int upWide = 0;
@@ -1124,6 +1157,7 @@ public class Route{
         return res;
     }
 
+    // 选取垂直向量上的点
     private Point pickHorPoint(Point bp) {
 
         int leftWide = 0;
@@ -1154,6 +1188,7 @@ public class Route{
         return res;
     }
 
+    // 选择loser机器人
     private Robot selectWeakRobot(Robot oth) {
         // 判断自己和另一个机器人谁更弱小，谁让路
         // todo 后面可以修改
@@ -1187,6 +1222,7 @@ public class Route{
         }
     }
 
+    // 同类型机器人的避让比较
     private Robot compareSameRobot(Robot oth) {
         
         // 拿 7 对方无理由避让
@@ -1229,9 +1265,9 @@ public class Route{
             return robot;
         }
     }
-    
+
+    // 判断是机器人否在路线上
     private boolean robotIsInRoute(HashSet<Pos> posSet, Point point) {
-        // 判断是机器人否在路线上
         //考虑机器人的宽度
         Pos pos = Astar.Point2Pos(point);
         for (int i = -1; i <= 1; i++) {
@@ -1251,6 +1287,7 @@ public class Route{
         return fps;
     }
 
+    // 判断路是否够宽
     public boolean roadIsWide(Point vec,Point bp, double dis) {
         // 判断路的宽度是否够两个车过
         // 先找出机器人所在点的位置，以及方向

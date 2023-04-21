@@ -1,10 +1,15 @@
 package com.huawei.codecraft.way;
 
 import com.huawei.codecraft.Main;
-import com.huawei.codecraft.core.Robot;
 import com.huawei.codecraft.util.Point;
 
 import java.util.*;
+
+/**
+ * @Author: zhouzhiqi
+ * @Data:2023/4/1 19:47
+ * @Description: 寻路算法主要实现
+ */
 
 // 寻路算法主要实现
 public class Astar {
@@ -28,7 +33,7 @@ public class Astar {
     public Astar(int[][] mapinfo, Point startPoint, Point endPoint) {
         this.startPosition = Point2Pos(startPoint);
         this.targetPosition = Point2Pos(endPoint);
-        board = new Board(mapinfo, startPosition, targetPosition);
+        board = new Board(mapinfo, targetPosition);
         openList = new ArrayList<Pos>();
         // openList = new PriorityQueue<>((pos1, pos2)->Integer.compare(board.getMsg(pos1).getF(), board.getMsg(pos2).getF()));
         resultList = new ArrayList<Pos>();
@@ -155,6 +160,7 @@ public class Astar {
         return ast.resultList.size();
     }
 
+    // 判断是否是狭窄路径
     private boolean isNarrowWay(Pos curPos) {
         // 路超过6就算宽
         int lenX = 0, lenY = 0;

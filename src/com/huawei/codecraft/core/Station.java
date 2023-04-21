@@ -358,6 +358,7 @@ public class Station implements Comparable{
         }
     }
 
+    // 工作台的第一次初始化，判断工作台能卖给哪些机器人
     public void initialization() {
 
         // 周围没有机器人，取消初始化

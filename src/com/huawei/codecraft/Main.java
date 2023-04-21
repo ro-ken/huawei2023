@@ -231,6 +231,7 @@ public class Main {
         }
     }
 
+    // 计算每一帧得到数据
     private static void calcParam(int i) {
         if (robots[i].nextStation == null && robots[i].attack == null){
 
@@ -272,6 +273,7 @@ public class Main {
 
     }
 
+    // 到达目标点，处理事件
     private static void handleArrive(int i) {
         // 有物品就买，没有就等待,逐帧判断
         if (robots[i].nextStation == robots[i].srcStation && robots[i].nextStation.proStatus == 1){

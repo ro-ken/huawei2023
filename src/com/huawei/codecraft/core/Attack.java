@@ -3,7 +3,6 @@ package com.huawei.codecraft.core;
 import java.util.*;
 import com.huawei.codecraft.Main;
 import com.huawei.codecraft.util.*;
-import com.huawei.codecraft.way.Astar;
 import com.huawei.codecraft.way.Mapinfo;
 import com.huawei.codecraft.way.Pos;
 
@@ -197,105 +196,8 @@ public class Attack {
         return theoryMoney;
     }
 
-    // 获取路径得权重系数，路越窄，系数越高。3格 1.2 4格 1.15 5格 1.1
-    // TODO 待商议
-    private static double getPosWeightCoef(Pos curPos) {
-        // 路超过6就算宽
-        int lenX = 0, lenY = 0;
-        int x = curPos.x , y = curPos.y;
-        // 计算横向的宽度
-        while (lenX < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
-            lenX++;
-            y--;
-        }
-        y = curPos.y + 1;
-        while (lenX < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
-            lenX++;
-            y++;
-        }
-        y = curPos.y;
-        // 计算纵向宽度
-        while (lenY < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
-            lenY++;
-            x--;
-        }
-        x = curPos.x + 1;
-        while (lenY < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
-            lenY++;
-            x++;
-        }
-        int len = Math.min(lenX, lenY);
-        if (len == 3) {
-            return 1.2;
-        }
-        else if (len == 4) {
-            return 1.15;
-        }
-        else if (len == 5) {
-            return 1.1;
-        }
-        else {
-            return 1.0;
-        }    
-    }
-
-    private static void fixPos(Pos curPos) {
-        // 将 Pos 点修正到路径中间，从而影响更多的地方
-        // 上下有墙 往中间移动
-        int flag = 15;
-        for (int i = 0; i < dirX.length / 2; i++) {
-            int x = curPos.x + dirX[i];
-            int y = curPos.y + dirY[i];
-            if (Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] == -2) {
-                flag &= ~(1 << 3 - i) & 0xFF;
-            }
-        }
-        // 上有墙，往下移动，下有墙，往上移动
-        if ((flag & 8) == 0 && Mapinfo.isInMap(curPos.x + 1, curPos.y) && Mapinfo.mapInfoOriginal[curPos.x + 1][curPos.y] != -2) {
-            curPos.x = curPos.x + 1;
-        }
-        else if ((flag & 4) == 0 && Mapinfo.isInMap(curPos.x - 1, curPos.y) && Mapinfo.mapInfoOriginal[curPos.x - 1][curPos.y] != -2) {
-            curPos.x = curPos.x - 1;
-        }
-        // 左边有墙，往右移动，右边有墙，往左移动
-        if ((flag & 2) == 0 && Mapinfo.isInMap(curPos.x, curPos.y + 1) && Mapinfo.mapInfoOriginal[curPos.x][curPos.y + 1] != -2) {
-            curPos.y = curPos.y + 1;
-        }
-        else if ((flag & 1) == 0 && Mapinfo.isInMap(curPos.x, curPos.y - 1) && Mapinfo.mapInfoOriginal[curPos.x][curPos.y - 1] != -2) {
-            curPos.y = curPos.x + 1;
-        }
-    }
-
-     // 初始化对方路径每个路径点的价值 价值 = 路径利润 / 路径时间损耗
-     private static void initCntMap() {
-        // 获取敌方的工作台信息
-        int length = Main.fighterStationNum;
-        Station[] stations = Main.fighterStations;
-
-        // 将station路径中的pos全部记录到hash表中
-        for (int i = 0; i < length; i++) {
-            // 计算满载路径下的点,获取路径价值
-            int type = stations[i].type;
-            Map<Point,HashSet<Pos>> fullPos = stations[i].paths.getResSetMap(false);
-            for (Point key : fullPos.keySet()) {
-                HashSet<Pos> posSet = fullPos.get(key);
-                double pathWeight = calcPathMoney(type, posSet.size() / 3);
-                for (Pos pos : posSet) {
-                    // 对每个 Point 对应的 Pos 进行相关操作
-                    double weightCoef = getPosWeightCoef(pos);
-                    double weight = pathWeight * weightCoef;
-                    if (posCnt.containsKey(pos)) {
-                        posCnt.put(pos, posCnt.get(pos) + weight); // 自增
-                    } else {
-                        posCnt.put(pos, weight); // 初始化值为1
-                    }
-                }
-            }
-        }
-    }
-
-     // 初始化攻击的点，依次选取每个工作台价值最高的作为攻击点
-     private static void initAttackPoint() {
+    // 初始化攻击的点，依次选取每个工作台价值最高的作为攻击点
+    private static void initAttackPoint() {
         // 获取敌方的工作台信息
         Map<Integer, ArrayList<Station>>  fighterStationsMap = Main.fighterStationsMap;
         Station[] fighterStations = Main.fighterStations;
@@ -348,6 +250,7 @@ public class Attack {
         
     } 
 
+    // 更换攻击点目标
     public void changeTarget() {
         // 一段时间没有敌人，换一个攻击点
         int seq = getFitPlace();
@@ -378,22 +281,10 @@ public class Attack {
             }
         }
 
-//        for (Point point : attackPoint) {
-//            if (point == null) continue;
-//            boolean occupy = false;
-//            for (Robot rob : robots) {
-//                if (rob.attack.target.equals(point)) {
-//                    occupy = true;
-//                    break;
-//                }
-//            }
-//            if (!occupy) {
-//                return point;  // 这个点没人占用,就这个点
-//            }
-//        }
         return 0;
     }
-
+    
+    // 打印攻击点，用于调试
     public static void printPoint() {
         Main.printLog(Main.zoneMap.size());
         Main.printLog("attackPoint");
