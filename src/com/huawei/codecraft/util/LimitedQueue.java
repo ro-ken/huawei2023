@@ -1,12 +1,16 @@
 package com.huawei.codecraft.util;
 
-/**
- * @author :ro_kin
- * @date : 2023/4/16
- */
+
 import com.huawei.codecraft.Main;
+
 import java.util.LinkedList;
 
+
+/**
+ * ClassName: LimitedQueue
+ * Package: com.huawei.codecraft.util
+ * Description: 小根堆 分析最近的敌人
+ */
 public class LimitedQueue<E> extends LinkedList<E> {
     private int limit;
     private Node first;

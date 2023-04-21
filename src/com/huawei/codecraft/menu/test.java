@@ -1,13 +1,21 @@
 package com.huawei.codecraft.menu;
 
 import com.huawei.codecraft.util.LimitedQueue;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Queue;
 
+
+/**
+ * ClassName: test
+ * Package: com.huawei.codecraft.menu
+ * Description: 用于测试
+ */
 public class test {
 
-    public static void main(String[] args) {
+    @Test
+    public void test1(){
         LimitedQueue<String> queue = new LimitedQueue<>(5);
         queue.add("A");
         queue.add("B");
@@ -22,6 +30,6 @@ public class test {
 //
 //        System.out.print("逆序遍历结果：");
 //        queue.reversePrint(); // 输出 "逆序遍历结果：G F E D C "
-
     }
+
 }

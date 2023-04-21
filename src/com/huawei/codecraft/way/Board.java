@@ -1,12 +1,15 @@
 package com.huawei.codecraft.way;
 
-/**
- * @Author: zhouzhiqi
- * @Data:2023/4/1 19:47
- * @Description: 地图封路实现，保证寻路算法实现
- */
 
-// 记录寻路路径的地图信息，每个点保存该点的F值和探索情况
+/**
+ * ClassName: Board
+ * Package: com.huawei.codecraft.way
+ * Description: 地图封路实现，保证寻路算法实现
+ * 记录寻路路径的地图信息，每个点保存该点的F值和探索情况
+ *
+ * @Author: zhouzhiqi/WLY
+ * @Data:2023/4/1 19:47
+ */
 public class Board {
     public static int row = 0;
     public static int col = 0;
@@ -16,6 +19,12 @@ public class Board {
     public static int HypotenuseCost = 14;  // 斜边代价
 
 
+    /**
+     * 构造器
+     *
+     * @param mapInfo       地图信息
+     * @param targetPostion 目标点
+     */
     public Board(int[][] mapInfo, Pos targetPostion) {
         row = mapInfo.length;
         col = mapInfo[0].length;
@@ -25,7 +34,13 @@ public class Board {
         maps[targetPostion.x][targetPostion.y].isOK = 0; // 终点设置为可探索，防止出现错误
     }
 
-    // 初始话每个点到目标点的 H 值
+    //
+
+    /**
+     * 初始化每个点到目标点的 H 值
+     *
+     * @param mapInfo 地图信息
+     */
     public void initMsg(int[][] mapInfo) {
         for (int i = 0; i < row; ++i) {
             for (int j = 0; j < col; ++j) {
@@ -33,24 +48,32 @@ public class Board {
                 // 障碍物初始设置为2，用于区分斜穿条件
                 maps[i][j].isOK = mapInfo[i][j] == 1 ? 2 : 0;
                 maps[i][j].H = StraightCost * (Math.abs(targetPostion.x - i) + Math.abs(targetPostion.y - j));
-                
+
             }
-        } 
+        }
     }
 
-    // 获取每个点的信息
+
+    /**
+     * 获取每个点的信息
+     *
+     * @param posotion 点位置
+     * @return 每个点的信息
+     */
     public Msg getMsg(Pos posotion) {
         return maps[posotion.x][posotion.y];
     }
 
+    /**
+     * Board打印
+     */
     public void printBoard() {
         for (int i = 0; i < row; i++) {
             String data = new String();
             for (int j = 0; j < col; j++) {
                 if (getMsg(new Pos(i, j)).isOK == 0) {
                     data += " ";
-                }
-                else {
+                } else {
                     data += String.valueOf(2);
                 }
             }

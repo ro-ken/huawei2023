@@ -4,6 +4,12 @@ import com.huawei.codecraft.util.Point;
 
 import java.util.Arrays;
 
+
+/**
+ * ClassName: VectorAngle2D
+ * Package: com.huawei.codecraft.menu
+ * Description: 向量角
+ */
 public class VectorAngle2D {
     public static void main(String[] args) {
         double[] direction = {1, 1}; // 方向向量
@@ -19,13 +25,18 @@ public class VectorAngle2D {
         System.out.println(Arrays.toString(v2));
     }
 
+    /**
+     * 根据一个向量和夹角，算另外两个向量
+     * @param vec 向量
+     * @param angle 夹角
+     * @return
+     */
     public static Point[] calc2vec(Point vec,double angle) {
-        // 根据一个向量和夹角，算另外两个向量
 
-        double[] direction = {1, 1}; // 方向向量
+        double[] direction = {1, 1};  // 方向向量
 
-        double[] unitDirection = normalize(direction); // 单位向量
-        double[] u = {-unitDirection[1], unitDirection[0]}; // 与单位向量垂直的向量
+        double[] unitDirection = normalize(direction);  // 单位向量
+        double[] u = {-unitDirection[1], unitDirection[0]};  // 与单位向量垂直的向量
 
         double[] v1 = add(scale(Math.cos(angle), unitDirection), scale(Math.sin(angle), u));
         double[] v2 = add(scale(Math.cos(angle), unitDirection), scale(-Math.sin(angle), u));
@@ -37,24 +48,45 @@ public class VectorAngle2D {
         return res;
     }
 
-
-    // 求向量长度
+    /**
+     * 求向量长度
+     * @param v 向量
+     * @return 向量长度
+     */
     public static double magnitude(double[] v) {
         return Math.sqrt(v[0] * v[0] + v[1] * v[1]);
     }
     
     // 求向量的单位向量
+
+    /**
+     * 求向量的单位向量
+     * @param v 向量
+     * @return 向量的单位向量
+     */
     public static double[] normalize(double[] v) {
         double mag = magnitude(v);
         return new double[] {v[0] / mag, v[1] / mag};
     }
 
-    // 求向量的标量乘积
+
+    /**
+     * 求向量的标量乘积
+     * @param c 系数
+     * @param v 向量
+     * @return 向量的标量乘积
+     */
     public static double[] scale(double c, double[] v) {
         return new double[] {c * v[0], c * v[1]};
     }
-    
-    // 求向量的加法
+
+
+    /**
+     * 求向量的加法
+     * @param v1 向量1
+     * @param v2 向量2
+     * @return 向量之和
+     */
     public static double[] add(double[] v1, double[] v2) {
         return new double[] {v1[0] + v2[0], v1[1] + v2[1]};
     }

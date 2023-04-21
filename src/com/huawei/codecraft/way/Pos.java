@@ -3,15 +3,28 @@ import com.huawei.codecraft.util.Point;
 
 import java.util.*;;
 
-// 记录点的坐标
+
+/**
+ * ClassName: Pos
+ * Package: com.huawei.codecraft.way
+ * Description: 记录点的坐标
+ */
 public class Pos {
     public int x = 0;
     public int y = 0;    // 坐标x，y
 
+    /**
+     * 空参构造器
+     */
     public Pos() {
 
     }
 
+    /**
+     * 构造器
+     * @param x x位置
+     * @param y y位置
+     */
     public Pos(int x, int y) {
         this.x = x;
         this.y = y;

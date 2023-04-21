@@ -5,16 +5,18 @@ import com.huawei.codecraft.util.Point;
 
 import java.util.*;
 
-/**
- * @Author: zhouzhiqi
- * @Data:2023/4/1 19:47
- * @Description: 寻路算法主要实现
- */
 
-// 寻路算法主要实现
+/**
+ * ClassName: Astar
+ * Package: com.huawei.codecraft.way
+ * Description: 寻路算法主要实现
+ *
+ * @Author: zhouzhiqi/WLY
+ * @Data:2023/4/1 19:47
+ */
 public class Astar {
     public static int narrowPathCount = 0;
-    static int[] bits = {20, 18, 12, 10};   // 用于判断斜边是否可以通过，按照上下左右是否有障碍物进行位运算
+    static int[] bits = {20, 18, 12, 10};  // 用于判断斜边是否可以通过，按照上下左右是否有障碍物进行位运算
     static int[] dirX = {-1, 1, 0, 0, -1, -1, 1, 1};
     static int[] dirY = {0, 0, -1, 1, -1, 1, -1, 1};
     static int findTimes = 101;
@@ -22,14 +24,21 @@ public class Astar {
     public Pos startPosition;
     public Pos targetPosition;
     public Board board;
-    public ArrayList<Pos> openList ;     // 存储待扩展节点
+    public ArrayList<Pos> openList;  // 存储待扩展节点
     // 后续使用优先队列进行优化
     // PriorityQueue<Pos> openList;
-    public ArrayList<Pos> resultList;    // 存储结果节点
-    public ArrayList<Point> mergeList;    // 存储合并的结果节点
+    public ArrayList<Pos> resultList;  // 存储结果节点
+    public ArrayList<Point> mergeList;  // 存储合并的结果节点
     public ArrayList<Pos> fixList;
-    public ArrayList<Point> result;     // 存储结果节点
+    public ArrayList<Point> result;  // 存储结果节点
 
+    /**
+     * 构造器
+     *
+     * @param mapinfo    地图信息
+     * @param startPoint 起点
+     * @param endPoint   终点
+     */
     public Astar(int[][] mapinfo, Point startPoint, Point endPoint) {
         this.startPosition = Point2Pos(startPoint);
         this.targetPosition = Point2Pos(endPoint);
@@ -42,6 +51,11 @@ public class Astar {
         result = new ArrayList<Point>();
     }
 
+    /**
+     * 返回包裹过的地图 确保寻找出的路线能通过机器人
+     *
+     * @param maps 包裹过的地图
+     */
     public void blockAvoidMaps(int[][] maps) {
         int x = targetPosition.x, y = targetPosition.y;
         int startI = Math.max(x - 2, 0);
@@ -51,24 +65,28 @@ public class Astar {
 
         for (int i = startI; i <= endI; i++) {
             for (int j = startJ; j <= endJ; j++) {
-                if (posNotInTwoPos(startPosition,targetPosition,i,j)){
+                if (posNotInTwoPos(startPosition, targetPosition, i, j)) {
                     maps[i][j] = 2;
                 }
             }
         }
     }
 
-    // 将机器人的位置当作障碍物进行锁定
-    // todo：暂时直接封禁一圈，因为前面的东西拿东西突然变大，也会对路径产生影响
+    /**
+     * 将机器人的位置当作障碍物进行锁定
+     * todo：暂时直接封禁一圈，因为前面的东西拿东西突然变大，也会对路径产生影响
+     *
+     * @param pointSet 点集合
+     */
     public void blockPoints(HashSet<Point> pointSet) {
-        if (pointSet == null){
+        if (pointSet == null) {
             return;
         }
 
         for (Point p : pointSet) {
             // 直接将机器人周围一圈封禁掉
             Pos position = Point2Pos(p);
-            if (Mapinfo.isInMap(position.x, position.y))  {
+            if (Mapinfo.isInMap(position.x, position.y)) {
                 board.getMsg(position).isOK = 2;
             }
             for (int i = 0; i < dirX.length; i++) {
@@ -81,34 +99,43 @@ public class Astar {
         }
     }
 
+    /**
+     * 判断一个点是否在两墙之间
+     *
+     * @param s 起点位置
+     * @param t 终点位置
+     * @param i 起点索引
+     * @param j 终点索引
+     * @return 一个点是否在两墙之间
+     */
     private boolean posNotInTwoPos(Pos s, Pos t, int i, int j) {
-        if (i == t.x && j == t.y){
+        if (i == t.x && j == t.y) {
             return false;   //中点放出来
         }
         //
-        if (s.x == t.x && s.y == t.y){
+        if (s.x == t.x && s.y == t.y) {
             return true;
         }
 
-        if (s.x != t.x && s.y != t.y){
+        if (s.x != t.x && s.y != t.y) {
             //
-            boolean flag1 = (t.x - s.x) * (t.x-i) >= 0; //同侧
-            boolean flag2 = (t.y - s.y) * (t.y-j) >= 0; //同侧
-            if (flag1 && flag2){
+            boolean flag1 = (t.x - s.x) * (t.x - i) >= 0; //同侧
+            boolean flag2 = (t.y - s.y) * (t.y - j) >= 0; //同侧
+            if (flag1 && flag2) {
                 return false;
             }
 
-        }else {
-            if (s.x == t.x){
-                boolean flag2 = (t.y - s.y) * (t.y-j) >= 0; //同侧
+        } else {
+            if (s.x == t.x) {
+                boolean flag2 = (t.y - s.y) * (t.y - j) >= 0; //同侧
                 boolean flag3 = Math.abs(t.x - i) <= 1; //
-                if (flag2 && flag3){
+                if (flag2 && flag3) {
                     return false;
                 }
-            }else {
-                boolean flag1 = (t.x - s.x) * (t.x-i) >= 0; //同侧
+            } else {
+                boolean flag1 = (t.x - s.x) * (t.x - i) >= 0; //同侧
                 boolean flag3 = Math.abs(t.y - j) <= 1; //
-                if (flag1 && flag3){
+                if (flag1 && flag3) {
                     return false;
                 }
             }
@@ -116,55 +143,84 @@ public class Astar {
         return true;
     }
 
-    // 创建两点之间的直线方程
-    public Pair calLineExpression(Point startPoint,  Point endPoint) {
+
+    /**
+     * 创建两点之间的直线方程
+     *
+     * @param startPoint 起点
+     * @param endPoint   终点
+     * @return 两点之间的直线方程
+     */
+    public Pair calLineExpression(Point startPoint, Point endPoint) {
         double k = (endPoint.y - startPoint.y) / (endPoint.x - startPoint.x);
         double b = startPoint.y - k * startPoint.x;
         return new Pair(k, b);
     }
 
-    // 计算两点多长，返回点的个数
-    public static int calcDis(boolean isEmpty,Point src, Point dest){
+
+    /**
+     * 计算两点多长，返回点的个数
+     *
+     * @param isEmpty 是否控制啊
+     * @param src     起点
+     * @param dest    终点
+     * @return 点的个数
+     */
+    public static int calcDis(boolean isEmpty, Point src, Point dest) {
         double dis = src.calcDistance(dest);
-        if (dis < 1.0){
-            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())){
+        if (dis < 1.0) {
+            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())) {
                 return 2;
             }
         }
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-        Astar ast = new Astar(fixMap,src,dest);
+        Astar ast = new Astar(fixMap, src, dest);
         ast.search();
 
         return ast.resultList.size();
     }
 
-    // 计算两点多长，返回点的个数
-    public static int calcDisAndMidPoint(boolean isEmpty,Point src, Point dest,Point mid){
+
+    /**
+     * 计算两点多长，返回点的个数
+     *
+     * @param isEmpty 是否为空
+     * @param src     起点
+     * @param dest    终点
+     * @param mid     中点
+     * @return 点的个数
+     */
+    public static int calcDisAndMidPoint(boolean isEmpty, Point src, Point dest, Point mid) {
         double dis = src.calcDistance(dest);
-        if (dis < 1.0){
-            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())){
+        if (dis < 1.0) {
+            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())) {
                 mid.set(dest);
                 return 2;
             }
         }
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-        Astar ast = new Astar(fixMap,src,dest);
+        Astar ast = new Astar(fixMap, src, dest);
         ast.search();
-        if (ast.resultList.size() == 0){
+        if (ast.resultList.size() == 0) {
             mid.set(src);
             return 100000;  // 未找到
         }
-        mid.set(ast.resultList.get(ast.resultList.size()/2));
+        mid.set(ast.resultList.get(ast.resultList.size() / 2));
         return ast.resultList.size();
     }
 
-    // 判断是否是狭窄路径
+    /**
+     * 判断是否是狭窄路径
+     *
+     * @param curPos 当前点
+     * @return 是否是狭窄路径
+     */
     private boolean isNarrowWay(Pos curPos) {
         // 路超过6就算宽
         int lenX = 0, lenY = 0;
-        int x = curPos.x , y = curPos.y;
+        int x = curPos.x, y = curPos.y;
         // 计算横向的宽度
         while (lenX < 6 && Mapinfo.isInMap(x, y) && Mapinfo.mapInfoOriginal[x][y] != -2) {
             lenX++;
@@ -190,17 +246,18 @@ public class Astar {
         if (len <= 5) {
             return true;
         }
-        return false;    
+        return false;
     }
 
+    /**
+     * 连续15格路径宽度低于5，判定为狭窄路径
+     */
     private void countNarrowPath() {
-        // 连续15格路径宽度低于5，判定为狭窄路径
         int total = 0;
         for (Pos pathPos : resultList) {
             if (isNarrowWay(pathPos)) {
                 total++;
-            }
-            else {
+            } else {
                 total = 0;
             }
             if (total >= 15) {
@@ -209,20 +266,39 @@ public class Astar {
         }
     }
 
-    public static Point getSafePoint2(boolean isEmpty,Point src, Point dest,HashSet<Pos> pos1,Point midPoint){
+    /**
+     * 寻找安全点/临时避障点
+     *
+     * @param isEmpty  是否空载
+     * @param src      起点
+     * @param dest     终点
+     * @param pos1     路径点集合
+     * @param midPoint 中点
+     * @return 安全点/临时避障点
+     */
+    public static Point getSafePoint2(boolean isEmpty, Point src, Point dest, HashSet<Pos> pos1, Point midPoint) {
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
         Main.printLog("midPoint" + midPoint);
-        Astar ast = new Astar(fixMap,src,midPoint);
+        Astar ast = new Astar(fixMap, src, midPoint);
 
         Point sp = ast.getTmpAvoidPoint(!isEmpty, pos1);
         return sp;
     }
 
-    public static ArrayList<Point> getPathAndResult(boolean isEmpty,Point src, Point dest,Set<Pos> posSet){
+    /**
+     * 返回路径和结果
+     *
+     * @param isEmpty 是否空载
+     * @param src     起点
+     * @param dest    终点
+     * @param posSet  路径点集合
+     * @return 路径点集合
+     */
+    public static ArrayList<Point> getPathAndResult(boolean isEmpty, Point src, Point dest, Set<Pos> posSet) {
         double dis = src.calcDistance(dest);
-        if (dis < 1.0){
-            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())){
+        if (dis < 1.0) {
+            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())) {
                 ArrayList<Point> res = new ArrayList<>();
                 res.add(src);
                 res.add(dest);
@@ -231,20 +307,30 @@ public class Astar {
         }
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-        Astar ast = new Astar(fixMap,src,dest);
+        Astar ast = new Astar(fixMap, src, dest);
         ast.search();
         if (Main.mapSeq == 0) {
             ast.countNarrowPath();
         }
-        resultToPosSet(ast.resultList,posSet);
+        resultToPosSet(ast.resultList, posSet);
 //        posSet.addAll(ast.resultList);
         return ast.getResult(!isEmpty);
     }
 
-    public static ArrayList<Point> getPathBlockRobots(boolean isEmpty,Point src, Point dest,Set<Pos> posSet,HashSet<Point> robots){
+    /**
+     * 获取路径阻塞的机器人
+     *
+     * @param isEmpty 是否空载
+     * @param src     起点
+     * @param dest    终点
+     * @param posSet  路径点集
+     * @param robots  机器人集合
+     * @return 路径阻塞的机器人
+     */
+    public static ArrayList<Point> getPathBlockRobots(boolean isEmpty, Point src, Point dest, Set<Pos> posSet, HashSet<Point> robots) {
         double dis = src.calcDistance(dest);
-        if (dis < 1.0){
-            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())){
+        if (dis < 1.0) {
+            if (src.equals(dest) || src.fixPoint2Center().equals(dest.fixPoint2Center())) {
                 ArrayList<Point> res = new ArrayList<>();
                 res.add(src);
                 res.add(dest);
@@ -253,31 +339,51 @@ public class Astar {
         }
 
         int[][] fixMap = Main.mapinfo.getFixMap(isEmpty);
-        Astar ast = new Astar(fixMap,src,dest);
+        Astar ast = new Astar(fixMap, src, dest);
         ast.blockPoints(robots);    // 先封锁机器人
         ast.search();
-        resultToPosSet(ast.resultList,posSet);
+        resultToPosSet(ast.resultList, posSet);
 //        posSet.addAll(ast.resultList);
         return ast.getResult(!isEmpty);
     }
 
 
+    /**
+     * 把结果保存到posSet里面，加上下左右点
+     *
+     * @param resultList 结果列表
+     * @param posSet     点集
+     */
     private static void resultToPosSet(ArrayList<Pos> resultList, Set<Pos> posSet) {
-        // 把结果保存到posSet里面，加上下左右点
         for (Pos pos : resultList) {
             posSet.add(pos);
-            posSet.add(new Pos(pos.x-1, pos.y));
-            posSet.add(new Pos(pos.x+1, pos.y));
-            posSet.add(new Pos(pos.x, pos.y-1));
-            posSet.add(new Pos(pos.x, pos.y+1));
+            posSet.add(new Pos(pos.x - 1, pos.y));
+            posSet.add(new Pos(pos.x + 1, pos.y));
+            posSet.add(new Pos(pos.x, pos.y - 1));
+            posSet.add(new Pos(pos.x, pos.y + 1));
         }
     }
 
+    /**
+     * 计算两点之间的欧氏距离
+     *
+     * @param pos1 点1
+     * @param pos2 点2
+     * @return 两点之间的欧氏距离
+     */
     public static double getPosDistance(Pos pos1, Pos pos2) {
         Point point1 = Pos2Point(pos1);
         Point point2 = Pos2Point(pos2);
         return Math.sqrt(Math.pow((point1.x - point2.x), 2) + Math.pow((point1.y - point2.y), 2));
     }
+
+    /**
+     * 得到离避让点最近的点
+     *
+     * @param sp   点
+     * @param pos1 点集合
+     * @return 离避让点最近的点
+     */
     public static Point getClosestPoint(Point sp, HashSet<Pos> pos1) {
         if (pos1.size() == 0) {
             return null;
@@ -289,7 +395,7 @@ public class Astar {
         Pos minPos = new Pos();
         double mindis = 50;
         int times = 0;
-        while(!flag && times != findTimes) {   // 检查是否检测到了
+        while (!flag && times != findTimes) {   // 检查是否检测到了
             for (int i = 0; i < dirX.length; i++) {
                 int x = pos.x + dirX[i] * step;
                 int y = pos.y + dirY[i] * step;
@@ -299,7 +405,8 @@ public class Astar {
                     double curDis = getPosDistance(pos, curPos);
                     if (mindis > curDis) {
                         mindis = curDis;
-                        minPos.set(curPos);;
+                        minPos.set(curPos);
+                        ;
                     }
                 }
             }
@@ -312,7 +419,13 @@ public class Astar {
         return Pos2Point(minPos);
     }
 
-    // 空载需要找 2 * 2 的网格，从该点进行寻找 -1 没找到，1 代表左上方 2 代表右上方 3 代表左下方 4 代表右下方
+    /**
+     * 空载需要找 2 * 2 的网格，从该点进行寻找 -1 没找到，1 代表左上方 2 代表右上方 3 代表左下方 4 代表右下方
+     *
+     * @param curPos 当前位置
+     * @param set    路径点集
+     * @return 位置信息
+     */
     public int getEmptyGrid(Pos curPos, HashSet<Pos> set) {
         if (set.contains(curPos)) {
             return -1;
@@ -333,32 +446,39 @@ public class Astar {
 
         // 斜左上 左右 左下 右下
         // 斜左上
-        if ((ret & 10) == 10 && Mapinfo.isInMap(curPos.x - 1, curPos.y - 1)  && !set.contains(new Pos(curPos.x - 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y - 1] != -2) {
+        if ((ret & 10) == 10 && Mapinfo.isInMap(curPos.x - 1, curPos.y - 1) && !set.contains(new Pos(curPos.x - 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][curPos.y - 1] != -2) {
             return 0;
         }
         // 斜右上
-        if ((ret & 9) == 9 && Mapinfo.isInMap(curPos.x - 1, curPos.y + 1) && !set.contains(new Pos(curPos.x - 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][ curPos.y + 1] != -2) {
+        if ((ret & 9) == 9 && Mapinfo.isInMap(curPos.x - 1, curPos.y + 1) && !set.contains(new Pos(curPos.x - 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x - 1][curPos.y + 1] != -2) {
             return 1;
         }
         // 斜左下
-        if ((ret & 6) == 6 && Mapinfo.isInMap(curPos.x + 1, curPos.y - 1) && !set.contains(new Pos(curPos.x + 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y - 1] != -2) {
+        if ((ret & 6) == 6 && Mapinfo.isInMap(curPos.x + 1, curPos.y - 1) && !set.contains(new Pos(curPos.x + 1, curPos.y - 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][curPos.y - 1] != -2) {
             return 2;
         }
         // 斜右下
-        if ((ret & 5) == 5 && Mapinfo.isInMap(curPos.x + 1, curPos.y + 1) && !set.contains(new Pos(curPos.x + 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][ curPos.y + 1] != -2) {
+        if ((ret & 5) == 5 && Mapinfo.isInMap(curPos.x + 1, curPos.y + 1) && !set.contains(new Pos(curPos.x + 1, curPos.y + 1)) && Mapinfo.mapInfoOriginal[curPos.x + 1][curPos.y + 1] != -2) {
             return 3;
         }
         return -1;
     }
 
-    // 0 代表找到，-1 没找到
+
+    /**
+     * 判断是否找到3*3网格
+     *
+     * @param curPos 当前位置
+     * @param set    点集合
+     * @return 0 代表找到，-1 没找到
+     */
     public boolean getFullGrid(Pos curPos, HashSet<Pos> set) {
         // 从当前点寻找 3 * 3 网格
         if (set.contains(curPos)) {
             return false;
         }
         // 判断周围 8个方向是否符合条件
-        for (int i = 0; i <  dirX.length; i++) {
+        for (int i = 0; i < dirX.length; i++) {
             int x = curPos.x + dirX[i];
             int y = curPos.y + dirY[i];
             if (!Mapinfo.isInMap(x, y) || set.contains(new Pos(x, y)) || Mapinfo.mapInfoOriginal[x][y] == -2) {
@@ -369,6 +489,14 @@ public class Astar {
         return true;
     }
 
+    /**
+     * 获取避让点
+     *
+     * @param maps  地图信息
+     * @param pos1  点集合
+     * @param carry 是否搬运
+     * @return 避让点
+     */
     public Point getPoint(int[][] maps, HashSet<Pos> pos1, boolean carry) {
         if (pos1.size() == 0) {
             return null;
@@ -399,7 +527,14 @@ public class Astar {
         return null;
     }
 
-    public Point getTmpAvoidPoint(boolean carry,HashSet<Pos> pos1) {
+    /**
+     * 获取临时避让点
+     *
+     * @param carry 是否载物
+     * @param pos1  点集合
+     * @return 临时避让点
+     */
+    public Point getTmpAvoidPoint(boolean carry, HashSet<Pos> pos1) {
 
         int[][] maps = new int[Mapinfo.row][Mapinfo.col];
         initAvoidMaps(maps);    // 用于找避让点的地图，0 未探索 1 已探索 2 障碍物
@@ -407,23 +542,38 @@ public class Astar {
         return getPoint(maps, pos1, carry);
     }
 
-    // 将得到的路径左边合并并返回结果坐标
-    public  ArrayList<Point> getResult(boolean carry) {
+
+    /**
+     * 将得到的路径左边合并并返回结果坐标
+     *
+     * @param carry 是否满载
+     * @return 结果坐标
+     */
+    public ArrayList<Point> getResult(boolean carry) {
         // 将结果返回，空载需要右移坐标，满载无需移动
         mergeResultList();
         fixRoute(carry);    // 修正得到的结果
         return result;
     }
 
-    // 将得到的路径左边合并并返回结果
-    public  ArrayList<Pos> getResultList() {
+    /**
+     * 将得到的路径左边合并并返回结果
+     *
+     * @return 合并后的点集合
+     */
+    public ArrayList<Pos> getResultList() {
         return resultList;
     }
 
+    /**
+     * 修正路径
+     *
+     * @param carry 是否满载
+     */
     public void fixRoute(boolean carry) {
         // 没有结果，返回
         int size = mergeList.size();
-        if (size < 2){
+        if (size < 2) {
             return;
         }
         result.add(mergeList.get(0));
@@ -437,8 +587,7 @@ public class Astar {
                 offsetPoint(prePoint, curPoint, prePos, curPos, carry);
                 result.add(prePoint);
                 result.add(curPoint);
-            }
-            else {
+            } else {
                 result.add(curPoint);
             }
             prePoint = curPoint;
@@ -447,11 +596,17 @@ public class Astar {
         result.add(mergeList.get(mergeList.size() - 1));
     }
 
+    /**
+     * 判断是否为关键点
+     *
+     * @param curPos 当前位置
+     * @return 类型
+     */
     public int isCriticalPos(Pos curPos) {
         int x = curPos.x;
         int y = curPos.y;
         // 判断左边是否是墙
-        if ((Mapinfo.isInMap(x, y - 1) && Mapinfo.isInMap(x - 1, y - 1) && Mapinfo.isInMap(x - 1, y + 1)) &&  (Mapinfo.mapInfoOriginal[x][y - 1] == -2 || Mapinfo.mapInfoOriginal[x - 1][y - 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y - 1] == -2)) {
+        if ((Mapinfo.isInMap(x, y - 1) && Mapinfo.isInMap(x - 1, y - 1) && Mapinfo.isInMap(x - 1, y + 1)) && (Mapinfo.mapInfoOriginal[x][y - 1] == -2 || Mapinfo.mapInfoOriginal[x - 1][y - 1] == -2 || Mapinfo.mapInfoOriginal[x + 1][y - 1] == -2)) {
             return 1;
         }
         // 判断上边是否是墙
@@ -461,7 +616,16 @@ public class Astar {
         return 0;
     }
 
-    // TODO：边界问题暂时没有考虑，需要优化
+    /**
+     * 判断是否是障碍物
+     * TODO：边界问题暂时没有考虑，需要优化
+     *
+     * @param param    点信息
+     * @param startPos 起始点
+     * @param endPos   终点
+     * @return 是否为障碍物
+     */
+    //
     public boolean isObstacle(Pair param, Pos startPos, Pos endPos) {
         double step = 0.5;  // 下标 x 的增加对应世界地图值增加 0.5
         double x1 = Pos2Point(startPos).x;
@@ -479,32 +643,27 @@ public class Astar {
                 Pos nexPos = Point2Pos(new Point(x, y));
                 // 连接线上的点，上下不能有障碍物
 
-                if ( (nexPos.y < Mapinfo.col - 1 && nexPos.y > 0) &&  ( Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y - 1] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y + 1] == -2)) {
+                if ((nexPos.y < Mapinfo.col - 1 && nexPos.y > 0) && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y - 1] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y + 1] == -2)) {
                     return true;
-                }
-                else if (nexPos.y == Mapinfo.col - 1 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y - 1] == -2)) {
+                } else if (nexPos.y == Mapinfo.col - 1 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y - 1] == -2)) {
                     return true;
-                }
-                else if (nexPos.y == 0 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y + 1] == -2)) {
+                } else if (nexPos.y == 0 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y + 1] == -2)) {
                     return true;
                 }
             }
-        }
-        else {
+        } else {
             int turn = x1 < x2 ? 1 : -1;
             // 从起点和终点开始判断是否能够舍弃该点,相邻点直接舍弃
             for (double x = x1 + step * turn; (x - x2) * turn - 0.01 < 0 && times != 100; x += step * turn) {
                 times++;
-                double y =  param.k * x + param.b;
+                double y = param.k * x + param.b;
                 Pos nexPos = Point2Pos(new Point(x, y));
                 // 连接线上的点，上下不能有障碍物
                 if ((nexPos.x > 0 && nexPos.x < Mapinfo.row - 1) && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x - 1][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x + 1][nexPos.y] == -2)) {
                     return true;
-                }
-                else if (nexPos.x == 0 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x + 1][nexPos.y] == -2)) {
+                } else if (nexPos.x == 0 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x + 1][nexPos.y] == -2)) {
                     return true;
-                }
-                else if (nexPos.x == Mapinfo.row - 1 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x - 1][nexPos.y] == -2)) {
+                } else if (nexPos.x == Mapinfo.row - 1 && (Mapinfo.mapInfoOriginal[nexPos.x][nexPos.y] == -2 || Mapinfo.mapInfoOriginal[nexPos.x - 1][nexPos.y] == -2)) {
                     return true;
                 }
             }
@@ -513,19 +672,32 @@ public class Astar {
         return false;
     }
 
+    /**
+     * 初始化避让地图信息
+     *
+     * @param maps 地图信息
+     */
     public void initAvoidMaps(int[][] maps) {
         for (int i = 0; i < Mapinfo.row; i++) {
             for (int j = 0; j < Mapinfo.col; j++) {
                 if (Mapinfo.mapInfoOriginal[i][j] == -2) {
                     maps[i][j] = 2;
-                }
-                else {
+                } else {
                     maps[i][j] = 0;
                 }
             }
         }
     }
 
+    /**
+     * 偏移点 用于寻路后修正路径
+     *
+     * @param startPoint 起点
+     * @param endPoint   终点
+     * @param startPos   起点位置
+     * @param endPos     终点位置
+     * @param carry      是否满载
+     */
     public void offsetPoint(Point startPoint, Point endPoint, Pos startPos, Pos endPos, boolean carry) {
         int step = 1;
         if (carry == true) {
@@ -537,13 +709,11 @@ public class Astar {
                 startPoint.x += 0.25;
                 endPoint.x += 0.25;
                 return;
-            }
-            else if (!Mapinfo.isInMap(startPos.x, startPos.y + 1)) {  // 右边是墙，直接左移
+            } else if (!Mapinfo.isInMap(startPos.x, startPos.y + 1)) {  // 右边是墙，直接左移
                 startPoint.x -= 0.25;
                 endPoint.x -= 0.25;
                 return;
-            }
-            else {
+            } else {
                 int turn = startPos.x < endPos.x ? 1 : -1;
                 for (int x = startPos.x; (x - endPos.x) * turn <= 0; x += turn * step) {
                     if (Mapinfo.mapInfoOriginal[x][startPos.y - 1] == -2) {
@@ -558,19 +728,16 @@ public class Astar {
                     }
                 }
             }
-        }
-        else {  // 水平
+        } else {  // 水平
             if (!Mapinfo.isInMap(startPos.x - 1, startPos.y)) {  // 上边是墙，直接下移
                 startPoint.y -= 0.25;
                 endPoint.y -= 0.25;
                 return;
-            }
-            else if (!Mapinfo.isInMap(startPos.x + 1, startPos.y)) {  // 下边是墙，直接上移
+            } else if (!Mapinfo.isInMap(startPos.x + 1, startPos.y)) {  // 下边是墙，直接上移
                 startPoint.y += 0.25;
                 endPoint.y += 0.25;
                 return;
-            }
-            else {
+            } else {
                 int turn = startPos.y < endPos.y ? 1 : -1;
                 for (int y = startPos.y; (y - endPos.y) * turn <= 0; y += turn * step) {
                     if (Mapinfo.mapInfoOriginal[startPos.x - 1][y] == -2) {
@@ -588,10 +755,12 @@ public class Astar {
         }
     }
 
-    // 合并结果，将相同的坐标合并在一起
+    /**
+     * 合并结果，将相同的坐标合并在一起
+     */
     public void mergeResultList() {
         // 没有结果，返回
-        if (resultList.size() < 2){
+        if (resultList.size() < 2) {
             return;
         }
         Pos startPos = resultList.get(0);
@@ -614,22 +783,35 @@ public class Astar {
         mergeList.add(Pos2Point(resultList.get(resultList.size() - 1)));    // 终点加入合并列表
     }
 
-    // 将得到的坐标转为Point
+    /**
+     * 将得到的坐标转为Point
+     *
+     * @param Pos 当前位置
+     * @return 转换后的位置
+     */
     public static Point Pos2Point(Pos Pos) {
-        double x = Pos.y * 0.5 + 0.25 ;
-        double y = 50 - (Pos.x * 0.5 + 0.25) ;
+        double x = Pos.y * 0.5 + 0.25;
+        double y = 50 - (Pos.x * 0.5 + 0.25);
         return new Point(x, y);
     }
 
-    // 将Point转为Pos用于地图索引 世界地图0-50 对应 数组下标0-99
+    /**
+     * 将Point转为Pos用于地图索引 世界地图0-50 对应 数组下标0-99
+     *
+     * @param point 点信息
+     * @return 地图索引
+     */
     public static Pos Point2Pos(Point point) {
-        int x = 99 -  (int)(point.y / 0.5);
-        int y = (int)(point.x / 0.5);
+        int x = 99 - (int) (point.y / 0.5);
+        int y = (int) (point.x / 0.5);
         return new Pos(x, y);
     }
 
-    // A* 搜索算法
-    // 判断是否找到路径
+
+    /**
+     * A* 搜索算法
+     * 判断是否找到路径
+     */
     public void search() {
         board.getMsg(startPosition).isOK = 1;    // 起点设为已探索
         openList.add(startPosition);                // 从起点开始探索
@@ -689,6 +871,14 @@ public class Astar {
         }
     }
 
+    /**
+     * A*算法 ：G值更新
+     *
+     * @param x               x位置
+     * @param y               y位置
+     * @param currentPosition 当前点
+     * @param newG            新的G值
+     */
     public void updateG(int x, int y, Pos currentPosition, int newG) {
         // 维护最小的G值
         if (board.maps[x][y].isOK == 0) {

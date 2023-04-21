@@ -7,7 +7,11 @@ import com.huawei.codecraft.core.Zone;
 import java.util.*;
 
 
-// 用于机器人空载和满载的地图
+/**
+ * ClassName: Mapinfo
+ * Package: com.huawei.codecraft.way
+ * Description: 用于机器人空载和满载的地图
+ */
 public class Mapinfo {
     static int[] bits = {20, 18, 12, 10};   // 用于判断斜边是否可以通过，按照上下左右是否有障碍物进行位运算
     static boolean[] isVisit = {false, false, false, false};       // 判断机器人是否已经寻找过
@@ -26,12 +30,20 @@ public class Mapinfo {
     ArrayList<Integer> station;
     ArrayList<Integer> fighterStation;
 
+    /**
+     * 构造器
+     */
     public Mapinfo() {
         robotId = new HashMap<>();
         stationId = new HashMap<>();
         fighterStationId = new HashMap<>();
     }
 
+    /**
+     * 初始化
+     *
+     * @param mapinfo 地图信息
+     */
     public static void init(int[][] mapinfo) {
         row = mapinfo.length;
         col = mapinfo[0].length;
@@ -52,8 +64,13 @@ public class Mapinfo {
                 '}';
     }
 
-    // 广度优先搜索最原始的地图,寻找连通区域 -3表示已探索 -2表示障碍物，-1 表示空地，0-50表示工作台
-    public void Bfs(Pos startPostion,  Map<Integer, Pos> robotPos) {
+    /**
+     * 广度优先搜索最原始的地图,寻找连通区域 -3表示已探索 -2表示障碍物，-1 表示空地，0-50表示工作台
+     *
+     * @param startPostion 起点
+     * @param robotPos     机器人位置
+     */
+    public void Bfs(Pos startPostion, Map<Integer, Pos> robotPos) {
         ArrayList<Pos> openList = new ArrayList<Pos>();
         openList.add(startPostion);
 
@@ -78,13 +95,11 @@ public class Mapinfo {
                         if (mapInfoOri[x][y] >= 100) {
                             robot.add(mapInfoOri[x][y] - 100);
                             isVisit[mapInfoOri[x][y] - 100] = true; // 机器人已经探索果了
-                        }
-                        else if (mapInfoOri[x][y] >= 0 && mapInfoOri[x][y] < 50) {
+                        } else if (mapInfoOri[x][y] >= 0 && mapInfoOri[x][y] < 50) {
 //                            if (Main.stations[mapInfoOri[x][y]].type<=3 || mapInfoFull[x][y] == 0){
-                                station.add(mapInfoOri[x][y]);
+                            station.add(mapInfoOri[x][y]);
 //                            }
-                        }
-                        else if (mapInfoOri[x][y] >= 50 && mapInfoOri[x][y] < 100) {
+                        } else if (mapInfoOri[x][y] >= 50 && mapInfoOri[x][y] < 100) {
                             fighterStation.add(mapInfoOri[x][y]);
                         }
                         // 节点设置为已探索，障碍物不能改变，不然会影响后续的点判断
@@ -107,13 +122,11 @@ public class Mapinfo {
                             if (mapInfoOri[x][y] >= 100) {
                                 robot.add(mapInfoOri[x][y] - 100);
                                 isVisit[mapInfoOri[x][y] - 100] = true; // 机器人已经探索果了
-                            }
-                            else if (mapInfoOri[x][y] >= 0 && mapInfoOri[x][y] < 50) {
-    //                            if (Main.stations[mapInfoOri[x][y]].type<=3 || mapInfoFull[x][y] == 0){
-                                    station.add(mapInfoOri[x][y]);
-    //                            }
-                            }
-                            else if (mapInfoOri[x][y] >= 50 && mapInfoOri[x][y] < 100) {
+                            } else if (mapInfoOri[x][y] >= 0 && mapInfoOri[x][y] < 50) {
+                                //                            if (Main.stations[mapInfoOri[x][y]].type<=3 || mapInfoFull[x][y] == 0){
+                                station.add(mapInfoOri[x][y]);
+                                //                            }
+                            } else if (mapInfoOri[x][y] >= 50 && mapInfoOri[x][y] < 100) {
                                 fighterStation.add(mapInfoOri[x][y]);
                             }
                             // 节点设置为已探索，障碍物不能改变，不然会影响后续的点判断
@@ -127,24 +140,35 @@ public class Mapinfo {
     }
 
 
+    /**
+     * 阻塞点赋值
+     *
+     * @param x x位置
+     * @param y y位置
+     */
     public static void blockPos(int x, int y) {
         mapInfoEmpty[x][y] = 1;
         mapInfoOri[x][y] = -2;
         mapInfoOriginal[x][y] = -2;
     }
 
-    // 开始直接处理斜角不能走的情况，方便空载封路
-    // todo，会遗漏四个斜角和斜边，但是和付出的时间和地图概率相比，我觉得是值得忽略的
+
+    /**
+     * 开始直接处理斜角不能走的情况，方便空载封路
+     * todo，会遗漏四个斜角和斜边，但是和付出的时间和地图概率相比，我觉得是值得忽略的
+     *
+     * @param mapinfo 地图信息
+     * @param x       x位置
+     * @param y       y位置
+     */
     public static void checkSideWay(int[][] mapinfo, int x, int y) {
         // 判断右边
         if (isInMap(x, y + 1) && mapinfo[x][y + 1] == -1) {
             if (isInMap(x, y + 2) && mapinfo[x][y + 2] == -2) {
                 blockPos(x, y + 1);
-            }
-            else if (isInMap(x - 1, y + 2) && mapinfo[x - 1][y + 2] == -2 && mapinfo[x - 1][y + 1] != -2) {
+            } else if (isInMap(x - 1, y + 2) && mapinfo[x - 1][y + 2] == -2 && mapinfo[x - 1][y + 1] != -2) {
                 blockPos(x, y + 1);
-            }
-            else if (isInMap(x + 1, y + 2) && mapinfo[x + 1][y + 2] == -2 && mapinfo[x + 1][y + 1] != -2) {
+            } else if (isInMap(x + 1, y + 2) && mapinfo[x + 1][y + 2] == -2 && mapinfo[x + 1][y + 1] != -2) {
                 blockPos(x, y + 1);
             }
         }
@@ -152,11 +176,9 @@ public class Mapinfo {
         if (isInMap(x + 1, y) && mapinfo[x + 1][y] == -1) {
             if (isInMap(x + 2, y) && mapinfo[x + 2][y] == -2) {
                 blockPos(x + 1, y);
-            }
-            else if (isInMap(x + 2, y - 1) && mapinfo[x + 2][y - 1] == -2 && mapinfo[x + 1][y - 1] != -2) {
+            } else if (isInMap(x + 2, y - 1) && mapinfo[x + 2][y - 1] == -2 && mapinfo[x + 1][y - 1] != -2) {
                 blockPos(x + 1, y);
-            }
-            else if (isInMap(x + 2, y + 1) && mapinfo[x + 2][y + 1] == -2 && mapinfo[x + 1][y + 1] != -2) {
+            } else if (isInMap(x + 2, y + 1) && mapinfo[x + 2][y + 1] == -2 && mapinfo[x + 1][y + 1] != -2) {
                 blockPos(x + 1, y);
             }
         }
@@ -173,7 +195,12 @@ public class Mapinfo {
         }
     }
 
-    // 获取连通的机器人和工作台的Id
+
+    /**
+     * 获取连通的机器人和工作台的Id
+     *
+     * @param robotPos 机器人位置
+     */
     public void getConnectedArea(Map<Integer, Pos> robotPos) {
         int connectedArea = 0;
         for (Map.Entry<Integer, Pos> entry : robotPos.entrySet()) {
@@ -185,7 +212,7 @@ public class Mapinfo {
             }
             robot = new ArrayList<Integer>();
             station = new ArrayList<Integer>();
-            fighterStation =  new ArrayList<Integer>();
+            fighterStation = new ArrayList<Integer>();
             robot.add(key);
 
             Bfs(position, robotPos);   // 从机器人的位置做广度优先搜索
@@ -198,20 +225,39 @@ public class Mapinfo {
         }
     }
 
-    // 获取连通的机器人ID
-    public  Map<Integer, ArrayList<Integer>> getConnectedRobotsId() {
+
+    /**
+     * 获取连通的机器人ID
+     *
+     * @return 连通的机器人ID
+     */
+    public Map<Integer, ArrayList<Integer>> getConnectedRobotsId() {
         return robotId;
     }
 
-    // 获取连通的工作台ID
-    public  Map<Integer, ArrayList<Integer>> getConnectedStationsId() {
+
+    /**
+     * 获取连通的工作台ID
+     *
+     * @return 连通的工作台ID
+     */
+    public Map<Integer, ArrayList<Integer>> getConnectedStationsId() {
         return stationId;
     }
 
-    public int[][] getFixMap(boolean isEmpty){
-        return isEmpty? mapInfoEmpty:mapInfoFull;
+    /**
+     * 得到修正后的地图
+     *
+     * @param isEmpty 是否空载
+     * @return 修正地图信息
+     */
+    public int[][] getFixMap(boolean isEmpty) {
+        return isEmpty ? mapInfoEmpty : mapInfoFull;
     }
-    
+
+    /**
+     * 初始化用于寻找连通的地图
+     */
     public static void initMapOri() {
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < col; j++) {
@@ -221,16 +267,20 @@ public class Mapinfo {
         }
     }
 
-    // 初始化用于空载的地图
+
+    /**
+     * 初始化用于空载的地图
+     *
+     * @param mapinfo 地图信息
+     */
     public static void initMapEmpty(int[][] mapinfo) {
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < col; j++) {
                 if (mapinfo[i][j] >= 0) {
                     mapInfoOri[i][j] = mapinfo[i][j];
                     mapInfoOriginal[i][j] = mapinfo[i][j];
-                }
-                else {
-                    mapInfoOri[i][j] =  mapInfoOri[i][j] == -2 ? mapInfoOri[i][j] : mapinfo[i][j];   // 已被初始化的话不再初始化
+                } else {
+                    mapInfoOri[i][j] = mapInfoOri[i][j] == -2 ? mapInfoOri[i][j] : mapinfo[i][j];   // 已被初始化的话不再初始化
                     mapInfoOriginal[i][j] = mapInfoOriginal[i][j] == -2 ? mapInfoOriginal[i][j] : mapinfo[i][j];
                 }
 
@@ -242,12 +292,12 @@ public class Mapinfo {
                     if (isInMap(i + 1, j)) {
                         mapInfoEmpty[i + 1][j] = 1;
                         // 原始地图用于探索连通时，将除工作台、机器人以外的点全部置为封闭区域
-                        mapInfoOri[i + 1][j] = mapinfo[i + 1][j]  >= 0 ? mapinfo[i + 1][j]  : -2;
+                        mapInfoOri[i + 1][j] = mapinfo[i + 1][j] >= 0 ? mapinfo[i + 1][j] : -2;
                     }
                     // 包住右边
                     if (isInMap(i, j + 1)) {
                         mapInfoEmpty[i][j + 1] = 1;
-                        mapInfoOri[i][j + 1] =  mapinfo[i][j + 1] >= 0 ?  mapinfo[i][j + 1] : -2;
+                        mapInfoOri[i][j + 1] = mapinfo[i][j + 1] >= 0 ? mapinfo[i][j + 1] : -2;
                     }
 
                     // 封住左边需要检查左边的左边
@@ -255,7 +305,7 @@ public class Mapinfo {
                         // 三种同时不成立才能包住
                         if (mapInfoEmpty[i][j - 2] != 1 && mapInfoEmpty[i - 1][j - 2] != 1 && mapInfoEmpty[i + 1][j - 2] != 1) {
                             mapInfoEmpty[i][j - 1] = 1;
-                            mapInfoOri[i][j - 1] =  mapInfoOri[i][j - 1] >= 0 ?  mapInfoOri[i][j - 1] : -2;
+                            mapInfoOri[i][j - 1] = mapInfoOri[i][j - 1] >= 0 ? mapInfoOri[i][j - 1] : -2;
                         }
                     }
                     // 封住上方需要看上方的上方是不是空位
@@ -263,7 +313,7 @@ public class Mapinfo {
                         // 三种同时不成立才能包住
                         if (mapInfoEmpty[i - 2][j] != 1 && mapInfoEmpty[i - 2][j - 1] != 1 && mapInfoEmpty[i - 2][j + 1] != 1) {
                             mapInfoEmpty[i - 1][j] = 1;
-                            mapInfoOri[i - 1][j] =  mapInfoOri[i - 1][j] >= 0 ?  mapInfoOri[i - 1][j] : -2;
+                            mapInfoOri[i - 1][j] = mapInfoOri[i - 1][j] >= 0 ? mapInfoOri[i - 1][j] : -2;
                         }
                     }
                 }
@@ -271,8 +321,13 @@ public class Mapinfo {
         }
     }
 
-    // 初始化用于满载的地图
-    public  static void initMapFull(int[][] mapinfo) {
+
+    /**
+     * 初始化用于满载的地图
+     *
+     * @param mapinfo 地图信息
+     */
+    public static void initMapFull(int[][] mapinfo) {
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < col; j++) {
                 if (mapinfo[i][j] == -2) {   // 有障碍包住点周围的 8 个方向
@@ -281,7 +336,7 @@ public class Mapinfo {
                     int[] rangeY = {j - 1, j + 1};
                     // 左右
                     for (int y : rangeY) {
-                        if (isInMap(i, y) ) {
+                        if (isInMap(i, y)) {
                             mapInfoFull[i][y] = 1;
                         }
                     }
@@ -300,6 +355,13 @@ public class Mapinfo {
         }
     }
 
+    /**
+     * 判断是否在地图中
+     *
+     * @param x x坐标
+     * @param y y坐标
+     * @return 是否在地图中
+     */
     public static boolean isInMap(int x, int y) {
         if (x < 0 || y < 0 || x >= row || y >= col) {
             return false;
@@ -307,20 +369,29 @@ public class Mapinfo {
         return true;
     }
 
+    /**
+     * 添加工作台
+     *
+     * @param sid 工作台id
+     * @param x   x坐标
+     * @param y   y坐标
+     */
     private void putStation(int sid, int x, int y) {
-        if (Main.stations[sid].type<=3 || mapInfoFull[x][y] == 0){
+        if (Main.stations[sid].type <= 3 || mapInfoFull[x][y] == 0) {
             station.add(sid);
         }
     }
 
+    /**
+     * 打印地图
+     */
     public static void printMapFull() {
         for (int i = 0; i < row; i++) {
             String data = new String();
             for (int j = 0; j < col; j++) {
                 if (mapInfoFull[i][j] == 1) {
                     data += "#";
-                }
-                else {
+                } else {
                     data += '.';
                 }
             }
@@ -328,14 +399,16 @@ public class Mapinfo {
         }
     }
 
+    /**
+     * 打印原始地图
+     */
     public static void printMapOriginal() {
         for (int i = 0; i < row; i++) {
             String data = new String();
             for (int j = 0; j < col; j++) {
                 if (mapInfoOriginal[i][j] == -2) {
                     data += "#";
-                }
-                else {
+                } else {
                     data += '.';
                 }
             }
@@ -343,16 +416,21 @@ public class Mapinfo {
         }
     }
 
-    // 给station 和 robot 划分区域
-    public void setZone(Map<Integer, Zone> zoneMap){
+
+    /**
+     * 给station 和 robot 划分区域
+     *
+     * @param zoneMap 区域地图
+     */
+    public void setZone(Map<Integer, Zone> zoneMap) {
         getConnectedArea(Main.robotPos);
         for (int zoneId : robotId.keySet()) {
             Zone zone = null;
-            if (!zoneMap.containsKey(zoneId)){
+            if (!zoneMap.containsKey(zoneId)) {
                 // 没有先创建
                 zone = new Zone(zoneId);
-                zoneMap.put(zoneId,zone);
-            }else {
+                zoneMap.put(zoneId, zone);
+            } else {
                 zone = zoneMap.get(zoneId);
             }
             // 分别把，机器人和station 加到zone里面去
@@ -363,11 +441,11 @@ public class Mapinfo {
 
             for (int sid : stationId.get(zoneId)) {
                 Station st = Main.stations[sid];
-                if (!zone.stationsMap.containsKey(st.type)){
+                if (!zone.stationsMap.containsKey(st.type)) {
                     ArrayList<Station> list = new ArrayList<>();
                     list.add(st);
-                    zone.stationsMap.put(st.type,list);
-                }else {
+                    zone.stationsMap.put(st.type, list);
+                } else {
                     zone.stationsMap.get(st.type).add(st);
                 }
                 st.zone = zone;
@@ -375,11 +453,11 @@ public class Mapinfo {
 
             for (int fSid : fighterStationId.get(zoneId)) {
                 Station st = Main.fighterStations[fSid - Main.fighterStationNumStart];
-                if (!zone.fighterStationsMap.containsKey(st.type)){
+                if (!zone.fighterStationsMap.containsKey(st.type)) {
                     ArrayList<Station> list = new ArrayList<>();
                     list.add(st);
-                    zone.fighterStationsMap.put(st.type,list);
-                }else {
+                    zone.fighterStationsMap.put(st.type, list);
+                } else {
                     zone.fighterStationsMap.get(st.type).add(st);
                 }
                 st.zone = zone;
