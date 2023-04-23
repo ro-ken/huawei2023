@@ -5,8 +5,6 @@ package com.huawei.codecraft.util;
  * ClassName: Goods
  * Package: com.huawei.codecraft.util
  * Description: 记录货物信息
- *
- * @Author: ro_kin
  * @Data:2023/3/13 19:56
  */
 public class Goods {

@@ -8,8 +8,6 @@ import com.huawei.codecraft.core.Robot;
  * ClassName: Line
  * Package: com.huawei.codecraft.util
  * Description: 直线计算工具
- *
- * @Author: ro_kin
  * @Data:2023/3/17 21:52
  */
 public class Line {

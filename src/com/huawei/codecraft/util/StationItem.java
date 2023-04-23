@@ -1,6 +1,5 @@
 package com.huawei.codecraft.util;
 
-
 /**
  * ClassName: StationItem
  * Package: com.huawei.codecraft.util

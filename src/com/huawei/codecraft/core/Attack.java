@@ -12,8 +12,6 @@ import com.huawei.codecraft.way.Pos;
  * ClassName: Attack
  * Package: com.huawei.codecraft.core
  * Description: 攻击类
- *
- * @Author: ro_kin
  */
 public class Attack {
     // 下面是全局静态属性

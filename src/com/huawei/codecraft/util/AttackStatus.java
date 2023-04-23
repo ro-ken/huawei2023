@@ -5,8 +5,6 @@ package com.huawei.codecraft.util;
  * ClassName: AttackStatus
  * Package: com.huawei.codecraft.util
  * Description: 攻击进行的状态
- *
- * @author :ro_kin
  * @date : 2023/4/18
  */
 public enum AttackStatus {

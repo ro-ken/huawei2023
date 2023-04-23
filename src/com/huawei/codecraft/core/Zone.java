@@ -11,8 +11,6 @@ import java.util.*;
  * ClassName: Zone
  * Package: com.huawei.codecraft.core
  * Description: 地图划分为不同的区域，每个区域不连通
- *
- * @Author: ro_kin
  */
 public class Zone {
     public int id;  // 区域号
