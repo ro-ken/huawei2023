@@ -14,6 +14,8 @@ import java.util.Random;
  * ClassName: Robot
  * Package: com.huawei.codecraft.core
  * Description: 机器人
+ *
+ * @Author: ro_kin
  * @Data:2023/3/13 19:47
  */
 public class Robot {

@@ -11,6 +11,8 @@ import java.util.*;
  * ClassName: Zone
  * Package: com.huawei.codecraft.core
  * Description: 地图划分为不同的区域，每个区域不连通
+ *
+ * @Author: ro_kin
  */
 public class Zone {
     public int id;  // 区域号
@@ -524,7 +526,11 @@ public class Zone {
             if (target.place != StationStatus.BLOCK) {   // 已改
                 double value = target.cycleAvgValue;
                 if (target.place == StationStatus.EMPTY) {   // 已改
-                    value += 3;     // 若周围没有机器人 权重 +5
+                    if (Main.mapSeq == 6 || Main.mapSeq == 2) {
+                        value += 5;
+                    } else {
+                        value += 3;     // 若周围没有机器人 权重 +5
+                    }
                 }
                 if (value > maxValue) {
                     res = target;
@@ -556,8 +562,13 @@ public class Zone {
                 }
                 double value = target.cycleAvgValue;
                 if (target.place == StationStatus.EMPTY) {   // 已改
-                    value += 3;     // 若周围没有机器人 权重 +5
+                    if (Main.mapSeq == 6 || Main.mapSeq == 2) {
+                        value += 5;
+                    } else {
+                        value += 3;     // 若周围没有机器人 权重 +5
+                    }
                 }
+
                 if (value > maxValue) {
                     res = target;
                     maxValue = value;

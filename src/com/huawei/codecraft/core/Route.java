@@ -15,6 +15,8 @@ import static com.huawei.codecraft.core.Robot.pi;
  * ClassName: Route
  * Package: com.huawei.codecraft.core
  * Description: 运动过程描述
+ *
+ * @Author: ro_kin
  */
 public class Route {
     Robot robot;

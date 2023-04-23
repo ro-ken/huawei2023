@@ -45,7 +45,7 @@ public class Main {
     public static final int fighterStationNumStart = 50;  // 对方的工作台从50开始
     public static final int duration = 4 * 60 * 50;  // 比赛时长
     public static final int JudgeDuration = duration - 30 * 50;  // 最后20s需判断买入的商品能否卖出
-    public static final int AttackJudgeDuration = duration - 10 * 50;  // 最后20s需判断买入的商品能否卖出
+    public static int AttackJudgeDuration = duration - 10 * 50;  // 最后20s需判断买入的商品能否卖出
     public static final int fps = 50;  // 帧数
     public static final boolean test = false;  // 是否可写入
     public static final boolean writePath = false;  // 是否可写入
@@ -162,7 +162,9 @@ public class Main {
             ArrayList<Station> nearStations = point.getNearStations();
             for (Station st : nearStations) {
                 st.changeStatus(rp);
-//                st.place = StationStatus.EMPTY
+                if (Main.mapSeq == 1 || Main.mapSeq == 5) {
+                    st.place = StationStatus.EMPTY;
+                }
                 if (st.place != StationStatus.EMPTY) {
                     Main.blockStations.add(st);
                 }
@@ -251,7 +253,7 @@ public class Main {
             robots[i].printRoute();
 
             // 判断是否够一个来回
-            if (frameID > JudgeDuration && robots[i].nextStation != null && mapSeq != 2 && mapSeq != 4) {
+            if (frameID > JudgeDuration && robots[i].nextStation != null && mapSeq != 2 && mapSeq != 4 && mapSeq != 6) {
                 if (!robots[i].canBugJudge2()) {
                     Attack.addRobot(robots[i]);
                     return;
@@ -358,6 +360,7 @@ public class Main {
 
         // 4/0
         if (mapSeq == 4) {
+            Robot.detectWallWideCoef = 0.99;
             initMapSeq4();
         }
 
@@ -369,7 +372,7 @@ public class Main {
         // 开阔图
         if (mapSeq == 1) {
             if (isBlue) {
-                Attack.addRobot(robots[0], 0);
+                Attack.addRobot(robots[0]);
                 // 蓝方派一个
             } else {
                 // 红方干活
@@ -389,20 +392,21 @@ public class Main {
         // 天梯赛图1
         if (mapSeq == 5) {
             if (isBlue) {
-                Attack.addRobot(robots[0]);
+                //堵3--1 2 15-- 0 3 16
+                //堵5--3 5
+                Attack.addRobot(robots[1], fighterStations[3].pos, AttackType.BLOCK);
+                Attack.addRobot(robots[2], fighterStations[3].pos, AttackType.BLOCK);
+
+                Attack.addRobot(robots[0], fighterStations[5].pos, AttackType.BLOCK);
+                Attack.addRobot(robots[3], fighterStations[5].pos, AttackType.BLOCK);
+
             } else {
-                Attack.addRobot(robots[0]);
             }
         }
 
         // 天梯赛图2
         if (mapSeq == 6) {
-            if (Main.isBlue) {
-                Attack.addRobot(robots[0], 0);
-                Attack.addRobot(robots[1], 1);
-            } else {
-                Attack.addRobot(robots[0]);
-            }
+            initMapSeq2();
         }
     }
 
@@ -463,11 +467,8 @@ public class Main {
             mapSeq = 4;     // 蓝方无工作台
         } else if (zoneMap.size() >= 2) {
             mapSeq = 2;      // 两个区域是2号
-        } else if (Main.stationsBlue[0].type == 3 && Main.stationsBlue[1].type == 3 && Main.stationsBlue[2].type == 7) {
-            mapSeq = 5;
-        } else if (Main.stationsBlue[0].type == 1 && Main.stationsBlue[1].type == 2 && Main.stationsBlue[2].type == 4) {
-            mapSeq = 6;
-        } else if (Astar.narrowPathCount >= 5) {
+        }
+        else if (Astar.narrowPathCount >= 5) {
             mapSeq = 3;
         } else {
             mapSeq = 1;
